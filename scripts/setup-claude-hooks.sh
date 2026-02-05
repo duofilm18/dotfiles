@@ -59,7 +59,7 @@ HOOKS_JSON=$(cat <<EOF
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://${APPRISE_HOST}:${APPRISE_PORT}/notify/${APPRISE_TAG} -d 'Claude 需要你的注意'"
+            "command": "curl -s -X POST http://${APPRISE_HOST}:${APPRISE_PORT}/notify/${APPRISE_TAG} -H 'Content-Type: application/json' -d '{\"body\": \"Claude 需要你的注意\"}'"
           }
         ]
       }
@@ -91,6 +91,6 @@ echo "  ✅ Claude Code Hooks 設定完成！"
 echo "=========================================="
 echo ""
 echo "測試通知："
-echo "  curl -X POST http://${APPRISE_HOST}:${APPRISE_PORT}/notify/${APPRISE_TAG} -d 'test'"
+echo "  curl -X POST http://${APPRISE_HOST}:${APPRISE_PORT}/notify/${APPRISE_TAG} -H 'Content-Type: application/json' -d '{\"body\": \"test\"}'"
 echo ""
 echo "重啟 Claude Code 後生效"
