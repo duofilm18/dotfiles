@@ -7,9 +7,7 @@
 ```
 dotfiles/
 ├── docker/
-│   ├── docker-compose.yml
-│   └── guardrails/
-│       └── Dockerfile
+│   └── docker-compose.yml
 ├── scripts/
 │   ├── install.sh
 │   ├── install-docker.sh
@@ -31,15 +29,6 @@ dotfiles/
 ```bash
 git clone https://github.com/duofilm18/dotfiles.git ~/dotfiles
 ~/dotfiles/scripts/install.sh
-```
-
-### Docker 服務
-
-```bash
-cd ~/dotfiles/docker
-
-# 啟動 Guardrails AI
-docker compose --profile ai up -d
 ```
 
 ### 安全審查工具
