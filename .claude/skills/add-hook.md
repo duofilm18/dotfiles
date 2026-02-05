@@ -63,12 +63,13 @@ git push    # 不要忘記 push！
 
 ## Hook 類型參考
 
-| Hook 類型 | 觸發時機 |
-|-----------|----------|
-| Notification | Claude 需要用戶注意時 |
-| PreToolUse | 執行工具前 |
-| PostToolUse | 執行工具後 |
-| Stop | 會話結束時 |
+| Hook 類型 | Matcher | Emoji | 觸發時機 |
+|-----------|---------|-------|----------|
+| Stop | — | ✅ | 回應完成，等待輸入 |
+| Notification | idle_prompt | ⚠️ | 閒置超過 60 秒 |
+| Notification | permission_prompt | 🔴 | 需要權限確認 |
+| PreToolUse | 工具名稱 | — | 執行工具前 |
+| PostToolUse | 工具名稱 | — | 執行工具後 |
 
 ## 相關檔案
 
