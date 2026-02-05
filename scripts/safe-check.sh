@@ -14,23 +14,15 @@ fi
 
 COMMAND="$1"
 
-PROMPT="你是一個 Linux 指令安全審查員。請分析以下指令的危險程度。
-
-指令: $COMMAND
-
-請判斷這個指令是否危險，只回答一個詞：
-- DANGER: 如果指令可能造成資料遺失、系統損壞、或不可逆的操作
-- SAFE: 如果指令是安全的
-
-只回答 DANGER 或 SAFE，不要有其他文字。"
+# 用 jq 建立 JSON（自動處理特殊字元）
+JSON_PAYLOAD=$(jq -n \
+    --arg model "$MODEL" \
+    --arg prompt "Is this Linux command dangerous? Command: $COMMAND. Answer SAFE if it only reads/lists/queries. Answer DANGER if it deletes/modifies/destroys. One word only: SAFE or DANGER" \
+    '{model: $model, prompt: $prompt, stream: false}')
 
 RESPONSE=$(curl -s "http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/generate" \
     -H "Content-Type: application/json" \
-    -d "{
-        \"model\": \"$MODEL\",
-        \"prompt\": \"$PROMPT\",
-        \"stream\": false
-    }" 2>/dev/null)
+    -d "$JSON_PAYLOAD" 2>/dev/null)
 
 if [ $? -ne 0 ] || [ -z "$RESPONSE" ]; then
     echo "ERROR: 無法連接 Ollama API (${OLLAMA_HOST}:${OLLAMA_PORT})"
