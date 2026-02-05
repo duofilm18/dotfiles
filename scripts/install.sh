@@ -78,6 +78,18 @@ fi
 # 6. 設定腳本執行權限
 chmod +x "$DOTFILES/scripts/"*.sh
 
+# 7. 設定 Git pre-commit hook（自動更新 README）
+echo ""
+echo "🔗 設定 Git pre-commit hook..."
+cat > "$DOTFILES/.git/hooks/pre-commit" << 'EOF'
+#!/bin/bash
+# pre-commit hook - 自動更新 README.md 目錄結構
+
+~/dotfiles/scripts/update-readme.sh
+git add README.md
+EOF
+chmod +x "$DOTFILES/.git/hooks/pre-commit"
+
 echo ""
 echo "=========================================="
 echo "  ✅ 設置完成！"
