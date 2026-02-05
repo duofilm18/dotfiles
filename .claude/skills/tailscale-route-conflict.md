@@ -173,3 +173,44 @@ ip route | grep "${SUBNET%/*}"
 
 - [Tailscale Subnet Routes 文件](https://tailscale.com/kb/1019/subnets)
 - [Tailscale 路由優先級](https://tailscale.com/kb/1105/route-precedence)
+
+---
+
+## ⚠️ Tailscale 連線限制（重要）
+
+### 已證實無法從外部直接存取的方式
+
+| 類型 | 範例 | 狀態 | 說明 |
+|------|------|------|------|
+| Tailscale IP | `http://100.105.101.50:8080` | ❌ 不可用 | 100.x.x.x 為 CGNAT 地址，無法從外部直接連線 |
+| Magic DNS | `http://rpi5b.tail77f91d.ts.net:8080` | ❌ 不可用 | 需要正確設定 subnet routing 才能存取 |
+
+### 為什麼不能用？
+
+1. **CGNAT 地址限制**：100.64.0.0/10 是 CGNAT（Carrier-Grade NAT）保留地址，不會被路由到公網
+2. **Tailscale 安全設計**：即使設備都在 Tailscale 網路內，直接存取 Tailscale IP 仍需正確的防火牆和路由設定
+3. **netfilter 規則**：Tailscale 預設會在 iptables 建立 `ts-input` chain，其中包含 `DROP all -- 100.64.0.0/10` 規則
+
+### 正確的連線方式
+
+**使用 Subnet Routing 透過內網 IP：**
+
+```
+http://192.168.88.10:8080
+```
+
+**前提條件：**
+1. RPI5B 需廣播路由：`tailscale up --advertise-routes=192.168.88.0/24`
+2. 在 Tailscale Admin Console 核准該路由
+3. 客戶端需啟用：`tailscale up --accept-routes=true`
+4. 手機 Tailscale 需開啟「Use Tailscale subnets」選項
+
+### RPI5B 服務列表（透過 192.168.88.10）
+
+| 服務 | Port | 用途 |
+|------|------|------|
+| Apprise | 8000 | 通知中繼 |
+| ntfy | 8080 | 本地通知服務 |
+| Homepage | 3000 | 儀表板 |
+| Uptime Kuma | 3001 | 監控服務 |
+| Portainer | 9000 | Docker 管理 |

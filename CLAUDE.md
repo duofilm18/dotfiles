@@ -45,3 +45,16 @@ dotfiles/
 # 安全審查
 ~/dotfiles/scripts/safe-check.sh "要審查的指令"
 ```
+
+---
+
+## ⚠️ Tailscale 連線限制
+
+| 類型 | 範例 | 狀態 |
+|------|------|------|
+| Tailscale IP | `http://100.105.101.50:8080` | ❌ 不可用 |
+| Magic DNS | `http://rpi5b.tail77f91d.ts.net:8080` | ❌ 不可用 |
+
+**正確方式**：使用 subnet routing 透過 `http://192.168.88.10:<port>`
+
+詳細說明：[tailscale-route-conflict.md](.claude/skills/tailscale-route-conflict.md#⚠️-tailscale-連線限制重要)
