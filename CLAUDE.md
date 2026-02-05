@@ -11,6 +11,7 @@
 | Skill | 用途 |
 |-------|------|
 | [add-hook](.claude/skills/add-hook.md) | 新增 Claude Code Hook |
+| [tailscale-route-conflict](.claude/skills/tailscale-route-conflict.md) | Tailscale 路由衝突診斷與修復 |
 
 ## 規則
 
