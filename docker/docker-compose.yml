@@ -12,21 +12,3 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-
-  python-dev:
-    build:
-      context: ./python-dev
-      dockerfile: Dockerfile
-    container_name: python-dev
-    profiles:
-      - dev
-      - python
-    volumes:
-      - ../shared:/app/shared:ro
-      - ./volumes/python-dev:/app/workspace
-    environment:
-      - PYTHONUNBUFFERED=1
-    working_dir: /app/workspace
-    stdin_open: true
-    tty: true
-    restart: unless-stopped

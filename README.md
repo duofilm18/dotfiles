@@ -8,32 +8,36 @@
 dotfiles/
 ├── docker/
 │   ├── docker-compose.yml
-│   ├── guardrails/
-│   │   └── Dockerfile
-│   └── python-dev/
+│   └── guardrails/
 │       └── Dockerfile
 ├── scripts/
+│   ├── install.sh
+│   ├── install-docker.sh
 │   └── safe-check.sh
 ├── shared/
-├── windows/
-└── wsl/
+│   ├── .vimrc
+│   └── .tmux.conf
+├── wsl/
+│   └── .bash_aliases
+└── windows/
 ```
 
 ## 使用方式
+
+### 快速安裝
+
+```bash
+git clone https://github.com/duofilm18/dotfiles.git ~/dotfiles
+~/dotfiles/scripts/install.sh
+```
 
 ### Docker 服務
 
 ```bash
 cd ~/dotfiles/docker
 
-# 啟動 Python 開發環境
-docker compose --profile dev up -d
-
 # 啟動 Guardrails AI
 docker compose --profile ai up -d
-
-# 進入 Python 開發容器
-docker exec -it python-dev bash
 ```
 
 ### 安全審查工具
