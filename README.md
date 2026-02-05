@@ -13,6 +13,8 @@ dotfiles/
 │   ├── install-docker.sh
 │   ├── install.sh
 │   ├── qwen-advisor.sh
+│   ├── qwen-permission.sh
+│   ├── qwen-stop-summary.sh
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
 │   └── update-readme.sh
