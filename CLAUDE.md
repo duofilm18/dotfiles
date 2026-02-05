@@ -2,7 +2,7 @@
 
 ## 專案說明
 
-這是個人開發環境配置，用於快速設置 WSL + Docker 開發環境。
+這是個人開發環境配置，用於快速設置 WSL 開發環境。
 
 詳細使用說明請見 [README.md](./README.md)
 
@@ -24,11 +24,9 @@
 ```
 dotfiles/
 ├── .claude/skills/   # Claude AI 技能
-├── docker/           # Docker 配置
 ├── scripts/          # 安裝腳本
 ├── shared/           # 共用配置 (vim, tmux)
-├── wsl/              # WSL 專用配置
-└── windows/          # Windows 配置
+└── wsl/              # WSL 專用配置 + Claude hooks
 ```
 
 ## 常用指令
