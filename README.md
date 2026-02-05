@@ -6,18 +6,23 @@
 
 ```
 dotfiles/
-├── .claude/skills/          # Claude AI 技能
+├── .claude/
+│   └── skills/
+│       └── add-hook.md
 ├── scripts/
-│   ├── install.sh           # 一鍵安裝環境
-│   ├── install-docker.sh    # 安裝 Docker（可選）
-│   ├── safe-check.sh        # 危險指令審查
-│   └── setup-claude-hooks.sh # 設定 Claude 通知
+│   ├── install-docker.sh
+│   ├── install.sh
+│   ├── safe-check.sh
+│   ├── setup-claude-hooks.sh
+│   └── update-readme.sh
 ├── shared/
-│   ├── .vimrc               # Vim 配置
-│   └── .tmux.conf           # Tmux 配置
-└── wsl/
-    ├── .bash_aliases        # Bash 別名
-    └── claude-hooks.json.example  # Claude hooks 模板
+│   ├── .tmux.conf
+│   └── .vimrc
+├── wsl/
+│   ├── .bash_aliases
+│   └── claude-hooks.json.example
+├── CLAUDE.md
+└── README.md
 ```
 
 ## 使用方式
