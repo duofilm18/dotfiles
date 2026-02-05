@@ -26,7 +26,8 @@ sudo apt install -y \
     tmux \
     curl \
     build-essential \
-    jq
+    jq \
+    zstd
 
 # 2. 設定 Git
 echo ""
@@ -89,6 +90,17 @@ cat > "$DOTFILES/.git/hooks/pre-commit" << 'EOF'
 git add README.md
 EOF
 chmod +x "$DOTFILES/.git/hooks/pre-commit"
+
+# 8. 安裝 Ollama（用於 safe-check.sh）
+echo ""
+echo "🦙 安裝 Ollama..."
+if ! command -v ollama &>/dev/null; then
+    curl -fsSL https://ollama.com/install.sh | sh
+    echo "📥 下載 qwen2.5-coder:1.5b 模型..."
+    ollama pull qwen2.5-coder:1.5b
+else
+    echo "  Ollama 已安裝，跳過"
+fi
 
 echo ""
 echo "=========================================="
