@@ -1,13 +1,11 @@
 # Dotfiles
 
-個人開發環境配置檔案，用於快速設置 WSL + Docker 開發環境。
+個人開發環境配置檔案，用於快速設置 WSL 開發環境。
 
 ## 目錄結構
 
 ```
 dotfiles/
-├── docker/
-│   └── docker-compose.yml
 ├── scripts/
 │   ├── install.sh
 │   ├── install-docker.sh
