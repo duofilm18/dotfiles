@@ -11,7 +11,7 @@ INPUT=$(cat)
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 
 if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
-    curl -s -X POST http://192.168.88.10:8000/notify/claude-notify \
+    curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
         -H "Content-Type: application/json" \
         -d '{"event": "stop", "body": "✅ Claude 已完成回應"}' \
         >/dev/null 2>&1
@@ -23,7 +23,7 @@ CLAUDE_RESPONSE=$(tac "$TRANSCRIPT_PATH" | head -30 | grep '"type":"text"' | hea
 
 # 如果沒找到，發簡單通知
 if [ -z "$CLAUDE_RESPONSE" ] || [ "$CLAUDE_RESPONSE" = "null" ]; then
-    curl -s -X POST http://192.168.88.10:8000/notify/claude-notify \
+    curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
         -H "Content-Type: application/json" \
         -d '{"event": "stop", "body": "✅ Claude 已完成回應"}' \
         >/dev/null 2>&1
@@ -56,7 +56,7 @@ $RESULT"
         NOTIFY_BODY="✅ Claude 已完成回應"
     fi
 
-    curl -s -X POST http://192.168.88.10:8000/notify/claude-notify \
+    curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
         -H "Content-Type: application/json" \
         -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "stop", body: $body}')" \
         >/dev/null 2>&1

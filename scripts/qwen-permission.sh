@@ -98,7 +98,7 @@ $RESULT"
 $CONTEXT"
     fi
 
-    curl -s -X POST http://192.168.88.10:8000/notify/claude-notify \
+    curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
         -H "Content-Type: application/json" \
         -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "permission", body: $body}')" \
         >/dev/null 2>&1
