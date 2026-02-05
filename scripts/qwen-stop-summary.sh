@@ -3,7 +3,7 @@
 # 從 transcript 檔案讀取 Claude 最後的回應
 # 使用排隊機制避免撞車
 
-LOCK_FILE="/tmp/qwen-advisor.lock"
+LOCK_FILE="/tmp/qwen-stop.lock"
 
 INPUT=$(cat)
 

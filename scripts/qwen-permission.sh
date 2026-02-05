@@ -3,7 +3,7 @@
 # 從 transcript 讀取 Claude 想執行的操作
 # 使用排隊機制避免撞車
 
-LOCK_FILE="/tmp/qwen-advisor.lock"
+LOCK_FILE="/tmp/qwen-permission.lock"
 
 INPUT=$(cat)
 
