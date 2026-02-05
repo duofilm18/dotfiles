@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Claude Code 設定（機器特定）
+wsl/claude-hooks.json
+
 # 日誌檔案
 *.log
 logs/

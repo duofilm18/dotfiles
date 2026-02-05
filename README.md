@@ -13,12 +13,14 @@ dotfiles/
 ├── scripts/
 │   ├── install.sh
 │   ├── install-docker.sh
-│   └── safe-check.sh
+│   ├── safe-check.sh
+│   └── setup-claude-hooks.sh
 ├── shared/
 │   ├── .vimrc
 │   └── .tmux.conf
 ├── wsl/
-│   └── .bash_aliases
+│   ├── .bash_aliases
+│   └── claude-hooks.json.example
 └── windows/
 ```
 
@@ -49,6 +51,23 @@ docker compose --profile ai up -d
 ```
 
 需要先在 **Windows** 上啟動 Ollama。
+
+### Claude Code Hooks（手機通知）
+
+讓 Claude Code 在需要你注意時發送通知到手機。
+
+```bash
+# 1. 複製模板並修改設定
+cp ~/dotfiles/wsl/claude-hooks.json.example ~/dotfiles/wsl/claude-hooks.json
+vim ~/dotfiles/wsl/claude-hooks.json  # 修改 IP
+
+# 2. 執行設定腳本
+~/dotfiles/scripts/setup-claude-hooks.sh
+
+# 3. 重啟 Claude Code
+```
+
+需要先在 rpi5b 上啟動 Apprise 服務。
 
 ---
 
