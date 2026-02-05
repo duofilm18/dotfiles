@@ -4,7 +4,7 @@
 
 OLLAMA_HOST="${OLLAMA_HOST:-localhost}"
 OLLAMA_PORT="${OLLAMA_PORT:-11434}"
-MODEL="${OLLAMA_MODEL:-hf.co/sugiken/Ordis-1.5B-V355-VarGH-GGUF:Q4_K_M}"
+MODEL="${OLLAMA_MODEL:-qwen2.5-coder:1.5b}"
 
 if [ -z "$1" ]; then
     echo "用法: $0 \"要審查的指令\""
@@ -29,13 +29,7 @@ RESPONSE=$(curl -s "http://${OLLAMA_HOST}:${OLLAMA_PORT}/api/generate" \
     -d "{
         \"model\": \"$MODEL\",
         \"prompt\": \"$PROMPT\",
-        \"stream\": false,
-        \"options\": {
-            \"temperature\": 0.7,
-            \"top_p\": 0.9,
-            \"top_k\": 20,
-            \"repeat_penalty\": 1.1
-        }
+        \"stream\": false
     }" 2>/dev/null)
 
 if [ $? -ne 0 ] || [ -z "$RESPONSE" ]; then
