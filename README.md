@@ -14,6 +14,7 @@ dotfiles/
 │   ├── install.sh
 │   ├── qwen-advisor.sh
 │   ├── qwen-permission.sh
+│   ├── qwen-queue.sh
 │   ├── qwen-stop-summary.sh
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh

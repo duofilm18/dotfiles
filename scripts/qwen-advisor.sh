@@ -2,6 +2,10 @@
 # qwen-advisor.sh - Qwen 專家顧問
 # 在 Claude 執行完操作後，分析並給出專業意見
 # 支援 Bash、Edit、Write、Read 等工具
+# 使用排隊機制避免撞車
+
+SCRIPT_DIR="$(dirname "$0")"
+LOCK_FILE="/tmp/qwen-advisor.lock"
 
 # 從 stdin 讀取 JSON 輸入
 INPUT=$(cat)
@@ -59,15 +63,12 @@ $CONTENT"
 
     Read)
         FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
-
-        # Read 操作比較簡單，只需簡短說明
         CONTEXT="📖 讀取檔案: $FILE_PATH"
         PROMPT_HINT="簡單說明這是什麼類型的檔案，通常用來做什麼。"
         ICON="📖"
         ;;
 
     *)
-        # 不支援的工具，跳過
         exit 0
         ;;
 esac
@@ -77,38 +78,38 @@ if [ -z "$CONTEXT" ]; then
     exit 0
 fi
 
-# 呼叫 Qwen 給意見
-MODEL="${OLLAMA_MODEL:-qwen2.5-coder:1.5b}"
-JSON_PAYLOAD=$(jq -n \
-    --arg model "$MODEL" \
-    --arg prompt "你是一位程式開發專家顧問。Claude AI 剛執行了一個操作，請用繁體中文給出簡短專業意見（2-4句話）。
+# 組合 prompt
+PROMPT="你是一位程式開發專家顧問。Claude AI 剛執行了一個操作，請用繁體中文給出簡短專業意見（2-4句話）。
 
 $CONTEXT
 
 $PROMPT_HINT
 
-簡潔有力，像個專業顧問在旁邊給建議。請務必用繁體中文回答！" \
-    '{model: $model, prompt: $prompt, stream: false}')
+簡潔有力，像個專業顧問在旁邊給建議。請務必用繁體中文回答！"
 
-RESPONSE=$(curl -s "http://localhost:11434/api/generate" \
-    -H "Content-Type: application/json" \
-    -d "$JSON_PAYLOAD" 2>/dev/null)
+# 使用 flock 排隊呼叫 Qwen
+{
+    flock -w 30 200 || exit 0
 
-RESULT=$(echo "$RESPONSE" | jq -r '.response // empty')
+    MODEL="${OLLAMA_MODEL:-qwen2.5-coder:1.5b}"
+    RESULT=$(curl -s "http://localhost:11434/api/generate" \
+        -H "Content-Type: application/json" \
+        -d "$(jq -n --arg model "$MODEL" --arg prompt "$PROMPT" '{model: $model, prompt: $prompt, stream: false}')" \
+        2>/dev/null | jq -r '.response // empty')
 
-# 如果有回應，發送到通知系統
-if [ -n "$RESULT" ]; then
-    NOTIFY_BODY="$ICON Qwen 專家分析
+    if [ -n "$RESULT" ]; then
+        NOTIFY_BODY="$ICON Qwen 專家分析
 
 $CONTEXT
 
 💡 分析:
 $RESULT"
 
-    curl -s -X POST http://192.168.88.10:8000/notify/claude-notify \
-        -H "Content-Type: application/json" \
-        -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "qwen-advisor", body: $body}')" \
-        >/dev/null 2>&1
-fi
+        curl -s -X POST http://192.168.88.10:8000/notify/claude-notify \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "qwen-advisor", body: $body}')" \
+            >/dev/null 2>&1
+    fi
+} 200>"$LOCK_FILE"
 
 exit 0

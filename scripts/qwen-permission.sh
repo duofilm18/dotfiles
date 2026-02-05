@@ -1,6 +1,9 @@
 #!/bin/bash
 # qwen-permission.sh - 權限確認時，讓 Qwen 解釋 Claude 想做什麼
 # 從 transcript 讀取 Claude 想執行的操作
+# 使用排隊機制避免撞車
+
+LOCK_FILE="/tmp/qwen-advisor.lock"
 
 INPUT=$(cat)
 
@@ -10,7 +13,6 @@ MESSAGE=$(echo "$INPUT" | jq -r '.message // empty')
 
 # 從 transcript 讀取最近的 tool_use（Claude 想執行的操作）
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    # 找最後一個 tool_use 記錄，提取 message.content[0]
     LAST_TOOL=$(tac "$TRANSCRIPT_PATH" | grep -m1 '"type":"tool_use"' || true)
 
     if [ -n "$LAST_TOOL" ]; then
@@ -63,11 +65,12 @@ if [ -z "$CONTEXT" ]; then
     CONTEXT="$MESSAGE"
 fi
 
-# 呼叫 Qwen 分析
-MODEL="${OLLAMA_MODEL:-qwen2.5-coder:1.5b}"
-JSON_PAYLOAD=$(jq -n \
-    --arg model "$MODEL" \
-    --arg prompt "你是一位安全顧問。Claude AI 想執行一個操作，需要使用者確認權限。
+# 使用 flock 排隊呼叫 Qwen
+{
+    flock -w 30 200 || exit 0
+
+    MODEL="${OLLAMA_MODEL:-qwen2.5-coder:1.5b}"
+    PROMPT="你是一位安全顧問。Claude AI 想執行一個操作，需要使用者確認權限。
 
 $CONTEXT
 
@@ -75,29 +78,31 @@ $CONTEXT
 1. 這個操作要做什麼
 2. 有沒有需要注意的地方
 
-簡潔有力。請務必用繁體中文回答！" \
-    '{model: $model, prompt: $prompt, stream: false}')
+簡潔有力。請務必用繁體中文回答！"
 
-RESULT=$(curl -s "http://localhost:11434/api/generate" \
-    -H "Content-Type: application/json" \
-    -d "$JSON_PAYLOAD" 2>/dev/null | jq -r '.response // empty')
+    RESULT=$(curl -s "http://localhost:11434/api/generate" \
+        -H "Content-Type: application/json" \
+        -d "$(jq -n --arg model "$MODEL" --arg prompt "$PROMPT" '{model: $model, prompt: $prompt, stream: false}')" \
+        2>/dev/null | jq -r '.response // empty')
 
-if [ -n "$RESULT" ]; then
-    NOTIFY_BODY="🔴 Claude 需要權限確認
+    if [ -n "$RESULT" ]; then
+        NOTIFY_BODY="🔴 Claude 需要權限確認
 
 $CONTEXT
 
 💡 Qwen 說明:
 $RESULT"
-else
-    NOTIFY_BODY="🔴 Claude 需要權限確認
+    else
+        NOTIFY_BODY="🔴 Claude 需要權限確認
 
 $CONTEXT"
-fi
+    fi
 
-curl -s -X POST http://192.168.88.10:8000/notify/claude-notify \
-    -H "Content-Type: application/json" \
-    -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "permission", body: $body}')" \
-    >/dev/null 2>&1
+    curl -s -X POST http://192.168.88.10:8000/notify/claude-notify \
+        -H "Content-Type: application/json" \
+        -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "permission", body: $body}')" \
+        >/dev/null 2>&1
+
+} 200>"$LOCK_FILE"
 
 exit 0
