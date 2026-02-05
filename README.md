@@ -12,6 +12,7 @@ dotfiles/
 ├── scripts/
 │   ├── install-docker.sh
 │   ├── install.sh
+│   ├── qwen-advisor.sh
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
 │   └── update-readme.sh
