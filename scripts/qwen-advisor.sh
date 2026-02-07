@@ -98,17 +98,12 @@ $PROMPT_HINT
         2>/dev/null | jq -r '.response // empty')
 
     if [ -n "$RESULT" ]; then
-        NOTIFY_BODY="$ICON Qwen 專家分析
-
-$CONTEXT
+        NOTIFY_BODY="$CONTEXT
 
 💡 分析:
 $RESULT"
 
-        curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "qwen-advisor", body: $body}')" \
-            >/dev/null 2>&1
+        "$SCRIPT_DIR/notify.sh" advisor "$ICON Qwen 專家分析" "$NOTIFY_BODY"
     fi
 } 200>"$LOCK_FILE"
 

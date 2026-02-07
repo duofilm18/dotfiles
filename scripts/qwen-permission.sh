@@ -4,6 +4,7 @@
 # 使用排隊機制避免撞車
 
 LOCK_FILE="/tmp/qwen-permission.lock"
+SCRIPT_DIR="$(dirname "$0")"
 
 INPUT=$(cat)
 
@@ -86,22 +87,15 @@ $CONTEXT
         2>/dev/null | jq -r '.response // empty')
 
     if [ -n "$RESULT" ]; then
-        NOTIFY_BODY="🔴 Claude 需要權限確認
-
-$CONTEXT
+        NOTIFY_BODY="$CONTEXT
 
 💡 Qwen 說明:
 $RESULT"
     else
-        NOTIFY_BODY="🔴 Claude 需要權限確認
-
-$CONTEXT"
+        NOTIFY_BODY="$CONTEXT"
     fi
 
-    curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
-        -H "Content-Type: application/json" \
-        -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "permission", body: $body}')" \
-        >/dev/null 2>&1
+    "$SCRIPT_DIR/notify.sh" permission "🔴 Claude 需要權限確認" "$NOTIFY_BODY"
 
 } 200>"$LOCK_FILE"
 

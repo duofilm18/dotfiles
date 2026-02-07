@@ -12,12 +12,14 @@ dotfiles/
 ├── scripts/
 │   ├── install-docker.sh
 │   ├── install.sh
+│   ├── notify.sh
 │   ├── qwen-advisor.sh
 │   ├── qwen-permission.sh
 │   ├── qwen-queue.sh
 │   ├── qwen-stop-summary.sh
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
+│   ├── setup-rpi5b-mqtt.sh
 │   └── update-readme.sh
 ├── shared/
 │   ├── .tmux.conf
@@ -48,22 +50,51 @@ git clone https://github.com/duofilm18/dotfiles.git ~/dotfiles
 
 需要先在 **Windows** 上啟動 Ollama。
 
-### Claude Code Hooks（手機通知）
+### Claude Code Hooks（MQTT 通知）
 
-讓 Claude Code 在需要你注意時發送通知到手機。
+讓 Claude Code 在需要你注意時，透過 MQTT 發送手機通知 + LED 燈效。
+
+架構：WSL（Master）→ MQTT → rpi5b（Slave）
 
 ```bash
 # 1. 複製模板並修改設定
 cp ~/dotfiles/wsl/claude-hooks.json.example ~/dotfiles/wsl/claude-hooks.json
-vim ~/dotfiles/wsl/claude-hooks.json  # 修改 IP
+vim ~/dotfiles/wsl/claude-hooks.json  # 修改 MQTT_HOST
 
-# 2. 執行設定腳本
+# 2. 部署 MQTT 服務到 rpi5b
+~/dotfiles/scripts/setup-rpi5b-mqtt.sh
+
+# 3. 設定 Claude Code Hooks
 ~/dotfiles/scripts/setup-claude-hooks.sh
 
-# 3. 重啟 Claude Code
+# 4. 重啟 Claude Code
 ```
 
-需要先在 rpi5b 上啟動 Apprise 服務。
+### LED 燈效通知
+
+Claude Code 事件觸發 RGB LED 燈效，戴耳機時也能注意到狀態變化。
+
+燈效對應（可修改 `wsl/led-effects.json`）：
+
+| 事件 | 顏色 | 效果 |
+|------|------|------|
+| Claude 完成回應 | 綠色 | 閃 2 下 |
+| 需要權限確認 | 紅色 | 持續亮 30 秒 |
+| Qwen 專家分析 | 藍色 | 閃 1 下 |
+
+接線方式見 `rpi5b/mqtt-led/config.json.example`。
+
+測試：
+
+```bash
+# 測試通知
+mosquitto_pub -h 192.168.88.10 -t claude/notify \
+    -m '{"title":"測試","body":"MQTT 通知正常"}'
+
+# 測試 LED
+mosquitto_pub -h 192.168.88.10 -t claude/led \
+    -m '{"r":0,"g":255,"b":0,"pattern":"blink","times":2}'
+```
 
 ---
 

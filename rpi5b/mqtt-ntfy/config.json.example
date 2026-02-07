@@ -1,0 +1,7 @@
+{
+  "mqtt_broker": "localhost",
+  "mqtt_port": 1883,
+  "ntfy_url": "http://localhost:8080",
+  "ntfy_cloud_url": "https://ntfy.sh",
+  "ntfy_topic": "claude-notify"
+}

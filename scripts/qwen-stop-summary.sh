@@ -4,6 +4,7 @@
 # 使用排隊機制避免撞車
 
 LOCK_FILE="/tmp/qwen-stop.lock"
+SCRIPT_DIR="$(dirname "$0")"
 
 INPUT=$(cat)
 
@@ -11,10 +12,7 @@ INPUT=$(cat)
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 
 if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
-    curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
-        -H "Content-Type: application/json" \
-        -d '{"event": "stop", "body": "✅ Claude 已完成回應"}' \
-        >/dev/null 2>&1
+    "$SCRIPT_DIR/notify.sh" stop "✅ Claude 完成回應" "Claude 已完成回應，等待你的輸入"
     exit 0
 fi
 
@@ -23,10 +21,7 @@ CLAUDE_RESPONSE=$(tac "$TRANSCRIPT_PATH" | head -30 | grep '"type":"text"' | hea
 
 # 如果沒找到，發簡單通知
 if [ -z "$CLAUDE_RESPONSE" ] || [ "$CLAUDE_RESPONSE" = "null" ]; then
-    curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
-        -H "Content-Type: application/json" \
-        -d '{"event": "stop", "body": "✅ Claude 已完成回應"}' \
-        >/dev/null 2>&1
+    "$SCRIPT_DIR/notify.sh" stop "✅ Claude 完成回應" "Claude 已完成回應，等待你的輸入"
     exit 0
 fi
 
@@ -48,18 +43,13 @@ $CLAUDE_RESPONSE
         2>/dev/null | jq -r '.response // empty')
 
     if [ -n "$RESULT" ]; then
-        NOTIFY_BODY="✅ Claude 完成回應
-
-💡 Qwen 總結:
+        NOTIFY_BODY="💡 Qwen 總結:
 $RESULT"
     else
-        NOTIFY_BODY="✅ Claude 已完成回應"
+        NOTIFY_BODY="Claude 已完成回應，等待你的輸入"
     fi
 
-    curl -s --connect-timeout 3 --max-time 5 -X POST http://192.168.88.10:8000/notify/claude-notify \
-        -H "Content-Type: application/json" \
-        -d "$(jq -n --arg body "$NOTIFY_BODY" '{event: "stop", body: $body}')" \
-        >/dev/null 2>&1
+    "$SCRIPT_DIR/notify.sh" stop "✅ Claude 完成回應" "$NOTIFY_BODY"
 
 } 200>"$LOCK_FILE"
 

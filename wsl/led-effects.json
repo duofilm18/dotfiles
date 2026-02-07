@@ -1,0 +1,5 @@
+{
+  "stop":       {"r": 0,   "g": 255, "b": 0,   "pattern": "blink", "times": 2},
+  "permission": {"r": 255, "g": 0,   "b": 0,   "pattern": "solid", "duration": 30},
+  "advisor":    {"r": 0,   "g": 0,   "b": 255, "pattern": "blink", "times": 1}
+}

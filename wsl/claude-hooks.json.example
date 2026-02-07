@@ -1,6 +1,5 @@
 {
   "_comment": "複製此檔案為 claude-hooks.json 並修改設定",
-  "APPRISE_HOST": "192.168.88.10",
-  "APPRISE_PORT": "8000",
-  "APPRISE_TAG": "claude-notify"
+  "MQTT_HOST": "192.168.88.10",
+  "MQTT_PORT": "1883"
 }
