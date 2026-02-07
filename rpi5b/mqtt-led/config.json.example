@@ -1,10 +1,10 @@
 {
   "_wiring": {
-    "RGB LED": {
-      "Pin 11 (GPIO 17)": "G (綠)",
-      "Pin 13 (GPIO 27)": "B (藍)",
+    "RGB LED (共陰極, 長腳=GND)": {
+      "Pin 11 (GPIO 17)": "B (藍)",
+      "Pin 13 (GPIO 27)": "G (綠)",
       "Pin 15 (GPIO 22)": "R (紅)",
-      "Pin 17 (3.3V)":    "V (電源)"
+      "Pin 14 (GND)":     "GND (長腳)"
     },
     "蜂鳴器": {
       "Pin 1 (3.3V)":     "VCC",
@@ -14,10 +14,11 @@
   },
   "gpio": {
     "red": 22,
-    "green": 17,
-    "blue": 27,
+    "green": 27,
+    "blue": 17,
     "buzzer": 18
   },
+  "common_anode": false,
   "mqtt_broker": "localhost",
   "mqtt_port": 1883
 }

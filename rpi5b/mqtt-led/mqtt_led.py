@@ -24,6 +24,8 @@ with open(config_path) as f:
     config = json.load(f)
 
 gpio = config["gpio"]
+# 共陽極 RGB LED：active_high=False 在 lgpio 不支援，改用 active_high=True + 手動反轉
+COMMON_ANODE = config.get("common_anode", True)
 led = RGBLED(red=gpio["red"], green=gpio["green"], blue=gpio["blue"])
 buzzer = TonalBuzzer(gpio["buzzer"])
 
@@ -31,22 +33,30 @@ buzzer = TonalBuzzer(gpio["buzzer"])
 _cancel = threading.Event()
 
 
+def _inv(r, g, b):
+    """共陽極反轉：1→0, 0→1"""
+    if COMMON_ANODE:
+        return (1.0 - r, 1.0 - g, 1.0 - b)
+    return (r, g, b)
+
+
 def _run_effect(r, g, b, pattern, times, duration):
     """執行燈效，支援中途取消"""
     _cancel.clear()
+    off_color = _inv(0, 0, 0)
 
     if pattern == "blink":
         for _ in range(times):
             if _cancel.is_set():
                 break
-            led.color = (r, g, b)
+            led.color = _inv(r, g, b)
             if _cancel.wait(timeout=0.3):
                 break
-            led.off()
+            led.color = off_color
             if _cancel.wait(timeout=0.3):
                 break
     elif pattern == "solid":
-        led.color = (r, g, b)
+        led.color = _inv(r, g, b)
         _cancel.wait(timeout=duration)
     elif pattern == "pulse":
         for _ in range(times):
@@ -56,16 +66,16 @@ def _run_effect(r, g, b, pattern, times, duration):
                 if _cancel.is_set():
                     break
                 ratio = i / 10.0
-                led.color = (r * ratio, g * ratio, b * ratio)
+                led.color = _inv(r * ratio, g * ratio, b * ratio)
                 time.sleep(0.05)
             for i in range(10, -1, -1):
                 if _cancel.is_set():
                     break
                 ratio = i / 10.0
-                led.color = (r * ratio, g * ratio, b * ratio)
+                led.color = _inv(r * ratio, g * ratio, b * ratio)
                 time.sleep(0.05)
 
-    led.off()
+    led.color = off_color
 
 
 def _beep(frequency, duration_ms):

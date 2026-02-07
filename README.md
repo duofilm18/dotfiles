@@ -39,6 +39,7 @@ dotfiles/
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b-mqtt.sh
+│   ├── test-mqtt.sh
 │   └── update-readme.sh
 ├── shared/
 │   ├── .tmux.conf
@@ -114,11 +115,16 @@ notify.sh 會自動：
 
 | 事件 | 顏色 | 效果 |
 |------|------|------|
-| Claude 完成回應 (stop) | 綠色 | 閃 2 下 |
-| 需要權限確認 (permission) | 紅色 | 持續亮 30 秒 |
-| Qwen 專家分析 (advisor) | 藍色 | 閃 1 下 |
+| Claude 完成回應 (stop) | 綠色 | 持續閃爍 |
+| 需要權限確認 (permission) | 紅色 | 持續閃爍 |
+| Qwen 專家分析 (advisor) | 藍色 | 持續閃爍 |
+| Claude 閒置 (idle) | 橘色 | 持續閃爍 |
+| 關燈 (off) | — | 熄滅 |
+
+> **重要規則：閃燈必須持續閃爍（times 設 999），不要只閃幾下。** 使用者可能戴耳機看影片，只閃幾下看不到。下一個事件會自動覆蓋前一個燈效。
 
 接線方式見 `rpi5b/mqtt-led/config.json.example`。
+目前使用共陰極 RGB LED（麵包板 + 電阻），`common_anode: false`。
 
 ### rpi5b 服務列表（192.168.88.10）
 
@@ -138,17 +144,14 @@ notify.sh 會自動：
 # WSL 需安裝 mosquitto-clients
 sudo apt install mosquitto-clients
 
-# 測試手機通知
-mosquitto_pub -h 192.168.88.10 -t claude/notify \
-    -m '{"title":"測試","body":"MQTT 通知正常"}'
+# 全部測試（LED + ntfy）
+~/dotfiles/scripts/test-mqtt.sh
 
-# 測試 LED（綠燈閃 2 下）
-mosquitto_pub -h 192.168.88.10 -t claude/led \
-    -m '{"r":0,"g":255,"b":0,"pattern":"blink","times":2}'
-
-# 測試蜂鳴器
-mosquitto_pub -h 192.168.88.10 -t claude/buzzer \
-    -m '{"frequency":1000,"duration":500}'
+# 單獨測試
+~/dotfiles/scripts/test-mqtt.sh led      # LED 閃爍
+~/dotfiles/scripts/test-mqtt.sh ntfy     # 手機通知
+~/dotfiles/scripts/test-mqtt.sh buzzer   # 蜂鳴器
+~/dotfiles/scripts/test-mqtt.sh off      # 關燈
 ```
 
 ---

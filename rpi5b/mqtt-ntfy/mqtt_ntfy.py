@@ -21,14 +21,14 @@ with open(config_path) as f:
 
 
 def _send_ntfy(url, topic, title, body):
-    """POST 到 ntfy（使用 ntfy 原生 API）"""
+    """POST 到 ntfy（使用 JSON API 支援 UTF-8 標題）"""
     try:
-        requests.post(
-            f"{url}/{topic}",
-            headers={"Title": title},
-            data=body.encode("utf-8"),
+        resp = requests.post(
+            f"{url}",
+            json={"topic": topic, "title": title, "message": body},
             timeout=5,
         )
+        print(f"Sent to {url} (status={resp.status_code})")
     except Exception as e:
         print(f"Failed to send to {url}: {e}")
 

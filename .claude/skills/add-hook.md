@@ -36,9 +36,11 @@ SCRIPT_DIR="$(dirname "$0")"
 
 ```json
 {
-  "your_event": {"r": 255, "g": 128, "b": 0, "pattern": "blink", "times": 1}
+  "your_event": {"r": 255, "g": 128, "b": 0, "pattern": "blink", "times": 999}
 }
 ```
+
+> **重要：times 必須設 999（持續閃爍）。** 使用者戴耳機看影片，只閃幾下看不到。下一個事件會自動覆蓋。
 
 ### 3. 更新 setup 腳本
 
@@ -55,13 +57,8 @@ SCRIPT_DIR="$(dirname "$0")"
 # 重新執行設定腳本
 ~/dotfiles/scripts/setup-claude-hooks.sh
 
-# 測試通知（MQTT）
-mosquitto_pub -h 192.168.88.10 -t claude/notify \
-    -m '{"title": "測試標題", "body": "測試內容"}'
-
-# 測試 LED
-mosquitto_pub -h 192.168.88.10 -t claude/led \
-    -m '{"r": 0, "g": 255, "b": 0, "pattern": "blink", "times": 2}'
+# 測試
+~/dotfiles/scripts/test-mqtt.sh
 ```
 
 ### 6. 提交

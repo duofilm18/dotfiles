@@ -57,7 +57,8 @@ echo "   MQTT Host: $MQTT_HOST"
 echo "   MQTT Port: $MQTT_PORT"
 
 # 生成 hooks JSON（所有 hook 都呼叫腳本，腳本內部用 notify.sh → mosquitto_pub）
-NEW_HOOKS_JSON=$(jq -n '{
+NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
+{
   "hooks": {
     "PostToolUse": [
       {
@@ -87,7 +88,7 @@ NEW_HOOKS_JSON=$(jq -n '{
         "hooks": [
           {
             "type": "command",
-            "command": "~/dotfiles/scripts/notify.sh idle '\"'\"'⚠️ Claude 需要你的注意'\"'\"' '\"'\"'Claude 已閒置超過 60 秒，等待你的輸入'\"'\"'"
+            "command": "~/dotfiles/scripts/notify.sh idle 'Claude 需要你的注意' 'Claude 已閒置，等待你的輸入'"
           }
         ]
       },
@@ -102,7 +103,9 @@ NEW_HOOKS_JSON=$(jq -n '{
       }
     ]
   }
-}')
+}
+HOOKSJSON
+)
 
 # 確保 ~/.claude 目錄存在
 mkdir -p "$CLAUDE_DIR"
