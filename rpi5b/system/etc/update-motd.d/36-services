@@ -1,0 +1,14 @@
+#!/bin/bash
+# ============================================
+# MOTD - 顯示服務連結
+# ============================================
+# 安裝位置: /etc/update-motd.d/36-services
+# ============================================
+
+IP=$(hostname -I | awk '{print $1}')
+
+echo ""
+echo -e "\e[1;33m=== 服務連結 ===\e[0m"
+echo -e " Pi-hole:     \e[4mhttp://${IP}/admin\e[0m"
+echo -e " Uptime Kuma: \e[4mhttp://${IP}:3001\e[0m"
+echo -e " ntfy:        \e[4mhttp://${IP}:8080\e[0m"

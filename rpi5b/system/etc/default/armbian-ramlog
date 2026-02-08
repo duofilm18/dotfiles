@@ -1,0 +1,10 @@
+# Armbian RAM 日誌設定
+# 將 /var/log 掛載到 RAM，定期同步到 SD 卡
+
+ENABLED=true
+SIZE=50M
+USE_RSYNC=true
+XTRA_RSYNC_FROM=()
+
+# 如果有外接 NVMe，可以將長期日誌存到 NVMe
+# HDD_LOG=/mnt/nvme/log

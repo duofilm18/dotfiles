@@ -38,7 +38,7 @@ dotfiles/
 │   ├── qwen-stop-summary.sh
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
-│   ├── setup-rpi5b-mqtt.sh
+│   ├── setup-rpi5b.sh
 │   ├── test-mqtt.sh
 │   └── update-readme.sh
 ├── shared/
@@ -53,12 +53,24 @@ dotfiles/
 
 ## 使用方式
 
-### 快速安裝
+### 快速安裝（WSL）
 
 ```bash
 git clone https://github.com/duofilm18/dotfiles.git ~/dotfiles
 ~/dotfiles/scripts/install.sh
 ```
+
+### RPi5B 一鍵部署
+
+SD 卡壞了？新的 Pi 要設定？一個指令搞定：
+
+```bash
+~/dotfiles/scripts/setup-rpi5b.sh
+```
+
+會依序安裝：系統設定 → Pi-hole → Docker → MQTT → Tailscale → crontab
+
+需要互動的步驟會暫停提示，不會跳過。
 
 ### 安全審查工具
 
@@ -75,8 +87,8 @@ git clone https://github.com/duofilm18/dotfiles.git ~/dotfiles
 讓 Claude Code 在需要你注意時，透過 MQTT 發送手機通知 + LED 燈效。
 
 ```bash
-# 1. 部署 MQTT 服務到 rpi5b（一次性）
-~/dotfiles/scripts/setup-rpi5b-mqtt.sh
+# 1. 部署 RPi5B（包含 MQTT 服務）
+~/dotfiles/scripts/setup-rpi5b.sh
 
 # 2. 複製模板並修改設定
 cp ~/dotfiles/wsl/claude-hooks.json.example ~/dotfiles/wsl/claude-hooks.json
@@ -134,9 +146,7 @@ notify.sh 會自動：
 | ntfy | 8080 | 手機推播引擎 |
 | mqtt-led | — | MQTT → GPIO（LED + 蜂鳴器） |
 | mqtt-ntfy | — | MQTT → ntfy 橋接 |
-| Homepage | 3000 | 儀表板 |
 | Uptime Kuma | 3001 | 監控服務 |
-| Portainer | 9000 | Docker 管理 |
 
 ### 測試指令
 

@@ -1,0 +1,38 @@
+# ============================================
+# RPi5B Docker 服務
+# ============================================
+#
+# 只保留必要服務：uptime-kuma + ntfy
+# Portainer / Homepage 已移除（不常用）
+#
+# 部署：docker compose up -d
+#
+
+services:
+  # === 監控服務 ===
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
+  # === 通知服務 ===
+  ntfy:
+    image: binwiederhier/ntfy
+    container_name: ntfy
+    restart: unless-stopped
+    command: serve --listen-http=:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ntfy:/etc/ntfy
+      - ntfy-cache:/var/cache/ntfy
+    environment:
+      - TZ=Asia/Taipei
+
+volumes:
+  uptime-kuma-data:
+  ntfy-cache:

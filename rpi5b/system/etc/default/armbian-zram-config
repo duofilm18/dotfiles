@@ -1,0 +1,12 @@
+# Armbian zram 設定
+# zram 是壓縮的 RAM 區塊裝置，用於 swap 和日誌
+
+ENABLED=true
+
+# 以下為預設值，如需調整請取消註解
+# ZRAM_PERCENTAGE=50        # zram 佔實體 RAM 的百分比
+# MEM_LIMIT_PERCENTAGE=50   # 記憶體使用上限
+# ZRAM_MAX_DEVICES=4        # 最大 zram 裝置數
+# SWAP_ALGORITHM=lzo        # swap 壓縮演算法
+# RAMLOG_ALGORITHM=zstd     # 日誌壓縮演算法
+# TMP_ALGORITHM=zstd        # /tmp 壓縮演算法

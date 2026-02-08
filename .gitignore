@@ -14,8 +14,9 @@ rpi5b/mqtt-ntfy/config.json
 *.log
 logs/
 
-# Docker volumes
+# Docker volumes / cache
 volumes/
+rpi5b/docker/ntfy/cache/
 
 # Python
 __pycache__/

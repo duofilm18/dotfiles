@@ -1,0 +1,7 @@
+base-url: "http://192.168.88.10:8080"
+cache-file: "/var/cache/ntfy/cache.db"
+cache-duration: "12h"
+behind-proxy: false
+
+# iOS 即時推送需要透過 ntfy.sh 轉發
+upstream-base-url: "https://ntfy.sh"
