@@ -51,6 +51,11 @@ $RESULT"
 
     "$SCRIPT_DIR/notify.sh" stop "✅ Claude 完成回應" "$NOTIFY_BODY"
 
+    # Rainbow（3輪×7色×1秒=21秒）跑完後自動切換 idle 呼吸燈
+    # 用 marker 檔避免跟新訊息衝突（UserPromptSubmit 會刪除）
+    touch /tmp/claude-idle-pending
+    (sleep 22 && [ -f /tmp/claude-idle-pending ] && "$SCRIPT_DIR/notify.sh" idle) &
+
 } 200>"$LOCK_FILE"
 
 exit 0
