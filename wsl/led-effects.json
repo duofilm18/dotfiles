@@ -4,6 +4,6 @@
   "stop":       {"r": 0,   "g": 0,   "b": 0,   "pattern": "rainbow", "times": 3,   "interval": 1.0},
   "permission": {"r": 255, "g": 0,   "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.3},
   "advisor":    {"r": 0,   "g": 0,   "b": 255, "pattern": "solid",   "duration": 1},
-  "idle":       {"r": 255, "g": 165, "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.5},
+  "idle":       {"r": 255, "g": 13,  "b": 0,   "pattern": "pulse",   "times": 999, "interval": 3.0},
   "off":        {"r": 0,   "g": 0,   "b": 0,   "pattern": "solid",   "duration": 1}
 }
