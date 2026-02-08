@@ -3,7 +3,7 @@
   "running":    {"r": 0,   "g": 255, "b": 0,   "pattern": "pulse",   "times": 999, "interval": 2.0},
   "stop":       {"r": 0,   "g": 0,   "b": 0,   "pattern": "rainbow", "times": 3,   "interval": 1.0},
   "permission": {"r": 255, "g": 0,   "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.3},
-  "advisor":    {"r": 0,   "g": 0,   "b": 255, "pattern": "pulse",   "times": 999, "interval": 2.0},
+  "advisor":    {"r": 0,   "g": 0,   "b": 255, "pattern": "solid",   "duration": 1},
   "idle":       {"r": 255, "g": 165, "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.5},
   "off":        {"r": 0,   "g": 0,   "b": 0,   "pattern": "solid",   "duration": 1}
 }

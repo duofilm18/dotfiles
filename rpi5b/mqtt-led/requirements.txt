@@ -1,2 +1,3 @@
 paho-mqtt>=1.6
 lgpio>=0.2
+gpiozero>=2.0
