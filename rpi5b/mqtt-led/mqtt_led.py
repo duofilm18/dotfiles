@@ -4,10 +4,11 @@
 Pure slave：收到什麼指令就執行什麼，不含業務邏輯。
 所有燈效決策由 WSL (Master) 負責。
 
-使用 lgpio 直接控制 GPIO（gpiozero RGBLED 在 lgpio 後端有相容問題）。
+使用 lgpio PWM 控制 GPIO，支援全彩漸變和平滑呼吸燈。
 
 Topics:
     claude/led     - RGB LED 控制 {r, g, b, pattern, times, duration, interval}
+                     pattern: blink, solid, pulse, rainbow
     claude/buzzer  - 蜂鳴器控制 {frequency, duration}
 """
 
@@ -33,11 +34,12 @@ _h = lgpio.gpiochip_open(GPIO_CHIP)
 _pins = {"red": gpio["red"], "green": gpio["green"], "blue": gpio["blue"]}
 _buzzer_pin = gpio["buzzer"]
 
-# 初始化：LED 全滅，蜂鳴器關
-_OFF = 1 if COMMON_ANODE else 0
-_ON = 0 if COMMON_ANODE else 1
+# PWM 設定
+_PWM_FREQ = 1000  # 1kHz，LED 無閃爍感
+
+# 初始化：LED 全滅（PWM duty=0），蜂鳴器關
 for pin in _pins.values():
-    lgpio.gpio_claim_output(_h, pin, _OFF)
+    lgpio.tx_pwm(_h, pin, _PWM_FREQ, 0)
 lgpio.gpio_claim_output(_h, _buzzer_pin, 0)
 
 # 用來取消正在執行的燈效
@@ -45,18 +47,30 @@ _cancel = threading.Event()
 
 
 def _led_set(r, g, b):
-    """設定 LED 顏色 (0.0~1.0)，gpio_write 開關"""
+    """設定 LED 顏色 (0.0~1.0)，PWM 控制亮度"""
     for val, pin in [(r, _pins["red"]), (g, _pins["green"]), (b, _pins["blue"])]:
-        if val > 0.5:
-            lgpio.gpio_write(_h, pin, _ON)
-        else:
-            lgpio.gpio_write(_h, pin, _OFF)
+        duty = val * 100.0  # 0.0~1.0 → 0~100%
+        if COMMON_ANODE:
+            duty = 100.0 - duty  # 共陽極：duty 反轉
+        lgpio.tx_pwm(_h, pin, _PWM_FREQ, duty)
 
 
 def _led_off():
     """LED 全滅"""
+    off_duty = 100.0 if COMMON_ANODE else 0.0
     for pin in _pins.values():
-        lgpio.gpio_write(_h, pin, _OFF)
+        lgpio.tx_pwm(_h, pin, _PWM_FREQ, off_duty)
+
+
+_RAINBOW_COLORS = [
+    (1, 0, 0),  # 紅
+    (1, 1, 0),  # 黃
+    (0, 1, 0),  # 綠
+    (0, 1, 1),  # 青
+    (0, 0, 1),  # 藍
+    (1, 0, 1),  # 紫
+    (1, 1, 1),  # 白
+]
 
 
 def _run_effect(r, g, b, pattern, times, duration, interval=0.3):
@@ -77,21 +91,34 @@ def _run_effect(r, g, b, pattern, times, duration, interval=0.3):
         _led_set(r, g, b)
         _cancel.wait(timeout=duration)
     elif pattern == "pulse":
+        # interval 控制一次完整呼吸的秒數（漸亮 + 漸暗）
+        # 50 步漸亮 + 50 步漸暗 = 100 步
+        steps = 50
+        step_delay = interval / (steps * 2) if interval > 0 else 0.02
         for _ in range(times):
             if _cancel.is_set():
                 break
-            for i in range(0, 11):
+            for i in range(steps + 1):
                 if _cancel.is_set():
                     break
-                ratio = i / 10.0
+                ratio = i / float(steps)
                 _led_set(r * ratio, g * ratio, b * ratio)
-                time.sleep(0.05)
-            for i in range(10, -1, -1):
+                time.sleep(step_delay)
+            for i in range(steps, -1, -1):
                 if _cancel.is_set():
                     break
-                ratio = i / 10.0
+                ratio = i / float(steps)
                 _led_set(r * ratio, g * ratio, b * ratio)
-                time.sleep(0.05)
+                time.sleep(step_delay)
+    elif pattern == "rainbow":
+        # 七色輪流閃，跑 times 輪後自動關燈
+        for _ in range(times):
+            for cr, cg, cb in _RAINBOW_COLORS:
+                if _cancel.is_set():
+                    break
+                _led_set(cr, cg, cb)
+                if _cancel.wait(timeout=interval):
+                    break
 
     _led_off()
 

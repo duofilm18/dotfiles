@@ -118,22 +118,23 @@ notify.sh 會自動：
 | Topic | 用途 | Payload |
 |-------|------|---------|
 | `claude/notify` | 手機推播 | `{"title": "...", "body": "..."}` |
-| `claude/led` | RGB LED | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "blink\|solid\|pulse", "times": N, "duration": N, "interval": N}` |
+| `claude/led` | RGB LED | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "blink\|solid\|pulse\|rainbow", "times": N, "duration": N, "interval": N}` |
 | `claude/buzzer` | 蜂鳴器 | `{"frequency": Hz, "duration": ms}` |
 
 ### LED 燈效對應
 
 可修改 `wsl/led-effects.json`（修改後不需重啟任何服務）：
 
-| 事件 | 顏色 | 效果 |
-|------|------|------|
-| Claude 完成回應 (stop) | 綠色 | 持續閃爍 |
-| 需要權限確認 (permission) | 紅色 | 持續閃爍 |
-| Qwen 專家分析 (advisor) | 藍色 | 持續閃爍 |
-| Claude 閒置 (idle) | 橘色 | 持續閃爍 |
-| 關燈 (off) | — | 熄滅 |
+| 事件 | 顏色 | 效果 | 含義 |
+|------|------|------|------|
+| Claude 執行中 (running) | 綠色 | 慢呼吸 | 在跑，不用管 |
+| Claude 完成 (stop) | 七色 | 彩虹閃 3 輪 → 關燈 | 做完了 |
+| 需要權限 (permission) | 紅色 | 快閃 + 嗶 | 卡住了，快來 |
+| Qwen 分析 (advisor) | 藍色 | 慢呼吸 | 背景處理，不用管 |
+| 閒置提醒 (idle) | 橘色 | 閃爍 | 60 秒沒操作，提醒回來 |
+| 關燈 (off) | — | 熄滅 | — |
 
-> **重要規則：閃燈必須持續閃爍（times 設 999），不要只閃幾下。** 使用者可能戴耳機看影片，只閃幾下看不到。下一個事件會自動覆蓋前一個燈效。
+> **設計原則：blink 只給需要提醒的狀態（permission, idle），背景處理用 pulse 呼吸燈。** 下一個事件會自動覆蓋前一個燈效。
 
 接線方式見 `rpi5b/mqtt-led/config.json.example`。
 目前使用共陰極 RGB LED（麵包板 + 電阻），`common_anode: false`。

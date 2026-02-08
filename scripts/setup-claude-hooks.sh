@@ -60,6 +60,18 @@ echo "   MQTT Port: $MQTT_PORT"
 NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/notify.sh running",
+            "async": true
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Bash|Edit|Write|Read",
@@ -131,10 +143,11 @@ echo "  ✅ Claude Code Hooks 設定完成！"
 echo "=========================================="
 echo ""
 echo "📋 已設定的 Hooks："
-echo "   • Stop          → Qwen 總結 + MQTT 通知 + LED"
-echo "   • idle_prompt   → MQTT 通知 + LED"
-echo "   • permission    → Qwen 分析 + MQTT 通知 + LED"
-echo "   • PostToolUse   → Qwen 專家分析 + MQTT 通知 + LED"
+echo "   • UserPromptSubmit → 綠色呼吸燈（running）"
+echo "   • Stop             → 七色彩虹閃（完成）+ Qwen 總結"
+echo "   • idle_prompt      → 橘色閃爍（提醒回來）"
+echo "   • permission       → 紅色閃爍 + 嗶（等你授權）"
+echo "   • PostToolUse      → 藍色呼吸燈（Qwen 分析）"
 echo ""
 echo "測試："
 echo "  mosquitto_pub -h $MQTT_HOST -p $MQTT_PORT -t claude/notify \\"
