@@ -1,0 +1,16 @@
+[Unit]
+Description=MQTT ntfy Bridge
+After=mosquitto.service
+Requires=mosquitto.service
+
+[Service]
+Type=simple
+User={{ ansible_user }}
+WorkingDirectory={{ mqtt_ntfy_dir }}
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 {{ mqtt_ntfy_dir }}/mqtt_ntfy.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

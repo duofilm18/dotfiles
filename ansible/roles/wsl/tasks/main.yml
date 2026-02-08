@@ -1,0 +1,68 @@
+---
+# roles/wsl - WSL 開發環境設定
+
+- name: Install base packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - git
+      - vim
+      - tmux
+      - curl
+      - build-essential
+      - jq
+      - zstd
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure Git user.name
+  community.general.git_config:
+    name: user.name
+    value: "{{ git_user_name }}"
+    scope: global
+
+- name: Configure Git user.email
+  community.general.git_config:
+    name: user.email
+    value: "{{ git_user_email }}"
+    scope: global
+
+- name: Configure Git core.editor
+  community.general.git_config:
+    name: core.editor
+    value: vim
+    scope: global
+
+- name: Configure Git credential.helper
+  community.general.git_config:
+    name: credential.helper
+    value: "cache --timeout 86400"
+    scope: global
+
+- name: Configure Git aliases
+  community.general.git_config:
+    name: "alias.{{ item.key }}"
+    value: "{{ item.value }}"
+    scope: global
+  loop:
+    - { key: co, value: checkout }
+    - { key: ci, value: commit }
+    - { key: st, value: status }
+    - { key: br, value: branch }
+    - { key: lg, value: "log --graph --pretty=format:'%Cred%h - %Cgreen[%an]%Creset -%C(yellow)%d%Creset %s %C(yellow)<%cr>%Creset' --abbrev-commit --date=relative" }
+
+- name: Setup Git pre-commit hook
+  ansible.builtin.copy:
+    dest: "{{ dotfiles_local }}/.git/hooks/pre-commit"
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      # pre-commit hook - 自動更新 README.md 目錄結構
+      ~/dotfiles/scripts/update-readme.sh
+      git add README.md
+
+- name: Install Ollama
+  ansible.builtin.shell: curl -fsSL https://ollama.com/install.sh | sh
+  args:
+    creates: /usr/local/bin/ollama

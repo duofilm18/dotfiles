@@ -26,7 +26,11 @@
 ```
 dotfiles/
 ├── .claude/skills/   # Claude AI 技能
-├── scripts/          # 安裝腳本
+├── ansible/          # Ansible 自動化部署
+│   ├── roles/        # common, wsl, rpi_*, tinkerboard
+│   ├── site.yml      # 主 playbook
+│   └── rpi5b.yml     # RPi5B playbook
+├── scripts/          # Shell 安裝腳本（備援）
 ├── shared/           # 共用配置 (vim, tmux)
 └── wsl/              # WSL 專用配置 + Claude hooks
 ```
@@ -34,11 +38,13 @@ dotfiles/
 ## 常用指令
 
 ```bash
-# 安裝環境
-~/dotfiles/scripts/install.sh
+# Ansible 部署（推薦）
+cd ~/dotfiles/ansible && ansible-playbook site.yml
+ansible-playbook rpi5b.yml --tags mqtt
 
-# 安裝 Docker
-~/dotfiles/scripts/install-docker.sh
+# Shell 備援
+~/dotfiles/scripts/install.sh
+~/dotfiles/scripts/setup-rpi5b.sh
 
 # 設定 Claude Hooks
 ~/dotfiles/scripts/setup-claude-hooks.sh

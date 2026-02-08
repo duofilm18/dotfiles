@@ -1,0 +1,7 @@
+# RPi5B 機器特定變數
+# 複製為 rpi5b.yml 並填入實際值
+
+# Uptime Kuma Push URLs（含 API token）
+uptime_kuma_url_temp: "http://192.168.88.10:3001/api/push/CHANGE_ME"
+uptime_kuma_url_cpu: "http://192.168.88.10:3001/api/push/CHANGE_ME"
+uptime_kuma_url_ram: "http://192.168.88.10:3001/api/push/CHANGE_ME"

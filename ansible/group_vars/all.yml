@@ -1,0 +1,4 @@
+# 共用變數
+dotfiles_repo: https://github.com/duofilm18/dotfiles.git
+dotfiles_local: "{{ lookup('env', 'HOME') }}/dotfiles"
+timezone: Asia/Taipei

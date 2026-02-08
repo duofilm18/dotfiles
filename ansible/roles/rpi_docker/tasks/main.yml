@@ -1,0 +1,27 @@
+---
+# roles/rpi_docker - Docker + docker-compose 服務
+
+- name: Check if Docker is installed
+  ansible.builtin.command: docker --version
+  register: docker_check
+  changed_when: false
+  failed_when: false
+  tags: [docker]
+
+- name: Install Docker
+  ansible.builtin.shell: curl -fsSL https://get.docker.com | sh
+  when: docker_check.rc != 0
+  tags: [docker]
+
+- name: Ensure Docker is enabled and started
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+  tags: [docker]
+
+- name: Start Docker Compose services (uptime-kuma + ntfy)
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_compose_dir }}"
+    state: present
+  tags: [docker, compose]

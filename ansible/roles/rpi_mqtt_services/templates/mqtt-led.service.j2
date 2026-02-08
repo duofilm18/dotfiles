@@ -1,0 +1,17 @@
+[Unit]
+Description=MQTT LED Service - GPIO Control
+After=mosquitto.service
+Requires=mosquitto.service
+
+[Service]
+Type=simple
+User={{ ansible_user }}
+WorkingDirectory={{ mqtt_led_dir }}
+Environment=GPIOZERO_PIN_FACTORY=lgpio
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 {{ mqtt_led_dir }}/mqtt_led.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

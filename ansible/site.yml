@@ -1,0 +1,8 @@
+---
+# 主 Playbook - 部署全部機器
+
+- name: Deploy WSL
+  import_playbook: wsl.yml
+
+- name: Deploy RPi5B
+  import_playbook: rpi5b.yml

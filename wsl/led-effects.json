@@ -1,6 +1,6 @@
 {
   "_rule": "閃燈必須持續閃爍（times 設大數），直到下一個事件覆蓋。不要只閃幾下。",
-  "stop":       {"r": 0,   "g": 255, "b": 0,   "pattern": "blink", "times": 999},
+  "stop":       {"r": 0,   "g": 255, "b": 0,   "pattern": "blink", "times": 999, "interval": 1.0},
   "permission": {"r": 255, "g": 0,   "b": 0,   "pattern": "blink", "times": 999},
   "advisor":    {"r": 0,   "g": 0,   "b": 255, "pattern": "blink", "times": 999},
   "idle":       {"r": 255, "g": 165, "b": 0,   "pattern": "blink", "times": 999},

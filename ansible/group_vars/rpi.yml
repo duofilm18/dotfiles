@@ -1,0 +1,16 @@
+# RPi 家族共用變數
+remote_dotfiles: "{{ ansible_env.HOME }}/dotfiles"
+mqtt_broker: localhost
+mqtt_port: 1883
+
+# Docker Compose 服務
+docker_compose_dir: "{{ remote_dotfiles }}/rpi5b/docker"
+
+# MQTT 服務部署路徑
+mqtt_led_dir: "{{ ansible_env.HOME }}/mqtt-led"
+mqtt_ntfy_dir: "{{ ansible_env.HOME }}/mqtt-ntfy"
+
+# 系統監控閾值
+temp_warn: 70
+cpu_warn: 80
+ram_warn: 90

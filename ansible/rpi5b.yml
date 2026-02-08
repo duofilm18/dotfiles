@@ -1,0 +1,45 @@
+---
+# RPi5B 完整部署
+- name: Deploy RPi5B
+  hosts: rpi5b
+  gather_facts: true
+
+  pre_tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+  roles:
+    - rpi_system
+    - rpi_docker
+    - rpi_mosquitto
+    - rpi_mqtt_services
+    - rpi_tailscale
+    - rpi_crontab
+    - rpi_cleanup
+
+  post_tasks:
+    - name: Show service status
+      ansible.builtin.shell: |
+        echo '--- systemd ---'
+        for svc in mosquitto mqtt-led mqtt-ntfy pihole-FTL; do
+          status=$(systemctl is-active $svc 2>/dev/null || echo 'inactive')
+          printf '  %-15s %s\n' $svc $status
+        done
+        echo ''
+        echo '--- docker ---'
+        docker ps --format '  {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}' 2>/dev/null || true
+      register: service_status
+      changed_when: false
+
+    - name: Display service status
+      ansible.builtin.debug:
+        msg: "{{ service_status.stdout_lines }}"
+
+    - name: Remind manual checks
+      ansible.builtin.debug:
+        msg:
+          - "手動檢查事項："
+          - "1. push-temp.sh 的 Uptime Kuma Push URLs（含 API token）"
+          - "2. mqtt-led/config.json 的 GPIO 接線設定"
+          - "3. mqtt-ntfy/config.json 的 ntfy URL"
+          - "4. fstab 根目錄掛載加上 noatime,commit=3600"

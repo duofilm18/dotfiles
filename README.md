@@ -118,7 +118,7 @@ notify.sh 會自動：
 | Topic | 用途 | Payload |
 |-------|------|---------|
 | `claude/notify` | 手機推播 | `{"title": "...", "body": "..."}` |
-| `claude/led` | RGB LED | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "blink\|solid\|pulse", "times": N, "duration": N}` |
+| `claude/led` | RGB LED | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "blink\|solid\|pulse", "times": N, "duration": N, "interval": N}` |
 | `claude/buzzer` | 蜂鳴器 | `{"frequency": Hz, "duration": ms}` |
 
 ### LED 燈效對應
@@ -163,6 +163,31 @@ sudo apt install mosquitto-clients
 ~/dotfiles/scripts/test-mqtt.sh buzzer   # 蜂鳴器
 ~/dotfiles/scripts/test-mqtt.sh off      # 關燈
 ```
+
+### Ansible 部署（推薦）
+
+統一管理 WSL、RPi5B、Tinkerboard，可取代 shell script 部署。
+
+```bash
+# 安裝 Ansible
+sudo apt install ansible
+ansible-galaxy collection install ansible.posix community.docker
+
+# 部署全部機器
+cd ~/dotfiles/ansible && ansible-playbook site.yml
+
+# 只部署特定機器
+ansible-playbook rpi5b.yml
+ansible-playbook wsl.yml
+
+# 只跑特定步驟
+ansible-playbook rpi5b.yml --tags mqtt
+
+# 乾跑模式（不會實際修改）
+ansible-playbook rpi5b.yml --check --diff
+```
+
+> 機器特定敏感值（Uptime Kuma token 等）放在 `ansible/host_vars/rpi5b.yml`（已 gitignore），模板見 `rpi5b.yml.example`。
 
 ---
 

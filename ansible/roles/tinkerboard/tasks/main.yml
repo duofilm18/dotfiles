@@ -1,0 +1,7 @@
+---
+# roles/tinkerboard - 佔位，之後定義
+# TODO: 定義 Tinkerboard 的部署步驟
+
+- name: Tinkerboard placeholder
+  ansible.builtin.debug:
+    msg: "Tinkerboard role 尚未定義，請根據需求新增 tasks"

@@ -7,7 +7,7 @@ Pure slave：收到什麼指令就執行什麼，不含業務邏輯。
 使用 lgpio 直接控制 GPIO（gpiozero RGBLED 在 lgpio 後端有相容問題）。
 
 Topics:
-    claude/led     - RGB LED 控制 {r, g, b, pattern, times, duration}
+    claude/led     - RGB LED 控制 {r, g, b, pattern, times, duration, interval}
     claude/buzzer  - 蜂鳴器控制 {frequency, duration}
 """
 
@@ -59,7 +59,7 @@ def _led_off():
         lgpio.gpio_write(_h, pin, _OFF)
 
 
-def _run_effect(r, g, b, pattern, times, duration):
+def _run_effect(r, g, b, pattern, times, duration, interval=0.3):
     """執行燈效，支援中途取消"""
     _cancel.clear()
 
@@ -68,10 +68,10 @@ def _run_effect(r, g, b, pattern, times, duration):
             if _cancel.is_set():
                 break
             _led_set(r, g, b)
-            if _cancel.wait(timeout=0.3):
+            if _cancel.wait(timeout=interval):
                 break
             _led_off()
-            if _cancel.wait(timeout=0.3):
+            if _cancel.wait(timeout=interval):
                 break
     elif pattern == "solid":
         _led_set(r, g, b)
@@ -125,11 +125,12 @@ def on_message(client, userdata, msg):
         pattern = data.get("pattern", "solid")
         times = data.get("times", 1)
         duration = data.get("duration", 5)
+        interval = data.get("interval", 0.3)
 
         _cancel.set()
         threading.Thread(
             target=_run_effect,
-            args=(r, g, b, pattern, times, duration),
+            args=(r, g, b, pattern, times, duration, interval),
             daemon=True,
         ).start()
 

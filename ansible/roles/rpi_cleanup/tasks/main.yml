@@ -1,0 +1,27 @@
+---
+# roles/rpi_cleanup - 停用 rfkill + 清舊目錄
+
+- name: Check if unblock-rfkill exists
+  ansible.builtin.command: systemctl is-enabled unblock-rfkill
+  register: rfkill_check
+  changed_when: false
+  failed_when: false
+  tags: [cleanup]
+
+- name: Disable unblock-rfkill
+  ansible.builtin.systemd:
+    name: unblock-rfkill
+    enabled: false
+    state: stopped
+  when: rfkill_check.rc == 0
+  ignore_errors: true
+  tags: [cleanup]
+
+- name: Remove old repositories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /root/rpi-config
+    - /root/uptime-kuma
+  tags: [cleanup]

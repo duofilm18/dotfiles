@@ -1,0 +1,4 @@
+# WSL 變數
+git_user_name: duofilm18
+git_user_email: duofilm18@gmail.com
+ollama_model: "qwen2.5-coder:1.5b"
