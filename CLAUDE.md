@@ -38,6 +38,9 @@ dotfiles/
 ## 常用指令
 
 ```bash
+# SSH 連線 RPi5B
+ssh root@192.168.88.10
+
 # Ansible 部署（推薦）
 cd ~/dotfiles/ansible && ansible-playbook site.yml
 ansible-playbook rpi5b.yml --tags mqtt
@@ -55,13 +58,26 @@ ansible-playbook rpi5b.yml --tags mqtt
 
 ---
 
-## ⚠️ Tailscale 連線限制
+## 環境備註
 
-| 類型 | 範例 | 狀態 |
-|------|------|------|
-| Tailscale IP | `http://100.105.101.50:8080` | ❌ 不可用 |
-| Magic DNS | `http://rpi5b.tail77f91d.ts.net:8080` | ❌ 不可用 |
+- **Docker 只跑在 RPi5B 上**，WSL 不跑 Docker，所以 WSL2 mirrored networking mode 不會有衝突
+- WSL2 已設定 `networkingMode=mirrored`，可直連區網 `192.168.88.x`
+- **⚠️ WSL 的 Tailscale 絕不要 `--accept-routes=true`**——會建立 fwmark policy route 黑洞，導致區網連線全斷。詳見 [wsl-lan-connectivity.md](.claude/skills/wsl-lan-connectivity.md)
 
-**正確方式**：使用 subnet routing 透過 `http://192.168.88.10:<port>`
+## WSL → RPi5B 連線方式
 
-詳細說明：[tailscale-route-conflict.md](.claude/skills/tailscale-route-conflict.md#⚠️-tailscale-連線限制重要)
+WSL 透過 **mirrored networking 直連 LAN**，不經過 Tailscale：
+
+```bash
+# 正確：直接用 LAN IP
+ssh root@192.168.88.10
+curl http://192.168.88.10:8080
+```
+
+| 方式 | 範例 | 狀態 | 說明 |
+|------|------|------|------|
+| LAN IP | `192.168.88.10` | ✅ 正確 | mirrored networking 直連 |
+| Tailscale IP | `100.103.230.107` | ❌ 不通 | WSL 未開 accept-routes，預期行為 |
+| Magic DNS | `rpi5b.tail77f91d.ts.net` | ❌ 不通 | 同上 |
+
+**如果 WSL 突然連不到 RPi5B**，最常見原因是 Tailscale `accept-routes` 被意外開啟。排查步驟見 [wsl-lan-connectivity.md](.claude/skills/wsl-lan-connectivity.md)

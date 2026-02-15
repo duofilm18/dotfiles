@@ -94,13 +94,14 @@ sudo tailscale up --advertise-routes=  # 清除所有路由
 sudo tailscale up --advertise-routes=192.168.1.0/24
 ```
 
-### 方案 B：在客戶端停用特定 Subnet Route
+### 方案 B：在客戶端停用 Subnet Route
 
 ```bash
-# 在客戶端停用接收特定的 subnet route
-# （需要 Tailscale 較新版本支援）
+# 在客戶端停用接收 subnet route
 tailscale up --accept-routes=false
 ```
+
+**⚠️ WSL2 必須使用此方案**：WSL 透過 mirrored networking 直連 LAN，開啟 `accept-routes` 會建立 fwmark policy route 黑洞，導致區網全斷。詳見 [wsl-lan-connectivity.md](./wsl-lan-connectivity.md)
 
 ### 方案 C：腳本自動修復（Windows）
 
@@ -202,8 +203,10 @@ http://192.168.88.10:8080
 **前提條件：**
 1. RPI5B 需廣播路由：`tailscale up --advertise-routes=192.168.88.0/24`
 2. 在 Tailscale Admin Console 核准該路由
-3. 客戶端需啟用：`tailscale up --accept-routes=true`
+3. 遠端客戶端需啟用：`tailscale up --accept-routes=true`
 4. 手機 Tailscale 需開啟「Use Tailscale subnets」選項
+
+**⚠️ WSL2 例外**：WSL 不需要也不應該開 `--accept-routes`，它透過 mirrored networking 已能直連 LAN。開啟會造成黑洞路由。詳見 [wsl-lan-connectivity.md](./wsl-lan-connectivity.md)
 
 ### RPI5B 服務列表（透過 192.168.88.10）
 
