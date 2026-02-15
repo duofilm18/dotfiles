@@ -80,7 +80,7 @@ df -h / /tmp /var/log 2>/dev/null | head -5
 # 7. 服務狀態
 echo ""
 echo "=== 服務狀態 ==="
-for svc in log2ram armbian-ramlog pihole-FTL docker mosquitto mqtt-led mqtt-ntfy; do
+for svc in log2ram armbian-ramlog docker mosquitto mqtt-led mqtt-ntfy; do
     if systemctl is-active --quiet $svc 2>/dev/null; then
         check_pass "$svc 運行中"
     elif systemctl is-enabled --quiet $svc 2>/dev/null; then

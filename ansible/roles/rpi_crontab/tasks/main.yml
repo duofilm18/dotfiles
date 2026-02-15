@@ -8,19 +8,3 @@
     minute: "*"
   tags: [crontab]
 
-- name: Setup Pi-hole gravity update (daily 2am)
-  ansible.builtin.cron:
-    name: "Update Pi-hole blocklist"
-    job: "pihole -g"
-    hour: "2"
-    minute: "0"
-  tags: [crontab]
-
-- name: Setup Pi-hole update (weekly Monday 3am)
-  ansible.builtin.cron:
-    name: "Update Pi-hole"
-    job: "pihole -up"
-    hour: "3"
-    minute: "0"
-    weekday: "1"
-  tags: [crontab]

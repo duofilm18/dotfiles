@@ -21,7 +21,7 @@
     - name: Show service status
       ansible.builtin.shell: |
         echo '--- systemd ---'
-        for svc in mosquitto mqtt-led mqtt-ntfy pihole-FTL; do
+        for svc in mosquitto mqtt-led mqtt-ntfy; do
           status=$(systemctl is-active $svc 2>/dev/null || echo 'inactive')
           printf '  %-15s %s\n' $svc $status
         done
@@ -43,3 +43,5 @@
           - "2. mqtt-led/config.json 的 GPIO 接線設定"
           - "3. mqtt-ntfy/config.json 的 ntfy URL"
           - "4. fstab 根目錄掛載加上 noatime,commit=3600"
+          - "5. Pi-hole Web UI 密碼（PIHOLE_PASSWORD 環境變數）"
+          - "6. 路由器 DHCP DNS 指向 192.168.88.10"

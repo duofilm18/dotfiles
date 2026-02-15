@@ -4,7 +4,7 @@
 # ============================================
 #
 # 從零開始部署 RPi5B 所有服務：
-#   系統設定 → Pi-hole → Docker → MQTT → Tailscale → crontab
+#   系統設定 → Docker（含 Pi-hole）→ MQTT → Tailscale → crontab
 #
 # 用法：~/dotfiles/scripts/setup-rpi5b.sh
 #
@@ -50,7 +50,7 @@ REMOTE_DOTFILES="$REMOTE_HOME/dotfiles"
 # ============================================
 # Step 1: 系統設定
 # ============================================
-step "Step 1/10: 系統設定（boot, fstab, log2ram, sysctl, journald, MOTD）"
+step "Step 1/9: 系統設定（boot, fstab, log2ram, sysctl, journald, MOTD）"
 
 # 同步 rpi5b 目錄到遠端
 info "同步設定檔到 $REMOTE_DOTFILES/rpi5b/..."
@@ -103,24 +103,9 @@ ssh "$RPI_USER@$RPI_HOST" "sudo cp $REMOTE_DOTFILES/rpi5b/system/etc/update-motd
 info "Step 1 完成 ✅"
 
 # ============================================
-# Step 2: Pi-hole（需互動）
+# Step 2: Docker
 # ============================================
-step "Step 2/10: Pi-hole"
-
-if ssh "$RPI_USER@$RPI_HOST" "command -v pihole" &>/dev/null; then
-    info "Pi-hole 已安裝，跳過"
-else
-    warn "Pi-hole 需要互動安裝"
-    echo "請在 RPi 上執行："
-    echo "  ssh $RPI_USER@$RPI_HOST"
-    echo "  curl -sSL https://install.pi-hole.net | bash"
-    pause "Pi-hole 安裝完成後按 Enter 繼續"
-fi
-
-# ============================================
-# Step 3: Docker
-# ============================================
-step "Step 3/10: Docker"
+step "Step 2/9: Docker"
 
 if ssh "$RPI_USER@$RPI_HOST" "command -v docker" &>/dev/null; then
     info "Docker 已安裝，跳過"
@@ -130,18 +115,27 @@ else
 fi
 
 # ============================================
-# Step 4: Docker Compose（uptime-kuma + ntfy）
+# Step 3: Docker Compose（uptime-kuma + ntfy + pihole）
 # ============================================
-step "Step 4/10: Docker Compose 服務（uptime-kuma + ntfy）"
+step "Step 3/9: Docker Compose 服務（uptime-kuma + ntfy + pihole）"
+
+info "停用 systemd-resolved（釋放 port 53 給 Pi-hole）..."
+ssh "$RPI_USER@$RPI_HOST" "
+    if systemctl is-active --quiet systemd-resolved 2>/dev/null; then
+        sudo systemctl disable --now systemd-resolved
+        sudo rm -f /etc/resolv.conf
+        echo 'nameserver 1.1.1.1' | sudo tee /etc/resolv.conf
+    fi
+"
 
 info "部署 docker-compose..."
 ssh "$RPI_USER@$RPI_HOST" "cd $REMOTE_DOTFILES/rpi5b/docker && docker compose up -d"
-info "Step 4 完成 ✅"
+info "Step 3 完成 ✅"
 
 # ============================================
-# Step 5: Mosquitto + lgpio
+# Step 4: Mosquitto + lgpio
 # ============================================
-step "Step 5/10: Mosquitto + lgpio 編譯"
+step "Step 4/9: Mosquitto + lgpio 編譯"
 
 info "安裝系統套件..."
 ssh "$RPI_USER@$RPI_HOST" "sudo apt-get update -qq && sudo apt-get install -y -qq \
@@ -166,12 +160,12 @@ ssh "$RPI_USER@$RPI_HOST" "cd /tmp && rm -rf lg && git clone --depth 1 https://g
 info "升級 gpiozero 到 2.0.1+..."
 ssh "$RPI_USER@$RPI_HOST" "pip3 install --break-system-packages --upgrade gpiozero"
 
-info "Step 5 完成 ✅"
+info "Step 4 完成 ✅"
 
 # ============================================
-# Step 6: mqtt-led + mqtt-ntfy + systemd
+# Step 5: mqtt-led + mqtt-ntfy + systemd
 # ============================================
-step "Step 6/10: MQTT 服務部署（mqtt-led + mqtt-ntfy）"
+step "Step 5/9: MQTT 服務部署（mqtt-led + mqtt-ntfy）"
 
 REMOTE_LED="$REMOTE_HOME/mqtt-led"
 REMOTE_NTFY_SVC="$REMOTE_HOME/mqtt-ntfy"
@@ -248,12 +242,12 @@ EOF
 
 ssh "$RPI_USER@$RPI_HOST" "sudo systemctl daemon-reload && sudo systemctl enable mqtt-led mqtt-ntfy && sudo systemctl restart mqtt-led mqtt-ntfy"
 
-info "Step 6 完成 ✅"
+info "Step 5 完成 ✅"
 
 # ============================================
-# Step 7: Tailscale（需手動登入）
+# Step 6: Tailscale（需手動登入）
 # ============================================
-step "Step 7/10: Tailscale"
+step "Step 6/9: Tailscale"
 
 if ssh "$RPI_USER@$RPI_HOST" "command -v tailscale" &>/dev/null; then
     info "Tailscale 已安裝"
@@ -267,28 +261,22 @@ else
 fi
 
 # ============================================
-# Step 8: Crontab
+# Step 7: Crontab
 # ============================================
-step "Step 8/10: Crontab"
+step "Step 7/9: Crontab"
 
 info "設定 crontab..."
 ssh "$RPI_USER@$RPI_HOST" "crontab -" <<'CRON'
 # 每分鐘推送系統狀態到 Uptime Kuma
 * * * * * /root/dotfiles/rpi5b/scripts/push-temp.sh
-
-# 每天凌晨 2 點更新 Pi-hole 阻擋列表
-0 2 * * * pihole -g
-
-# 每週一凌晨 3 點更新 Pi-hole
-0 3 * * 1 pihole -up
 CRON
 
-info "Step 8 完成 ✅"
+info "Step 7 完成 ✅"
 
 # ============================================
-# Step 9: 停用 unblock-rfkill
+# Step 8: 停用 unblock-rfkill
 # ============================================
-step "Step 9/10: 停用 unblock-rfkill"
+step "Step 8/9: 停用 unblock-rfkill"
 
 ssh "$RPI_USER@$RPI_HOST" "
     if systemctl is-enabled unblock-rfkill &>/dev/null; then
@@ -300,12 +288,12 @@ ssh "$RPI_USER@$RPI_HOST" "
     fi
 "
 
-info "Step 9 完成 ✅"
+info "Step 8 完成 ✅"
 
 # ============================================
-# Step 10: 清理舊 repo
+# Step 9: 清理舊 repo
 # ============================================
-step "Step 10/10: 清理舊 repo"
+step "Step 9/9: 清理舊 repo"
 
 ssh "$RPI_USER@$RPI_HOST" "
     for dir in /root/rpi-config /root/uptime-kuma; do
@@ -321,7 +309,7 @@ ssh "$RPI_USER@$RPI_HOST" "
     fi
 "
 
-info "Step 10 完成 ✅"
+info "Step 9 完成 ✅"
 
 # ============================================
 # 完成
@@ -334,7 +322,7 @@ echo ""
 echo "服務狀態："
 ssh "$RPI_USER@$RPI_HOST" "
     echo '--- systemd ---'
-    for svc in mosquitto mqtt-led mqtt-ntfy pihole-FTL; do
+    for svc in mosquitto mqtt-led mqtt-ntfy; do
         status=\$(systemctl is-active \$svc 2>/dev/null || echo 'inactive')
         printf '  %-15s %s\n' \$svc \$status
     done
@@ -349,6 +337,8 @@ echo "  1. push-temp.sh 的 Uptime Kuma Push URLs（含 API token）"
 echo "  2. mqtt-led/config.json 的 GPIO 接線設定"
 echo "  3. mqtt-ntfy/config.json 的 ntfy URL"
 echo "  4. fstab 根目錄掛載加上 noatime,commit=3600"
+echo "  5. Pi-hole Web UI 密碼（PIHOLE_PASSWORD 環境變數，預設 changeme）"
+echo "  6. 路由器 DHCP DNS 指向 192.168.88.10"
 echo ""
 echo "測試指令："
 echo "  ~/dotfiles/scripts/test-mqtt.sh"

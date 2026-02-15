@@ -20,7 +20,21 @@
     state: started
   tags: [docker]
 
-- name: Start Docker Compose services (uptime-kuma + ntfy)
+- name: Disable systemd-resolved (free port 53 for Pi-hole)
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    enabled: false
+    state: stopped
+  failed_when: false
+  tags: [docker, pihole]
+
+- name: Set static resolv.conf
+  ansible.builtin.copy:
+    content: "nameserver 1.1.1.1\n"
+    dest: /etc/resolv.conf
+  tags: [docker, pihole]
+
+- name: Start Docker Compose services (uptime-kuma + ntfy + pihole)
   community.docker.docker_compose_v2:
     project_src: "{{ docker_compose_dir }}"
     state: present
