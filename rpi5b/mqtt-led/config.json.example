@@ -19,7 +19,7 @@
     "buzzer": 18
   },
   "common_anode": true,
-  "gpio_chip": 4,
+  "gpio_chip": 0,
   "mqtt_broker": "localhost",
   "mqtt_port": 1883
 }

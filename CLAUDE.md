@@ -13,6 +13,7 @@
 | [add-hook](.claude/skills/add-hook.md) | 新增 Claude Code Hook |
 | [tailscale-route-conflict](.claude/skills/tailscale-route-conflict.md) | Tailscale 路由衝突診斷與修復 |
 | [wsl-lan-connectivity](.claude/skills/wsl-lan-connectivity.md) | WSL2 無法連線本地區網的排查 |
+| [pihole-tplink](.claude/skills/pihole-tplink.md) | Pi-hole + TP-Link 路由器廣告攔截設定與排查 |
 
 ## 規則
 
@@ -60,6 +61,7 @@ ansible-playbook rpi5b.yml --tags mqtt
 
 ## 環境備註
 
+- **Pi-hole 跑在 RPi5B Docker 上**（`192.168.88.10:53`），TP-Link 路由器 DHCP 的主要 DNS 指向它，次要 DNS **必須留空**。設定與排查詳見 [pihole-tplink.md](.claude/skills/pihole-tplink.md)
 - **Docker 只跑在 RPi5B 上**，WSL 不跑 Docker，所以 WSL2 mirrored networking mode 不會有衝突
 - WSL2 已設定 `networkingMode=mirrored`，可直連區網 `192.168.88.x`
 - **⚠️ WSL 的 Tailscale 絕不要 `--accept-routes=true`**——會建立 fwmark policy route 黑洞，導致區網連線全斷。詳見 [wsl-lan-connectivity.md](.claude/skills/wsl-lan-connectivity.md)

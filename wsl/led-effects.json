@@ -1,10 +1,10 @@
 {
-  "_rule": "5 狀態對齊 ESP32: IDLE(橘pulse慢), RUNNING(綠pulse), WAITING(紅blink快), COMPLETED(彩虹3輪), ERROR(紅solid)。advisor 為 Qwen 專用，不在狀態機內。",
+  "_rule": "5 狀態對齊 ESP32。melody 欄位可選，由 notify.sh 發送到 claude/melody topic。",
   "idle":       {"r": 255, "g": 13,  "b": 0,   "pattern": "pulse",   "times": 999, "interval": 3.0},
   "running":    {"r": 0,   "g": 255, "b": 0,   "pattern": "pulse",   "times": 999, "interval": 2.0},
-  "waiting":    {"r": 255, "g": 0,   "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.3},
-  "completed":  {"r": 0,   "g": 0,   "b": 0,   "pattern": "rainbow", "times": 3,   "interval": 1.0},
-  "error":      {"r": 255, "g": 0,   "b": 0,   "pattern": "solid",   "duration": 5},
+  "waiting":    {"r": 255, "g": 0,   "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.3, "melody": "short_waiting"},
+  "completed":  {"r": 0,   "g": 0,   "b": 0,   "pattern": "rainbow", "times": 3,   "interval": 1.0, "melody": "zelda_secret"},
+  "error":      {"r": 255, "g": 0,   "b": 0,   "pattern": "solid",   "duration": 5, "melody": "short_error"},
   "advisor":    {"r": 0,   "g": 0,   "b": 255, "pattern": "solid",   "duration": 1},
   "off":        {"r": 0,   "g": 0,   "b": 0,   "pattern": "solid",   "duration": 1}
 }

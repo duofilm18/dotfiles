@@ -33,6 +33,7 @@ dotfiles/
 │   ├── install-docker.sh
 │   ├── install.sh
 │   ├── notify.sh
+│   ├── play-melody.sh
 │   ├── qwen-advisor.sh
 │   ├── qwen-permission.sh
 │   ├── qwen-queue.sh

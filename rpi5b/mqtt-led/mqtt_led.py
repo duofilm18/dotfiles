@@ -8,6 +8,7 @@ Topics:
     claude/led     - RGB LED 控制 {r, g, b, pattern, times, duration, interval}
                      pattern: blink, solid, pulse, rainbow
     claude/buzzer  - 蜂鳴器控制 {frequency, duration}
+    claude/melody  - 旋律播放 {name: "zelda_secret"}
 
 Watchdog:
     透過 sd_notify 通知 systemd watchdog，防止服務卡住。
@@ -24,6 +25,8 @@ import lgpio
 from gpiozero import RGBLED
 from gpiozero.pins.lgpio import LGPIOFactory
 import paho.mqtt.client as mqtt
+
+from melodies import MELODIES
 
 # 載入設定
 config_path = Path(__file__).parent / "config.json"
@@ -46,13 +49,15 @@ led = RGBLED(
 )
 
 # 蜂鳴器（lgpio 直接控制，不受頻率範圍限制）
+# 啟動時設為輸入模式（高阻抗），避免底噪；播放時才切輸出
 _h = lgpio.gpiochip_open(GPIO_CHIP)
 _buzzer_pin = gpio["buzzer"]
-lgpio.gpio_claim_output(_h, _buzzer_pin, 0)
+lgpio.gpio_claim_input(_h, _buzzer_pin)
 
 # rainbow / solid timer 的取消機制
 _cancel = threading.Event()
 _off_timer = None
+_melody_cancel = threading.Event()  # 旋律中斷機制
 
 _RAINBOW_COLORS = [
     (1, 0, 0),  # 紅
@@ -154,13 +159,35 @@ def _run_effect(r, g, b, pattern, times, duration, interval):
 
 
 def _beep(frequency, duration_ms):
-    """蜂鳴器"""
+    """蜂鳴器：播放時切輸出模式，結束後切回輸入模式（高阻抗）消除底噪"""
     try:
+        lgpio.gpio_claim_output(_h, _buzzer_pin, 0)
         lgpio.tx_pwm(_h, _buzzer_pin, frequency, 50)
         time.sleep(duration_ms / 1000.0)
     finally:
         lgpio.tx_pwm(_h, _buzzer_pin, 0, 0)
         lgpio.gpio_write(_h, _buzzer_pin, 0)
+        lgpio.gpio_claim_input(_h, _buzzer_pin)
+
+
+def _play_melody(notes):
+    """播放旋律：依序播放 [(freq, duration_ms), ...] 音符序列"""
+    _melody_cancel.clear()
+    try:
+        lgpio.gpio_claim_output(_h, _buzzer_pin, 0)
+        for freq, dur in notes:
+            if _melody_cancel.is_set():
+                break
+            if freq == 0:  # REST
+                lgpio.tx_pwm(_h, _buzzer_pin, 0, 0)
+            else:
+                lgpio.tx_pwm(_h, _buzzer_pin, freq, 50)
+            if _melody_cancel.wait(timeout=dur / 1000.0):
+                break
+    finally:
+        lgpio.tx_pwm(_h, _buzzer_pin, 0, 0)
+        lgpio.gpio_write(_h, _buzzer_pin, 0)
+        lgpio.gpio_claim_input(_h, _buzzer_pin)
 
 
 # ─── MQTT callbacks ───────────────────────────────────
@@ -169,6 +196,7 @@ def on_connect(client, userdata, flags, rc):
     print(f"Connected to MQTT broker (rc={rc})")
     client.subscribe("claude/led")
     client.subscribe("claude/buzzer")
+    client.subscribe("claude/melody")
 
 
 def on_message(client, userdata, msg):
@@ -196,6 +224,17 @@ def on_message(client, userdata, msg):
             daemon=True,
         ).start()
 
+    elif msg.topic == "claude/melody":
+        name = data.get("name", "")
+        notes = MELODIES.get(name)
+        if notes:
+            _melody_cancel.set()  # 中斷正在播放的旋律
+            threading.Thread(
+                target=_play_melody,
+                args=(notes,),
+                daemon=True,
+            ).start()
+
 
 if __name__ == "__main__":
     broker = config.get("mqtt_broker", "localhost")
@@ -205,7 +244,8 @@ if __name__ == "__main__":
     print(f"MQTT LED Service starting (gpiozero)... ({anode_str})")
     print(f"Broker: {broker}:{port}")
     print(f"GPIO: R={gpio['red']}, G={gpio['green']}, B={gpio['blue']}, Buzzer={gpio['buzzer']}")
-    print("Subscribing: claude/led, claude/buzzer")
+    print(f"Melodies: {', '.join(sorted(MELODIES.keys()))}")
+    print("Subscribing: claude/led, claude/buzzer, claude/melody")
 
     # Start watchdog thread
     threading.Thread(target=_watchdog_loop, daemon=True).start()
