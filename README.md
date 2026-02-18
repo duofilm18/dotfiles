@@ -29,6 +29,7 @@ dotfiles/
 │   └── skills/
 │       └── add-hook.md
 ├── scripts/
+│   ├── claude-hook.sh
 │   ├── install-docker.sh
 │   ├── install.sh
 │   ├── notify.sh

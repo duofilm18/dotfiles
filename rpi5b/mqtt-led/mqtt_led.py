@@ -8,15 +8,21 @@ Topics:
     claude/led     - RGB LED 控制 {r, g, b, pattern, times, duration, interval}
                      pattern: blink, solid, pulse, rainbow
     claude/buzzer  - 蜂鳴器控制 {frequency, duration}
+
+Watchdog:
+    透過 sd_notify 通知 systemd watchdog，防止服務卡住。
 """
 
 import json
+import os
+import socket
 import threading
 import time
 from pathlib import Path
 
 import lgpio
 from gpiozero import RGBLED
+from gpiozero.pins.lgpio import LGPIOFactory
 import paho.mqtt.client as mqtt
 
 # 載入設定
@@ -26,14 +32,17 @@ with open(config_path) as f:
 
 gpio = config["gpio"]
 COMMON_ANODE = config.get("common_anode", True)
-GPIO_CHIP = config.get("gpio_chip", 4)
+GPIO_CHIP = config.get("gpio_chip", 0)
 
 # RGB LED（gpiozero 處理 PWM、執行緒、共陽極反轉）
+# 明確指定 chip，避免 gpiozero 自動偵測 RPi5 時用錯 chip 編號（Armbian 用 0，RPi OS 用 4）
+_factory = LGPIOFactory(chip=GPIO_CHIP)
 led = RGBLED(
     red=gpio["red"],
     green=gpio["green"],
     blue=gpio["blue"],
     active_high=not COMMON_ANODE,
+    pin_factory=_factory,
 )
 
 # 蜂鳴器（lgpio 直接控制，不受頻率範圍限制）
@@ -55,6 +64,32 @@ _RAINBOW_COLORS = [
     (1, 1, 1),  # 白
 ]
 
+
+# ─── systemd watchdog ──────────────────────────────────
+
+def _sd_notify(state: str):
+    """Send notification to systemd (sd_notify protocol)."""
+    addr = os.environ.get("NOTIFY_SOCKET")
+    if not addr:
+        return
+    if addr.startswith("@"):
+        addr = "\0" + addr[1:]
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        sock.sendto(state.encode(), addr)
+        sock.close()
+    except OSError:
+        pass
+
+
+def _watchdog_loop():
+    """Periodically ping systemd watchdog."""
+    while True:
+        _sd_notify("WATCHDOG=1")
+        time.sleep(25)  # WatchdogSec=60, ping every 25s
+
+
+# ─── LED effects ───────────────────────────────────────
 
 def _stop_custom():
     """停止自訂效果（rainbow / solid timer）"""
@@ -128,6 +163,8 @@ def _beep(frequency, duration_ms):
         lgpio.gpio_write(_h, _buzzer_pin, 0)
 
 
+# ─── MQTT callbacks ───────────────────────────────────
+
 def on_connect(client, userdata, flags, rc):
     print(f"Connected to MQTT broker (rc={rc})")
     client.subscribe("claude/led")
@@ -170,8 +207,15 @@ if __name__ == "__main__":
     print(f"GPIO: R={gpio['red']}, G={gpio['green']}, B={gpio['blue']}, Buzzer={gpio['buzzer']}")
     print("Subscribing: claude/led, claude/buzzer")
 
+    # Start watchdog thread
+    threading.Thread(target=_watchdog_loop, daemon=True).start()
+
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(broker, port, 60)
+
+    # Notify systemd we're ready
+    _sd_notify("READY=1")
+
     client.loop_forever()

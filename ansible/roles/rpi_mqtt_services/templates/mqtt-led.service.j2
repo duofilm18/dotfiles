@@ -4,13 +4,14 @@ After=mosquitto.service
 Requires=mosquitto.service
 
 [Service]
-Type=simple
+Type=notify
 User={{ ansible_user }}
 WorkingDirectory={{ mqtt_led_dir }}
 Environment=GPIOZERO_PIN_FACTORY=lgpio
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 {{ mqtt_led_dir }}/mqtt_led.py
-Restart=on-failure
+WatchdogSec=60
+Restart=always
 RestartSec=5
 
 [Install]

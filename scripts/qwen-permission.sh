@@ -2,9 +2,10 @@
 # qwen-permission.sh - 權限確認時，讓 Qwen 解釋 Claude 想做什麼
 # 從 transcript 讀取 Claude 想執行的操作
 # 使用排隊機制避免撞車
+#
+# 注意：LED 狀態由 claude-hook.sh 管理，本腳本只負責 Qwen 解釋
 
 LOCK_FILE="/tmp/qwen-permission.lock"
-SCRIPT_DIR="$(dirname "$0")"
 
 INPUT=$(cat)
 
@@ -25,12 +26,12 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
                 COMMAND=$(echo "$TOOL_INPUT" | jq -r '.command // empty' 2>/dev/null)
                 DESC=$(echo "$TOOL_INPUT" | jq -r '.description // empty' 2>/dev/null)
                 if [ -n "$DESC" ]; then
-                    CONTEXT="🖥️ Claude 想執行指令:
+                    CONTEXT="Claude 想執行指令:
 $COMMAND
 
-📝 說明: $DESC"
+說明: $DESC"
                 else
-                    CONTEXT="🖥️ Claude 想執行指令:
+                    CONTEXT="Claude 想執行指令:
 $COMMAND"
                 fi
                 ;;
@@ -38,21 +39,21 @@ $COMMAND"
                 FILE_PATH=$(echo "$TOOL_INPUT" | jq -r '.file_path // empty' 2>/dev/null)
                 OLD_STR=$(echo "$TOOL_INPUT" | jq -r '.old_string // empty' 2>/dev/null | head -c 200)
                 NEW_STR=$(echo "$TOOL_INPUT" | jq -r '.new_string // empty' 2>/dev/null | head -c 200)
-                CONTEXT="✏️ Claude 想修改檔案: $FILE_PATH
+                CONTEXT="Claude 想修改檔案: $FILE_PATH
 
-🔴 原本: $OLD_STR
-🟢 改成: $NEW_STR"
+原本: $OLD_STR
+改成: $NEW_STR"
                 ;;
             Write)
                 FILE_PATH=$(echo "$TOOL_INPUT" | jq -r '.file_path // empty' 2>/dev/null)
                 CONTENT=$(echo "$TOOL_INPUT" | jq -r '.content // empty' 2>/dev/null | head -c 300)
-                CONTEXT="📝 Claude 想寫入檔案: $FILE_PATH
+                CONTEXT="Claude 想寫入檔案: $FILE_PATH
 
 內容: $CONTENT"
                 ;;
             Read)
                 FILE_PATH=$(echo "$TOOL_INPUT" | jq -r '.file_path // empty' 2>/dev/null)
-                CONTEXT="📖 Claude 想讀取檔案: $FILE_PATH"
+                CONTEXT="Claude 想讀取檔案: $FILE_PATH"
                 ;;
             *)
                 CONTEXT="$MESSAGE"
@@ -87,15 +88,8 @@ $CONTEXT
         2>/dev/null | jq -r '.response // empty')
 
     if [ -n "$RESULT" ]; then
-        NOTIFY_BODY="$CONTEXT
-
-💡 Qwen 說明:
-$RESULT"
-    else
-        NOTIFY_BODY="$CONTEXT"
+        echo "$RESULT"
     fi
-
-    "$SCRIPT_DIR/notify.sh" permission "🔴 Claude 需要權限確認" "$NOTIFY_BODY"
 
 } 200>"$LOCK_FILE"
 

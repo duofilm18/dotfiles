@@ -2,9 +2,10 @@
 # qwen-stop-summary.sh - Claude 回應完成時，讓 Qwen 分析回應內容
 # 從 transcript 檔案讀取 Claude 最後的回應
 # 使用排隊機制避免撞車
+#
+# 注意：LED 狀態由 claude-hook.sh 管理，本腳本只負責 Qwen 摘要
 
 LOCK_FILE="/tmp/qwen-stop.lock"
-SCRIPT_DIR="$(dirname "$0")"
 
 INPUT=$(cat)
 
@@ -12,16 +13,14 @@ INPUT=$(cat)
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 
 if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
-    "$SCRIPT_DIR/notify.sh" stop "✅ Claude 完成回應" "Claude 已完成回應，等待你的輸入"
     exit 0
 fi
 
 # 從 transcript 讀取最後的 text 類型記錄（Claude 的文字回應）
 CLAUDE_RESPONSE=$(tac "$TRANSCRIPT_PATH" | head -30 | grep '"type":"text"' | head -1 | jq -r '.message.content[0].text // empty' 2>/dev/null | head -c 800)
 
-# 如果沒找到，發簡單通知
+# 如果沒找到，直接結束
 if [ -z "$CLAUDE_RESPONSE" ] || [ "$CLAUDE_RESPONSE" = "null" ]; then
-    "$SCRIPT_DIR/notify.sh" stop "✅ Claude 完成回應" "Claude 已完成回應，等待你的輸入"
     exit 0
 fi
 
@@ -43,18 +42,8 @@ $CLAUDE_RESPONSE
         2>/dev/null | jq -r '.response // empty')
 
     if [ -n "$RESULT" ]; then
-        NOTIFY_BODY="💡 Qwen 總結:
-$RESULT"
-    else
-        NOTIFY_BODY="Claude 已完成回應，等待你的輸入"
+        echo "$RESULT"
     fi
-
-    "$SCRIPT_DIR/notify.sh" stop "✅ Claude 完成回應" "$NOTIFY_BODY"
-
-    # Rainbow（3輪×7色×1秒=21秒）跑完後自動切換 idle 呼吸燈
-    # 用 marker 檔避免跟新訊息衝突（UserPromptSubmit 會刪除）
-    touch /tmp/claude-idle-pending
-    (sleep 22 && [ -f /tmp/claude-idle-pending ] && "$SCRIPT_DIR/notify.sh" idle) &
 
 } 200>"$LOCK_FILE"
 
