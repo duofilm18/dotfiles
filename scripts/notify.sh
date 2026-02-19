@@ -30,9 +30,11 @@ if [ -n "$EFFECT" ]; then
         2>/dev/null &
 
     # 在 HP 電腦播放旋律（如果有設定）
+    # 用 setsid 脫離 process group，避免 Claude hook 結束時殺掉慢啟動的 powershell.exe
     MELODY=$(echo "$EFFECT" | jq -r '.melody // empty')
     if [ -n "$MELODY" ]; then
-        "$SCRIPT_DIR/play-melody.sh" "$MELODY" &
+        setsid "$SCRIPT_DIR/play-melody.sh" "$MELODY" &
+        disown
     fi
 fi
 
