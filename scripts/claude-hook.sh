@@ -62,6 +62,21 @@ NEW_STATE=$(resolve_state)
 if [ "$EVENT" = "PostToolUse" ] && [[ "$MATCHER" =~ ^(Bash|Edit|Write|Read)$ ]]; then
     echo "$INPUT" | "$SCRIPT_DIR/qwen-advisor.sh" &
     disown
+
+    # Git 操作音效（從 stdin JSON 解析指令）
+    GIT_CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+    if [ -n "$GIT_CMD" ]; then
+        GIT_MELODY=""
+        case "$GIT_CMD" in
+            *"git add"*)    GIT_MELODY="minimal_beep" ;;
+            *"git commit"*) GIT_MELODY="short_success" ;;
+            *"git push"*)   GIT_MELODY="windows_xp" ;;
+        esac
+        if [ -n "$GIT_MELODY" ]; then
+            setsid "$SCRIPT_DIR/play-melody.sh" "$GIT_MELODY" &>/dev/null &
+            disown
+        fi
+    fi
 fi
 
 # 無需狀態切換則退出
