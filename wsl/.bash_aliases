@@ -23,12 +23,39 @@ alias tl='tmux list-sessions'
 alias tk='tmux kill-session -t'
 alias tka='tmux kill-session -a'  # 殺掉所有 session
 
-# Git 快捷
+# Git 快捷（帶音效）
 alias gs='git status'
-alias ga='git add'
-alias gc='git commit'
-alias gp='git push'
 alias gl='git lg'
+
+ga() {
+    git add "$@"
+    local rc=$?
+    if [ $rc -eq 0 ]; then
+        setsid ~/dotfiles/scripts/play-melody.sh minimal_beep &>/dev/null &
+        disown
+    fi
+    return $rc
+}
+
+gc() {
+    git commit "$@"
+    local rc=$?
+    if [ $rc -eq 0 ]; then
+        setsid ~/dotfiles/scripts/play-melody.sh short_success &>/dev/null &
+        disown
+    fi
+    return $rc
+}
+
+gp() {
+    git push "$@"
+    local rc=$?
+    if [ $rc -eq 0 ]; then
+        setsid ~/dotfiles/scripts/play-melody.sh windows_xp &>/dev/null &
+        disown
+    fi
+    return $rc
+}
 
 # Docker
 alias dc='docker compose'
