@@ -33,7 +33,7 @@ if [ -n "$EFFECT" ]; then
     # 用 setsid 脫離 process group，避免 Claude hook 結束時殺掉慢啟動的 powershell.exe
     MELODY=$(echo "$EFFECT" | jq -r '.melody // empty')
     if [ -n "$MELODY" ]; then
-        setsid "$SCRIPT_DIR/play-melody.sh" "$MELODY" &
+        setsid "$SCRIPT_DIR/play-melody.sh" "$MELODY" &>/dev/null &
         disown
     fi
 fi

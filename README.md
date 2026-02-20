@@ -37,6 +37,7 @@ dotfiles/
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b.sh
+│   ├── test-hooks-auto.sh
 │   ├── test-hooks.sh
 │   ├── test-mqtt.sh
 │   └── update-readme.sh

@@ -64,7 +64,7 @@ if [ "$EVENT" = "PostToolUse" ] && [[ "$MATCHER" =~ ^(Bash|Edit|Write|Read)$ ]];
     if [ -n "$GIT_CMD" ]; then
         GIT_MELODY=""
         case "$GIT_CMD" in
-            *"git add"*)    GIT_MELODY="minimal_beep" ;;
+            *"git add"*)    GIT_MELODY="minimal_double" ;;
             *"git commit"*) GIT_MELODY="short_success" ;;
             *"git push"*)   GIT_MELODY="windows_xp" ;;
         esac

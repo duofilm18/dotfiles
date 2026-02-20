@@ -162,10 +162,10 @@ test_notify() {
     if [ -n "$test_effect" ]; then
         local test_melody
         test_melody=$(echo "$test_effect" | jq -r '.melody // empty')
-        if [ "$test_melody" = "minimal_beep" ]; then
-            pass "jq 正確解析 running → melody=minimal_beep"
+        if [ "$test_melody" = "short_running" ]; then
+            pass "jq 正確解析 running → melody=short_running"
         else
-            fail "jq 解析結果不符預期：running melody='$test_melody'（預期 minimal_beep）"
+            fail "jq 解析結果不符預期：running melody='$test_melody'（預期 short_running）"
         fi
     else
         fail "jq 無法從 led-effects.json 讀取 running 狀態"
@@ -184,7 +184,7 @@ test_notify() {
     fi
 
     # 2-6: 實際觸發 notify.sh running 狀態
-    echo -e "  ${YELLOW}♪ 觸發 notify.sh running...（應該聽到 minimal_beep）${NC}"
+    echo -e "  ${YELLOW}♪ 觸發 notify.sh running...（應該聽到 short_running 兩連升音）${NC}"
     "$SCRIPT_DIR/notify.sh" running
     sleep 2
     pass "notify.sh running 執行完畢"
@@ -298,7 +298,7 @@ test_git() {
     header "Layer 4: Git 音效觸發"
 
     # 4-1: git add 音效
-    echo -e "  ${YELLOW}♪ 模擬 git add...（應該聽到 minimal_beep）${NC}"
+    echo -e "  ${YELLOW}♪ 模擬 git add...（應該聽到 minimal_double 雙嗶）${NC}"
     echo '{"tool_input":{"command":"git add file.txt"}}' | "$SCRIPT_DIR/claude-hook.sh" PostToolUse Bash 2>/dev/null || true
     sleep 2
     pass "git add 音效指令已發送"
@@ -329,7 +329,7 @@ test_git() {
     fi
 
     # 4-6: git add + git commit 複合指令只觸發第一個匹配
-    echo -e "  ${YELLOW}♪ 模擬 git add && git commit...（case 匹配 git add → minimal_beep）${NC}"
+    echo -e "  ${YELLOW}♪ 模擬 git add && git commit...（case 匹配 git add → minimal_double）${NC}"
     echo '{"tool_input":{"command":"git add file.txt && git commit -m \"msg\""}}' | "$SCRIPT_DIR/claude-hook.sh" PostToolUse Bash 2>/dev/null || true
     sleep 2
     warn "複合 git 指令：case 只會匹配第一個（git add），git commit 的音效被吃掉"
@@ -371,7 +371,7 @@ test_e2e() {
     # Step 1: 使用者送出訊息
     echo -e "  ${CYAN}[1/6] UserPromptSubmit → RUNNING${NC}"
     echo '{}' | "$SCRIPT_DIR/claude-hook.sh" UserPromptSubmit 2>/dev/null || true
-    echo -e "  ${YELLOW}♪ 應該聽到 minimal_beep (running)${NC}"
+    echo -e "  ${YELLOW}♪ 應該聽到 short_running (兩連升音)${NC}"
     sleep 3
 
     # Step 2: 工具執行（不改變狀態）
@@ -388,7 +388,7 @@ test_e2e() {
     # Step 4: 使用者允許，繼續跑
     echo -e "  ${CYAN}[4/6] UserPromptSubmit → RUNNING${NC}"
     echo '{}' | "$SCRIPT_DIR/claude-hook.sh" UserPromptSubmit 2>/dev/null || true
-    echo -e "  ${YELLOW}♪ 應該聽到 minimal_beep (running)${NC}"
+    echo -e "  ${YELLOW}♪ 應該聽到 short_running (兩連升音)${NC}"
     sleep 3
 
     # Step 5: git commit

@@ -11,6 +11,13 @@ if [ -z "$MELODY" ]; then
     exit 0
 fi
 
+# 測試 log 模式：偵測到 flag 檔時只記錄不播音
+MELODY_LOG="/tmp/test-melody-capture.log"
+if [ -f "/tmp/test-melody-log-mode" ]; then
+    echo "[$(date '+%H:%M:%S')] $MELODY" >> "$MELODY_LOG"
+    exit 0
+fi
+
 # 通用播放函式：接收 "freq,dur freq,dur ..." 格式
 play() {
     local ps_cmds=""
