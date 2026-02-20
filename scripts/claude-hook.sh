@@ -5,7 +5,7 @@
 #   由 settings.json hooks 統一呼叫，stdin 接收 Claude hook JSON
 #
 # 5 狀態: IDLE / RUNNING / WAITING / COMPLETED / ERROR
-# 功能: 事件→狀態映射 · 2 秒去重 · 智慧抑制 · async Qwen 派發
+# 功能: 事件→狀態映射 · 2 秒去重 · 智慧抑制 · LED + 音效
 
 set -euo pipefail
 
@@ -29,13 +29,13 @@ resolve_state() {
         PreToolUse)
             case "$MATCHER" in
                 AskUserQuestion) echo "WAITING" ;;
-                *) echo "" ;;  # 其他 PreToolUse 不改狀態
+                *) echo "" ;;
             esac
             ;;
         PostToolUse)
             case "$MATCHER" in
                 AskUserQuestion) echo "RUNNING" ;;
-                *) echo "" ;;  # 其他 PostToolUse 不改狀態
+                *) echo "" ;;
             esac
             ;;
         Notification)
@@ -58,12 +58,8 @@ NEW_STATE=$(resolve_state)
 
 # ─── 無狀態變更的事件：只做 side effect ────────────────
 
-# PostToolUse(Bash|Edit|Write|Read) → qwen-advisor（不影響狀態機）
+# PostToolUse(Bash|Edit|Write|Read) → Git 操作音效
 if [ "$EVENT" = "PostToolUse" ] && [[ "$MATCHER" =~ ^(Bash|Edit|Write|Read)$ ]]; then
-    echo "$INPUT" | "$SCRIPT_DIR/qwen-advisor.sh" &
-    disown
-
-    # Git 操作音效（從 stdin JSON 解析指令）
     GIT_CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
     if [ -n "$GIT_CMD" ]; then
         GIT_MELODY=""
@@ -127,29 +123,19 @@ fi
 LED_KEY=$(echo "$NEW_STATE" | tr '[:upper:]' '[:lower:]')
 "$SCRIPT_DIR/notify.sh" "$LED_KEY"
 
-# ─── Async 派發 Qwen 腳本 ─────────────────────────────
+# ─── Stop 後自動回 IDLE ──────────────────────────────
 
-case "$EVENT" in
-    Notification)
-        if [ "$MATCHER" = "permission_prompt" ]; then
-            echo "$INPUT" | "$SCRIPT_DIR/qwen-permission.sh" &
-            disown
+if [ "$EVENT" = "Stop" ]; then
+    (
+        # Rainbow 3輪×7色×1秒=21秒，等 22 秒後自動切 IDLE
+        touch "$IDLE_PENDING"
+        sleep 22
+        if [ -f "$IDLE_PENDING" ]; then
+            echo "IDLE" > "$STATE_FILE"
+            "$SCRIPT_DIR/notify.sh" idle
         fi
-        ;;
-    Stop)
-        # qwen-stop-summary 完成後，22s 自動切 IDLE
-        (
-            echo "$INPUT" | "$SCRIPT_DIR/qwen-stop-summary.sh"
-            # Rainbow 3輪×7色×1秒=21秒，等 22 秒後自動切 IDLE
-            touch "$IDLE_PENDING"
-            sleep 22
-            if [ -f "$IDLE_PENDING" ]; then
-                echo "IDLE" > "$STATE_FILE"
-                "$SCRIPT_DIR/notify.sh" idle
-            fi
-        ) &
-        disown
-        ;;
-esac
+    ) &
+    disown
+fi
 
 exit 0

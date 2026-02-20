@@ -34,13 +34,10 @@ dotfiles/
 │   ├── install.sh
 │   ├── notify.sh
 │   ├── play-melody.sh
-│   ├── qwen-advisor.sh
-│   ├── qwen-permission.sh
-│   ├── qwen-queue.sh
-│   ├── qwen-stop-summary.sh
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b.sh
+│   ├── test-hooks.sh
 │   ├── test-mqtt.sh
 │   └── update-readme.sh
 ├── shared/
