@@ -1,6 +1,12 @@
-# WSL2 無法連線區網設備（RPi5B）排查指南
+---
+name: wsl-lan-connectivity
+description: >
+  WSL2 無法連線區網設備（如 RPi5B 192.168.88.10）的排查指南。最常見根因是
+  Tailscale accept-routes 建立 fwmark policy route 黑洞。當 WSL 無法 ping/SSH
+  到 192.168.88.x 但外網正常時使用。
+---
 
-當 WSL2 無法 SSH 或 ping 到區網設備（如 192.168.88.10）時，按本指南逐步排查。
+# WSL2 無法連線區網設備（RPi5B）排查指南
 
 ## 已知根因：Tailscale fwmark policy routing 黑洞
 

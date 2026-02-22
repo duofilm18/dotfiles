@@ -1,6 +1,12 @@
-# Pi-hole + TP-Link 路由器設定與維護
+---
+name: pihole-tplink
+description: >
+  RPi5B Docker 上的 Pi-hole 搭配 TP-Link 路由器的廣告攔截設定與維護。當需要
+  新增擋廣告名單、排查廣告未被攔截、設定 TP-Link DHCP DNS、或處理 Pi-hole v6
+  API 操作時使用。
+---
 
-RPi5B 上的 Pi-hole（Docker）搭配 TP-Link 路由器實現全網廣告攔截的設定、擋廣告名單管理與故障排查。
+# Pi-hole + TP-Link 路由器設定與維護
 
 ## 架構
 

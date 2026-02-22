@@ -1,6 +1,12 @@
-# Tailscale 路由衝突診斷與修復
+---
+name: tailscale-route-conflict
+description: >
+  Tailscale Subnet Routes 與本地區網路由衝突的診斷與修復。當設備無法 ping/SSH
+  到區網 IP（如 192.168.88.10）但外網正常時使用。涵蓋 Windows 和 Linux/WSL
+  的路由表檢查、衝突路由刪除、永久修復方案。
+---
 
-當 Tailscale 的 Subnet Routes 與本地區網發生衝突時，會導致無法連線到區網內的設備。本指南提供診斷和修復的完整流程。
+# Tailscale 路由衝突診斷與修復
 
 ## 問題症狀
 

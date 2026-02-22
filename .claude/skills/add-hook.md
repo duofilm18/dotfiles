@@ -1,6 +1,11 @@
-# 新增 Claude Code Hook
+---
+name: add-hook
+description: >
+  在 dotfiles 中新增 Claude Code Hook 的標準流程。當需要新增 Notification、
+  PreToolUse、PostToolUse 等 hook，或修改現有 hook 的通知/燈效行為時使用。
+---
 
-在 dotfiles 中新增 Claude Code Hook 的標準流程。
+# 新增 Claude Code Hook
 
 ## 前置條件
 
