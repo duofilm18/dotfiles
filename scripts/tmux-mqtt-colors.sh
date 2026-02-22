@@ -55,11 +55,20 @@ blink_loop &
 BLINK_PID=$!
 trap 'rm -f "$PIDFILE"; kill $BLINK_PID 2>/dev/null' EXIT
 
+
 # ── MQTT 訂閱 ──
-mosquitto_sub -h "$MQTT_HOST" -p "$MQTT_PORT" -t "claude/led/+" -v 2>/dev/null | while IFS= read -r line; do
-    # -v 格式: "claude/led/project {json}"
+mosquitto_sub -h "$MQTT_HOST" -p "$MQTT_PORT" -t "claude/led/+" -t "ime/state" -v 2>/dev/null | while IFS= read -r line; do
     topic="${line%% *}"
     payload="${line#* }"
+
+    # IME 狀態 → tmux 全域變數（事件驅動，零讀取成本）
+    if [ "$topic" = "ime/state" ]; then
+        tmux set -g @ime_state "$payload" 2>/dev/null
+        tmux refresh-client -S 2>/dev/null
+        continue
+    fi
+
+    # Claude 狀態 → 對應 window
     project="${topic##*/}"
     state=$(echo "$payload" | jq -r '.state // empty' 2>/dev/null)
 
