@@ -29,6 +29,7 @@ dotfiles/
 │   └── skills/
 │       └── add-hook.md
 ├── scripts/
+│   ├── claude-dispatch.sh
 │   ├── claude-hook.sh
 │   ├── install-docker.sh
 │   ├── install-lighthouse.sh

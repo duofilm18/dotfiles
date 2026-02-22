@@ -23,13 +23,11 @@ fi
 EFFECT=$(jq -c --arg state "$STATE" '.[$state] // empty' "$EFFECTS_FILE")
 
 if [ -n "$EFFECT" ]; then
-    # 發送 LED 燈效
-    mosquitto_pub -h "$MQTT_HOST" -p "$MQTT_PORT" \
+    # 發送 LED 燈效（-r retain：RPi5 重連後自動取得最新狀態）
+    mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
         -t "claude/led" \
         -m "$EFFECT" \
         2>/dev/null &
-
-    # 音效已由 settings.json 直接平行觸發 play-melody.sh，不在此處播放
 fi
 
 exit 0

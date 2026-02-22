@@ -5,9 +5,13 @@
 #   由 settings.json hooks 統一呼叫，stdin 接收 Claude hook JSON
 #
 # 5 狀態: IDLE / RUNNING / WAITING / COMPLETED / ERROR
-# 功能: 事件→狀態映射 · 2 秒去重 · 智慧抑制 · LED + 音效
+# 功能: 事件→狀態映射 · 2 秒去重 · 智慧抑制 · LED 發送
 
 set -euo pipefail
+
+# 檔案鎖：防止多個 Hook 同時讀寫狀態檔造成競爭
+exec 200>/tmp/claude-led.lock
+flock -n 200 || exit 0
 
 EVENT="$1"
 MATCHER="${2:-}"
@@ -55,25 +59,6 @@ resolve_state() {
 }
 
 NEW_STATE=$(resolve_state)
-
-# ─── 無狀態變更的事件：只做 side effect ────────────────
-
-# PostToolUse(Bash|Edit|Write|Read) → Git 操作音效
-if [ "$EVENT" = "PostToolUse" ] && [[ "$MATCHER" =~ ^(Bash|Edit|Write|Read)$ ]]; then
-    GIT_CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
-    if [ -n "$GIT_CMD" ]; then
-        GIT_MELODY=""
-        case "$GIT_CMD" in
-            *"git add"*)    GIT_MELODY="minimal_double" ;;
-            *"git commit"*) GIT_MELODY="short_success" ;;
-            *"git push"*)   GIT_MELODY="windows_xp" ;;
-        esac
-        if [ -n "$GIT_MELODY" ]; then
-            setsid "$SCRIPT_DIR/play-melody.sh" "$GIT_MELODY" &>/dev/null &
-            disown
-        fi
-    fi
-fi
 
 # 無需狀態切換則退出
 if [ -z "$NEW_STATE" ]; then
