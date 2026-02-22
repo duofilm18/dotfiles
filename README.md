@@ -31,6 +31,7 @@ dotfiles/
 ├── scripts/
 │   ├── claude-hook.sh
 │   ├── install-docker.sh
+│   ├── install-lighthouse.sh
 │   ├── install.sh
 │   ├── notify.sh
 │   ├── play-melody.sh
