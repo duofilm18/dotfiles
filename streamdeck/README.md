@@ -156,16 +156,34 @@ ConnectionRefusedError: [Errno 111] Connection refused
 
 ## 開機自動啟動
 
-用 Windows Task Scheduler 設定：
+### 一鍵安裝（推薦）
 
-1. 開啟 Task Scheduler（工作排程器）
-2. 建立基本工作 → 名稱：`Stream Deck MQTT Monitor`
-3. 觸發程序：**當使用者登入時**
-4. 動作：**啟動程式**
-   - 程式：`pythonw.exe`（用 `where pythonw` 找完整路徑）
-   - 引數：`C:\Users\你的帳號\dotfiles\streamdeck\streamdeck_mqtt.py`
-   - 開始位置：`C:\Users\你的帳號\dotfiles\streamdeck`
-5. 條件：取消勾選「僅在 AC 電源時執行」
+安裝腳本會自動完成：Python 套件安裝、hidapi.dll 下載、config.json 建立、Task Scheduler 排程。
+
+```powershell
+cd C:\Users\你的帳號\dotfiles\streamdeck
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+> 換新電腦時再跑一次就好。
+
+### 手動設定 Task Scheduler
+
+如果你想手動設定：
+
+```powershell
+# 建立排程
+$action = New-ScheduledTaskAction -Execute "C:\Python312\pythonw.exe" -Argument "C:\Users\你的帳號\dotfiles\streamdeck\streamdeck_mqtt.py" -WorkingDirectory "C:\Users\你的帳號\dotfiles\streamdeck"
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName "StreamDeck MQTT Monitor" -Action $action -Trigger $trigger -Settings $settings
+
+# 立即啟動
+Start-ScheduledTask -TaskName "StreamDeck MQTT Monitor"
+
+# 移除排程
+Unregister-ScheduledTask -TaskName "StreamDeck MQTT Monitor" -Confirm:$false
+```
 
 > `pythonw.exe` 不會跳出 console 視窗。
 
