@@ -17,6 +17,13 @@ WSL (Master)                              rpi5b (Slave, 192.168.88.10)
 │ Qwen (Ollama)        │                  │   └ claude/notify topic  │
 │ (本地 AI 摘要)        │                  │   └→ ntfy (port 8080)    │
 └──────────────────────┘                  └──────────────────────────┘
+                                                     ↑
+Windows (Stream Deck XL)                             │ MQTT subscribe
+┌──────────────────────┐                             │ (claude/led, retain)
+│ streamdeck_mqtt.py   │   paho-mqtt (TCP 1883)      │
+│   → Stream Deck XL ──┼─────────────────────────────┘
+│   (32 鍵 LCD 按鈕)    │
+└──────────────────────┘
 ```
 
 **設計原則**：WSL 是大腦（決定燈效、通知內容），rpi5b 是四肢（只執行 GPIO 指令）。rpi5b 部署一次很少動。
@@ -120,7 +127,7 @@ notify.sh 會自動：
 | Topic | 用途 | Payload |
 |-------|------|---------|
 | `claude/notify` | 手機推播 | `{"title": "...", "body": "..."}` |
-| `claude/led` | RGB LED | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "blink\|solid\|pulse\|rainbow", "times": N, "duration": N, "interval": N}` |
+| `claude/led` | RGB LED + Stream Deck | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "...", "state": "idle\|running\|waiting\|completed\|error"}` |
 | `claude/buzzer` | 蜂鳴器 | `{"frequency": Hz, "duration": ms}` |
 
 ### LED 燈效對應
@@ -140,6 +147,37 @@ notify.sh 會自動：
 
 接線方式見 `rpi5b/mqtt-led/config.json.example`。
 目前使用共陰極 RGB LED（麵包板 + 電阻），`common_anode: false`。
+
+### Stream Deck XL 監控（Windows）
+
+在 Stream Deck 上即時顯示 Claude Code 開發狀態。透過 MQTT 訂閱 RPi5B broker。
+
+**前置需求：**
+1. Windows 安裝 Python 3.x（[python.org](https://www.python.org/)，不是 MS Store 版）
+2. 下載 [`hidapi.dll`](https://github.com/libusb/hidapi/releases) 放到 `%PATH%` 目錄
+3. 關閉官方 Stream Deck 軟體
+
+**安裝：**
+```powershell
+cd C:\Users\<user>\dotfiles\streamdeck
+pip install -r requirements.txt
+copy config.json.example config.json
+# 編輯 config.json 確認 mqtt_broker IP
+
+python streamdeck_mqtt.py
+```
+
+**按鍵顯示：**
+
+| 按鍵 | 狀態 | 顏色 | 含義 |
+|------|------|------|------|
+| Key 0 | RUNNING | 藍色 | Claude 執行中 |
+| Key 0 | WAITING | 黃色 | 需要你操作 |
+| Key 0 | DONE | 綠色 | 任務完成 |
+| Key 0 | IDLE | 橘色 | 閒置中 |
+| Key 0 | ERROR | 紅色 | 出錯了 |
+
+**自動啟動：** 用 Windows Task Scheduler，程式設定 `pythonw.exe`，參數指向 `streamdeck_mqtt.py`，觸發條件「登入時」。
 
 ### rpi5b 服務列表（192.168.88.10）
 

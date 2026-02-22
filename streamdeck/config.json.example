@@ -1,0 +1,8 @@
+{
+  "_comment": "複製此檔案為 config.json 並修改設定",
+  "mqtt_broker": "192.168.88.10",
+  "mqtt_port": 1883,
+  "mqtt_topic": "claude/led",
+  "deck_brightness": 30,
+  "claude_button_index": 0
+}

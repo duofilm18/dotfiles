@@ -20,7 +20,7 @@ if [ ! -f "$EFFECTS_FILE" ]; then
     exit 0
 fi
 
-EFFECT=$(jq -c --arg state "$STATE" '.[$state] // empty' "$EFFECTS_FILE")
+EFFECT=$(jq -c --arg state "$STATE" '.[$state] // empty | . + {state: $state}' "$EFFECTS_FILE")
 
 if [ -n "$EFFECT" ]; then
     # 發送 LED 燈效（-r retain：RPi5 重連後自動取得最新狀態）

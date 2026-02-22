@@ -10,6 +10,9 @@ wsl/claude-hooks.json
 rpi5b/mqtt-led/config.json
 rpi5b/mqtt-ntfy/config.json
 
+# Stream Deck 設定（機器特定）
+streamdeck/config.json
+
 # Ansible 機器特定變數（含敏感值）
 ansible/host_vars/*.yml
 !ansible/host_vars/*.yml.example
