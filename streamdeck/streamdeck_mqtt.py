@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Stream Deck MQTT Monitor - 顯示 Claude Code hook 狀態
 
-訂閱 RPi5B 的 MQTT broker，將 claude/led 狀態顯示在 Stream Deck 按鍵上。
+訂閱 RPi5B 的 MQTT broker，將多個 Claude Code instance 的狀態
+顯示在 Stream Deck 不同按鍵上。自動依專案資料夾名稱分配按鍵。
+
 需在 Windows 上執行（Stream Deck USB 接在 Windows）。
 """
 
@@ -43,7 +45,10 @@ UNKNOWN_DISPLAY = {"label": "?", "bg": (50, 50, 50), "fg": (200, 200, 200)}
 # --- 全域變數 ---
 
 _deck = None
-_button_index = 0
+_button_start = 0       # 起始按鍵 index
+_max_projects = 8       # 最多顯示幾個專案
+_projects = {}          # project_name → button_index
+_next_button = 0        # 下一個可用的按鍵 index
 
 
 def _load_font(size):
@@ -54,7 +59,7 @@ def _load_font(size):
         return ImageFont.load_default()
 
 
-def render_button(deck, key_index, state_info):
+def render_button(deck, key_index, project_name, state_info):
     """產生按鍵圖片並推送到 Stream Deck。"""
     image = PILHelper.create_key_image(deck)
     draw = ImageDraw.Draw(image)
@@ -63,12 +68,13 @@ def render_button(deck, key_index, state_info):
     # 背景
     draw.rectangle([(0, 0), (w, h)], fill=state_info["bg"])
 
-    # 上方標題
+    # 上方：專案名稱（截斷顯示）
     font_small = _load_font(11)
-    draw.text((w // 2, h // 4), "CLAUDE", font=font_small,
+    label = project_name[:10]
+    draw.text((w // 2, h // 4), label, font=font_small,
               fill=state_info["fg"], anchor="mm")
 
-    # 中央狀態
+    # 中央：狀態
     font_large = _load_font(18)
     draw.text((w // 2, h // 2 + 5), state_info["label"], font=font_large,
               fill=state_info["fg"], anchor="mm")
@@ -77,12 +83,29 @@ def render_button(deck, key_index, state_info):
     deck.set_key_image(key_index, native)
 
 
+def _get_button_for_project(project_name):
+    """取得專案對應的按鍵 index，新專案自動分配下一個。"""
+    global _next_button
+
+    if project_name in _projects:
+        return _projects[project_name]
+
+    if _next_button >= _max_projects:
+        return None  # 按鍵已滿
+
+    idx = _button_start + _next_button
+    _projects[project_name] = idx
+    _next_button += 1
+    print(f"  Key {idx} → {project_name}")
+    return idx
+
+
 # --- MQTT callbacks ---
 
 def on_connect(client, userdata, flags, rc):
-    topic = config.get("mqtt_topic", "claude/led")
-    client.subscribe(topic)
-    print(f"MQTT connected (rc={rc}), subscribed to {topic}")
+    # 訂閱 claude/led/# 接收所有專案的狀態
+    client.subscribe("claude/led/+")
+    print(f"MQTT connected (rc={rc}), subscribed to claude/led/+")
 
 
 def on_message(client, userdata, msg):
@@ -91,18 +114,28 @@ def on_message(client, userdata, msg):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return
 
+    # 從 topic 取得專案名稱: claude/led/{project}
+    parts = msg.topic.split("/")
+    if len(parts) != 3:
+        return
+    project_name = parts[2]
+
     state = data.get("state", "").lower()
     state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
 
+    button_idx = _get_button_for_project(project_name)
+    if button_idx is None:
+        return
+
     if _deck and _deck.is_open():
         with _deck:
-            render_button(_deck, _button_index, state_info)
+            render_button(_deck, button_idx, project_name, state_info)
 
 
 # --- 主程式 ---
 
 def main():
-    global _deck, _button_index
+    global _deck, _button_start, _max_projects
 
     # Stream Deck 初始化
     decks = DeviceManager().enumerate()
@@ -116,13 +149,11 @@ def main():
     _deck = decks[0]
     _deck.open()
     _deck.set_brightness(config.get("deck_brightness", 30))
-    _button_index = config.get("claude_button_index", 0)
+    _button_start = config.get("claude_button_index", 0)
+    _max_projects = config.get("max_projects", 8)
 
     print(f"Stream Deck: {_deck.deck_type()} ({_deck.key_count()} keys)")
-
-    # 初始按鍵：等待 MQTT 訊息
-    with _deck:
-        render_button(_deck, _button_index, UNKNOWN_DISPLAY)
+    print(f"Claude buttons: Key {_button_start} ~ {_button_start + _max_projects - 1}")
 
     # MQTT 連線
     broker = config.get("mqtt_broker", "192.168.88.10")

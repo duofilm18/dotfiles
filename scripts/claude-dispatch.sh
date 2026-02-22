@@ -7,12 +7,13 @@
 EVENT="$1"
 MATCHER="${2:-}"
 SCRIPT_DIR="$(dirname "$0")"
+PROJECT="$(basename "$PWD")"
 
 # 從 stdin 讀取 hook JSON（非阻塞，可能為空）
 INPUT=$(timeout 1 cat 2>/dev/null || true)
 
 # ── LED 狀態機（背景） ──
-echo "$INPUT" | (timeout 5 "$SCRIPT_DIR/claude-hook.sh" "$EVENT" "$MATCHER" || true) &>/dev/null &
+echo "$INPUT" | (timeout 5 "$SCRIPT_DIR/claude-hook.sh" "$EVENT" "$MATCHER" "$PROJECT" || true) &>/dev/null &
 
 # ── 音效決策（所有音效邏輯集中於此） ──
 MELODY=""

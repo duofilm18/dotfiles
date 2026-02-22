@@ -9,16 +9,17 @@
 
 set -euo pipefail
 
-# 檔案鎖：防止多個 Hook 同時讀寫狀態檔造成競爭
-exec 200>/tmp/claude-led.lock
+# 檔案鎖：防止多個 Hook 同時讀寫狀態檔造成競爭（per-project）
+exec 200>/tmp/claude-led-${3:-default}.lock
 flock -n 200 || exit 0
 
 EVENT="$1"
 MATCHER="${2:-}"
+PROJECT="${3:-default}"
 SCRIPT_DIR="$(dirname "$0")"
 
-STATE_FILE="/tmp/claude-led-state"
-IDLE_PENDING="/tmp/claude-idle-pending"
+STATE_FILE="/tmp/claude-led-state-${PROJECT}"
+IDLE_PENDING="/tmp/claude-idle-pending-${PROJECT}"
 
 # 從 stdin 讀取 JSON（非阻塞，可能為空）
 INPUT=$(cat)
@@ -106,7 +107,7 @@ fi
 
 # 發送 LED 燈效（狀態名轉小寫作為 notify.sh 的 key）
 LED_KEY=$(echo "$NEW_STATE" | tr '[:upper:]' '[:lower:]')
-"$SCRIPT_DIR/notify.sh" "$LED_KEY"
+"$SCRIPT_DIR/notify.sh" "$LED_KEY" "$PROJECT"
 
 # ─── Stop 後自動回 IDLE ──────────────────────────────
 
@@ -117,7 +118,7 @@ if [ "$EVENT" = "Stop" ]; then
         sleep 22
         if [ -f "$IDLE_PENDING" ]; then
             echo "IDLE" > "$STATE_FILE"
-            "$SCRIPT_DIR/notify.sh" idle
+            "$SCRIPT_DIR/notify.sh" idle "$PROJECT"
         fi
     ) &
     disown

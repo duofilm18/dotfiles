@@ -6,6 +6,7 @@
 # 所有狀態邏輯由 claude-hook.sh 管理。
 
 STATE="$1"
+PROJECT="${2:-default}"
 
 if [ -z "$STATE" ]; then
     exit 0
@@ -20,12 +21,18 @@ if [ ! -f "$EFFECTS_FILE" ]; then
     exit 0
 fi
 
-EFFECT=$(jq -c --arg state "$STATE" '.[$state] // empty | . + {state: $state}' "$EFFECTS_FILE")
+EFFECT=$(jq -c --arg state "$STATE" --arg project "$PROJECT" \
+    '.[$state] // empty | . + {state: $state, project: $project}' "$EFFECTS_FILE")
 
 if [ -n "$EFFECT" ]; then
     # 發送 LED 燈效（-r retain：RPi5 重連後自動取得最新狀態）
+    # 同時發到通用 topic（RPi5B LED）和專案 topic（Stream Deck）
     mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
         -t "claude/led" \
+        -m "$EFFECT" \
+        2>/dev/null &
+    mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
+        -t "claude/led/$PROJECT" \
         -m "$EFFECT" \
         2>/dev/null &
 fi
