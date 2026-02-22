@@ -49,6 +49,7 @@ dotfiles/
 │   ├── test-hooks-auto.sh
 │   ├── test-hooks.sh
 │   ├── test-mqtt.sh
+│   ├── tmux-mqtt-colors.sh
 │   └── update-readme.sh
 ├── shared/
 │   ├── .tmux.conf

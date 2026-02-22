@@ -9,6 +9,7 @@
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -69,13 +70,15 @@ def render_button(deck, key_index, project_name, state_info):
     draw.rectangle([(0, 0), (w, h)], fill=state_info["bg"])
 
     # 上方：專案名稱（截斷顯示）
-    font_small = _load_font(11)
+    title_size = config.get("font_size_title", 11)
+    font_small = _load_font(title_size)
     label = project_name[:10]
     draw.text((w // 2, h // 4), label, font=font_small,
               fill=state_info["fg"], anchor="mm")
 
     # 中央：狀態
-    font_large = _load_font(18)
+    state_size = config.get("font_size_state", 18)
+    font_large = _load_font(state_size)
     draw.text((w // 2, h // 2 + 5), state_info["label"], font=font_large,
               fill=state_info["fg"], anchor="mm")
 
@@ -98,6 +101,42 @@ def _get_button_for_project(project_name):
     _next_button += 1
     print(f"  Key {idx} → {project_name}")
     return idx
+
+
+# --- 按鍵回調 ---
+
+def _reverse_lookup(button_idx):
+    """從按鍵 index 反查專案名稱。"""
+    for name, idx in _projects.items():
+        if idx == button_idx:
+            return name
+    return None
+
+
+def on_key_press(deck, key, state):
+    """按下按鍵時切換到對應的 tmux session 並拉起 Windows Terminal。"""
+    if not state:  # key release, ignore
+        return
+
+    project = _reverse_lookup(key)
+    if not project:
+        return
+
+    try:
+        # 1. 切換 tmux session（透過 WSL 執行）
+        subprocess.Popen(
+            ["wsl.exe", "tmux", "switch-client", "-t", project],
+            creationflags=0x08000000 if sys.platform == "win32" else 0,
+        )
+        # 2. 把 Windows Terminal 拉到前景
+        subprocess.Popen(
+            ["powershell.exe", "-WindowStyle", "Hidden", "-Command",
+             "(New-Object -ComObject WScript.Shell).AppActivate('Terminal')"],
+            creationflags=0x08000000 if sys.platform == "win32" else 0,
+        )
+        print(f"  Switching to tmux session: {project}")
+    except Exception as e:
+        print(f"  Switch failed: {e}")
 
 
 # --- MQTT callbacks ---
@@ -154,6 +193,9 @@ def main():
 
     print(f"Stream Deck: {_deck.deck_type()} ({_deck.key_count()} keys)")
     print(f"Claude buttons: Key {_button_start} ~ {_button_start + _max_projects - 1}")
+
+    # 註冊按鍵回調（按下 → 切換 Windows Terminal 分頁）
+    _deck.set_key_callback(on_key_press)
 
     # MQTT 連線
     broker = config.get("mqtt_broker", "192.168.88.10")

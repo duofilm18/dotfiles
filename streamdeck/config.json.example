@@ -4,5 +4,7 @@
   "mqtt_port": 1883,
   "deck_brightness": 30,
   "claude_button_index": 0,
-  "max_projects": 8
+  "max_projects": 8,
+  "font_size_title": 11,
+  "font_size_state": 18
 }

@@ -9,6 +9,12 @@ MATCHER="${2:-}"
 SCRIPT_DIR="$(dirname "$0")"
 PROJECT="$(basename "$PWD")"
 
+# 自動標記 tmux window（供 tmux-mqtt-colors.sh 匹配）
+if [ -n "$TMUX" ] && [ "$EVENT" = "UserPromptSubmit" ]; then
+    tmux rename-window "$PROJECT" 2>/dev/null || true
+    tmux set-window-option @project "$PROJECT" 2>/dev/null || true
+fi
+
 # 從 stdin 讀取 hook JSON（非阻塞，可能為空）
 INPUT=$(timeout 1 cat 2>/dev/null || true)
 
