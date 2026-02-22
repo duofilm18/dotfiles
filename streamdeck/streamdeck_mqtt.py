@@ -6,8 +6,14 @@
 """
 
 import json
-import threading
+import os
+import sys
 from pathlib import Path
+
+# hidapi.dll 搜尋：優先從腳本同目錄載入
+_script_dir = str(Path(__file__).parent)
+if sys.platform == "win32":
+    os.add_dll_directory(_script_dir)
 
 import paho.mqtt.client as mqtt
 from PIL import Image, ImageDraw, ImageFont
@@ -17,7 +23,7 @@ from StreamDeck.ImageHelpers import PILHelper
 # --- 設定 ---
 
 CONFIG_PATH = Path(__file__).parent / "config.json"
-with open(CONFIG_PATH) as f:
+with open(CONFIG_PATH, encoding="utf-8") as f:
     config = json.load(f)
 
 # --- 狀態顯示對照表 ---
