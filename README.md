@@ -149,6 +149,26 @@ notify.sh 會自動：
 接線方式見 `rpi5b/mqtt-led/config.json.example`。
 目前使用共陰極 RGB LED（麵包板 + 電阻），`common_anode: false`。
 
+### IME 中英指示器（Windows）
+
+游標旁顯示中/英輸入法狀態圓點。使用 [duofilm18/IME_Indicator](https://github.com/duofilm18/IME_Indicator)（fork of RickAsli/IME_Indicator）的 Python 版本，透過 Win32 IMM API 偵測（單一資訊來源，不依賴按鍵追蹤）。
+
+**前置需求：** Windows 安裝 Python 3.x（[python.org](https://www.python.org/)，勾選 Add to PATH）
+
+**安裝：**
+```powershell
+cd C:\Users\<user>\dotfiles\windows
+.\install.ps1
+```
+
+會自動：clone IME_Indicator → 安裝 pip 依賴 → 設定開機自動啟動
+
+**更新：**
+```powershell
+cd %LOCALAPPDATA%\IME_Indicator
+git pull
+```
+
 ### Stream Deck XL 監控（Windows）
 
 在 Stream Deck 上即時顯示 Claude Code 開發狀態。透過 MQTT 訂閱 RPi5B broker。
