@@ -11,12 +11,23 @@
 #
 # 用法: 由 .tmux.conf run-shell -b 自動啟動
 
-# 防止重複啟動
+# 防止重複啟動（殺舊進程組，確保乾淨接管）
 PIDFILE="/tmp/tmux-mqtt-colors.pid"
-if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-    exit 0
+if [ -f "$PIDFILE" ]; then
+    OLD_PID="$(cat "$PIDFILE")"
+    if [ "$$" != "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        kill -- -"$OLD_PID" 2>/dev/null   # 殺整個舊進程組
+        sleep 0.2
+    fi
 fi
 echo $$ > "$PIDFILE"
+
+# 確保退出時清理所有子進程（blink_loop + mosquitto_sub）
+cleanup() {
+    rm -f "$PIDFILE"
+    kill 0 2>/dev/null   # 殺整個進程組
+}
+trap cleanup EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$SCRIPT_DIR/../wsl/claude-hooks.json"
@@ -47,14 +58,12 @@ blink_loop() {
                     ;;
             esac
         done
+        tmux refresh-client -S 2>/dev/null
         sleep 1
     done
 }
 
 blink_loop &
-BLINK_PID=$!
-trap 'rm -f "$PIDFILE"; kill $BLINK_PID 2>/dev/null' EXIT
-
 
 # ── MQTT 訂閱 ──
 mosquitto_sub -h "$MQTT_HOST" -p "$MQTT_PORT" -t "claude/led/+" -t "ime/state" -v 2>/dev/null | while IFS= read -r line; do

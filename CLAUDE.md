@@ -83,3 +83,27 @@ curl http://192.168.88.10:8080
 | Magic DNS | `rpi5b.tail77f91d.ts.net` | ❌ 不通 | 同上 |
 
 **如果 WSL 突然連不到 RPi5B**，最常見原因是 Tailscale `accept-routes` 被意外開啟。排查步驟見 [wsl-lan-connectivity.md](.claude/skills/wsl-lan-connectivity.md)
+
+## 背景腳本撰寫規範
+
+由 tmux `run-shell -b` 或其他方式啟動的常駐背景腳本，**必須用進程組管理生命週期**：
+
+```bash
+# 1. 新實例啟動時：殺掉整個舊進程組（主腳本 + 子進程）
+PIDFILE="/tmp/my-script.pid"
+if [ -f "$PIDFILE" ]; then
+    OLD_PID="$(cat "$PIDFILE")"
+    if [ "$$" != "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        kill -- -"$OLD_PID" 2>/dev/null
+        sleep 0.2
+    fi
+fi
+echo $$ > "$PIDFILE"
+
+# 2. 退出時：清理整個進程組
+trap 'rm -f "$PIDFILE"; kill 0 2>/dev/null' EXIT
+```
+
+**為什麼不能只用 PID file 檢查**：舊腳本只在偵測到舊進程存在時 `exit 0`（放棄啟動），但不殺舊的子進程。tmux reload 後舊 `mosquitto_sub`、blink_loop 等子進程變孤兒，多組進程互相打架導致閃爍失效。
+
+**規則**：`kill -- -PID`（殺進程組）+ `trap 'kill 0' EXIT`（退出清理）= 永遠只有一組進程在跑。
