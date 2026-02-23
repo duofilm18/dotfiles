@@ -61,6 +61,10 @@ _project_states = {}    # project_name → state string
 _next_button = 0        # 下一個可用的按鍵 index
 _free_buttons = []      # 已釋放的 slot，可被新專案重用
 _blink_on = False       # 閃爍切換旗標
+_date_button_index = -1 # 日期按鍵 index（-1 = 停用）
+_last_date = ""         # 上次渲染的日期，用於偵測跨日
+
+DATE_DISPLAY = {"label": "", "bg": (40, 40, 40), "fg": (255, 255, 255)}
 
 
 def _load_font(size):
@@ -115,10 +119,32 @@ def _get_button_for_project(project_name):
         return None  # 按鍵已滿
 
     idx = _button_start + _next_button
-    _projects[project_name] = idx
     _next_button += 1
+    # 跳過日期按鍵
+    if idx == _date_button_index:
+        if _next_button >= _max_projects:
+            return None
+        idx = _button_start + _next_button
+        _next_button += 1
+
+    _projects[project_name] = idx
     print(f"  Key {idx} → {project_name}")
     return idx
+
+
+def render_date_button():
+    """渲染日期按鍵，顯示 YYYYMMDD。"""
+    global _last_date
+    if _date_button_index < 0 or not (_deck and _deck.is_open()):
+        return
+    today = time.strftime("%Y%m%d")
+    _last_date = today
+    try:
+        with _deck:
+            render_button(_deck, _date_button_index, "DATE",
+                          {"label": today, **DATE_DISPLAY})
+    except Exception:
+        pass
 
 
 def _remove_project(project_name):
@@ -154,6 +180,19 @@ def _reverse_lookup(button_idx):
 def on_key_press(deck, key, state):
     """按下按鍵時切換到對應的 tmux session 並拉起 Windows Terminal。"""
     if not state:  # key release, ignore
+        return
+
+    if key == _date_button_index:
+        # 按下日期按鍵 → 輸入今天日期 YYYYMMDD
+        today = time.strftime("%Y%m%d")
+        subprocess.Popen(
+            ["powershell.exe", "-WindowStyle", "Hidden", "-Command",
+             f"Set-Clipboard -Value '{today}'; "
+             "Add-Type -AssemblyName System.Windows.Forms; "
+             "[System.Windows.Forms.SendKeys]::SendWait('^v')"],
+            creationflags=0x08000000 if sys.platform == "win32" else 0,
+        )
+        print(f"  Date typed: {today}")
         return
 
     project = _reverse_lookup(key)
@@ -193,6 +232,9 @@ def blink_loop():
         _blink_on = not _blink_on
         if not (_deck and _deck.is_open()):
             continue
+        # 跨日更新日期按鍵
+        if _date_button_index >= 0 and time.strftime("%Y%m%d") != _last_date:
+            render_date_button()
         for project_name, button_idx in list(_projects.items()):
             state = _project_states.get(project_name, "")
             if state not in BLINK_DISPLAY:
@@ -274,6 +316,7 @@ def open_deck():
         _deck.set_key_callback(on_key_press)
         # 清空所有按鍵 + 重設狀態（純被動顯示器，不保留舊狀態）
         _clear_all_buttons(_deck)
+        render_date_button()
         _projects.clear()
         _project_states.clear()
         _free_buttons.clear()
@@ -289,6 +332,7 @@ def rerender_all():
     """重連後重新繪製所有已知按鍵。"""
     if not (_deck and _deck.is_open()):
         return
+    render_date_button()
     for project_name, button_idx in list(_projects.items()):
         state = _project_states.get(project_name, "")
         state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
@@ -327,6 +371,8 @@ def main():
 
     _button_start = config.get("claude_button_index", 0)
     _max_projects = config.get("max_projects", 8)
+    global _date_button_index
+    _date_button_index = config.get("date_button_index", -1)
 
     # Stream Deck 初始化（等到接上為止）
     print("Waiting for Stream Deck...")
