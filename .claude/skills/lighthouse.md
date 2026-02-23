@@ -1,20 +1,53 @@
 # Lighthouse 效能測試
 
-## 環境限制
+## 測試 URL
 
-- **WSL 沒有裝 Chrome**，`npx lighthouse` 會失敗（`Unable to connect to Chrome`）
-- **PageSpeed Insights API** 免費額度容易用完（429 RATE_LIMIT_EXCEEDED）
-- 用戶本機（Windows）可直接跑 Lighthouse
+- **Hugo 站（workers.dev）**：`https://landtw-v2.duofilm18.workers.dev/`
+- **正式站（WordPress）**：`https://landtw.com`（目前仍是 WP，未來切換到 Hugo）
+
+測效能改善時用 workers.dev URL，不要打 landtw.com（那是 WordPress）。
 
 ## 執行方式
 
-### 1. 本機 CLI（推薦）
+### 1. WSL Puppeteer（推薦）
+
+WSL 沒裝 Chrome，用 Puppeteer 自帶 Chromium 跑：
 
 ```bash
-npx lighthouse https://landtw.com \
-  --output=json --output-path=lighthouse.json \
-  --chrome-flags="--headless --no-sandbox" \
-  --only-categories=performance
+cd ~/landtw
+npm install puppeteer lighthouse  # 只需裝一次
+```
+
+```js
+// scripts/lighthouse.mjs
+import puppeteer from 'puppeteer';
+import lighthouse from 'lighthouse';
+
+const url = process.argv[2] || 'https://landtw-v2.duofilm18.workers.dev/';
+const browser = await puppeteer.launch({
+  headless: 'new',
+  args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+});
+const { lhr } = await lighthouse(url, {
+  port: new URL(browser.wsEndpoint()).port,
+  output: 'json',
+  onlyCategories: ['performance'],
+});
+
+console.log('Performance Score:', lhr.categories.performance.score * 100);
+const keys = ['first-contentful-paint', 'largest-contentful-paint',
+  'total-blocking-time', 'cumulative-layout-shift', 'speed-index'];
+keys.forEach(k => {
+  const a = lhr.audits[k];
+  if (a) console.log(`${a.title}: ${a.displayValue}`);
+});
+
+await browser.close();
+```
+
+```bash
+node scripts/lighthouse.mjs
+node scripts/lighthouse.mjs "https://landtw-v2.duofilm18.workers.dev/代書收費標準/"
 ```
 
 ### 2. Chrome DevTools
@@ -24,12 +57,12 @@ npx lighthouse https://landtw.com \
 
 ### 3. PageSpeed Insights 網頁
 
-https://pagespeed.web.dev/analysis?url=https://landtw.com
+https://pagespeed.web.dev/analysis?url=https://landtw-v2.duofilm18.workers.dev/
 
 ### 4. PSI API（有 quota 限制）
 
 ```bash
-curl -s "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://landtw.com&category=PERFORMANCE&strategy=MOBILE"
+curl -s "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://landtw-v2.duofilm18.workers.dev/&category=PERFORMANCE&strategy=MOBILE"
 ```
 
 免費 quota 用完會回 429，需等隔天重置或申請提高額度。
