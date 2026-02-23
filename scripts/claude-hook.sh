@@ -27,6 +27,9 @@ ACTIVITY_FILE="/tmp/claude-activity-${PROJECT}"
 # 從 stdin 讀取 JSON（非阻塞，可能為空）
 INPUT=$(cat)
 
+# 記錄活動時間戳（所有事件都更新，供 RUNNING timeout 參考）
+date +%s > "$ACTIVITY_FILE"
+
 # ─── 事件→狀態映射 ───────────────────────────────────
 
 resolve_state() {
@@ -83,7 +86,7 @@ fi
 
 # ─── 2 秒去重 ─────────────────────────────────────────
 
-DEDUP_FILE="/tmp/claude-led-dedup"
+DEDUP_FILE="/tmp/claude-led-dedup-${PROJECT}"
 NOW=$(date +%s)
 
 if [ "$CURRENT_STATE" = "$NEW_STATE" ] && [ -f "$DEDUP_FILE" ]; then
@@ -106,6 +109,22 @@ echo "$NEW_STATE" > "$STATE_FILE"
 # RUNNING 時清除 idle-pending（新訊息進來，取消回 idle 計時）
 if [ "$NEW_STATE" = "RUNNING" ]; then
     rm -f "$IDLE_PENDING"
+    # RUNNING timeout：超過 60 秒無活動自動切 IDLE
+    # 處理中斷回應等 Stop 事件未觸發的情況
+    (
+        while true; do
+            sleep 30
+            [ "$(head -1 "$STATE_FILE" 2>/dev/null)" = "RUNNING" ] || exit 0
+            LAST=$(head -1 "$ACTIVITY_FILE" 2>/dev/null || echo 0)
+            NOW=$(date +%s)
+            if [ $((NOW - ${LAST:-0})) -ge 60 ]; then
+                echo "IDLE" > "$STATE_FILE"
+                [ -n "$WINDOW_IDX" ] && tmux set-window-option -t ":$WINDOW_IDX" @claude_state "idle" 2>/dev/null || true
+                exit 0
+            fi
+        done
+    ) &
+    disown
 fi
 
 # 寫入 tmux @claude_state（State Publisher 會輪詢並發 MQTT）

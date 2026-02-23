@@ -95,15 +95,14 @@ def render_button(deck, key_index, project_name, state_info):
     draw.rectangle([(0, 0), (w, h)], fill=state_info["bg"])
 
     # 上方：專案名稱（截斷顯示）
-    _labels = config.get("labels", {})
-    title_size = _labels.get("title_size", 16)
+    title_size = config.get("font_size_title", 16)
     font_small = _load_font(title_size)
     label = project_name[:10]
     draw.text((w // 2, h // 4), label, font=font_small,
               fill=state_info["fg"], anchor="mm")
 
     # 中央：狀態（粗體）
-    state_size = _labels.get("state_size", 18)
+    state_size = config.get("font_size_state", 18)
     font_large = _load_font(state_size, bold=True)
     draw.text((w // 2, h // 2 + 5), state_info["label"], font=font_large,
               fill=state_info["fg"], anchor="mm")
