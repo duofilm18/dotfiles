@@ -123,9 +123,15 @@ def on_key_press(deck, key, state):
         return
 
     try:
-        # 1. 切換 tmux session（透過 WSL 執行）
+        # 1. 找到 @project 匹配的 tmux window 並切換
+        #    Claude Code 跑在同一 session 的不同 window，用 @project 標記
+        cmd = (
+            f"idx=$(tmux list-windows -F '#{{window_index}} #{{@project}}'"
+            f" | grep ' {project}$' | head -1 | cut -d' ' -f1)"
+            f" && [ -n \"$idx\" ] && tmux select-window -t :$idx"
+        )
         subprocess.Popen(
-            ["wsl.exe", "tmux", "switch-client", "-t", project],
+            ["wsl.exe", "bash", "-c", cmd],
             creationflags=0x08000000 if sys.platform == "win32" else 0,
         )
         # 2. 把 Windows Terminal 拉到前景
@@ -134,7 +140,7 @@ def on_key_press(deck, key, state):
              "(New-Object -ComObject WScript.Shell).AppActivate('Terminal')"],
             creationflags=0x08000000 if sys.platform == "win32" else 0,
         )
-        print(f"  Switching to tmux session: {project}")
+        print(f"  Switching to tmux window: {project}")
     except Exception as e:
         print(f"  Switch failed: {e}")
 
