@@ -21,6 +21,7 @@
 | [skill-creator](.claude/skills/skill-creator.md) | Skill 撰寫規範（基於 Anthropic 官方） |
 | [testing](.claude/skills/testing.md) | Bats 測試慣例與 LED E2E 流程 |
 | [font-subset](.claude/skills/font-subset.md) | Noto Sans TC 字型 subset 流程 |
+| [lighthouse](.claude/skills/lighthouse.md) | Lighthouse 效能測試（WSL 限制與替代方案） |
 
 ## 規則
 
