@@ -1,0 +1,84 @@
+---
+name: testing
+description: >
+  Bats 測試慣例、test_helper 用法、新增測試步驟、LED E2E 特殊流程。
+  當需要新增或修改 Hook 測試時使用。
+---
+
+# Testing（Bats）
+
+## 結構
+
+```
+tests/
+├── test_helper.bash       # 共用 setup/teardown/fire/assert
+├── state_machine.bats     # T1-T7: 狀態轉換 + 智慧抑制
+├── dedup.bats             # T8-T9: 2 秒去重
+├── melody.bats            # T1-T6 dispatch 音效 + T10-T13 git 音效
+├── dispatch.bats          # T-D1, T-D2: PROJECT 計算
+├── flock.bats             # T-B1, T-B2: activity before lock
+└── led_e2e.bats           # LED 端到端（需 RPi5B MQTT）
+```
+
+## 執行
+
+```bash
+bats tests/                # 全跑（LED 在無 RPi5B 時 skip）
+bats tests/melody.bats     # 單檔
+bats tests/ --filter "T1"  # 過濾
+```
+
+## test_helper.bash API
+
+| 函式 | 用途 |
+|------|------|
+| `common_setup` | 清除暫存檔、啟用 melody log 模式 |
+| `common_teardown` | 清除暫存檔、關閉 melody log 模式 |
+| `fire <event> [matcher] [json]` | 觸發 hook 事件 + melody dispatch |
+| `assert_state <expected>` | 驗證 STATE_FILE 第一行 |
+| `assert_melody <pattern>` | 驗證 MELODY_LOG 最後一行含 pattern |
+| `assert_no_melody <before_count>` | 驗證 MELODY_LOG 行數未增加 |
+| `melody_line_count` | 回傳 MELODY_LOG 目前行數 |
+
+## 新增測試步驟
+
+1. 建立 `tests/<name>.bats`
+2. `setup()` 內 `load test_helper; common_setup`
+3. `teardown()` 內 `common_teardown`
+4. 用 `@test "描述" { ... }` 撰寫測試
+5. 每個 `@test` 獨立隔離，不依賴其他 test 的狀態
+
+## LED E2E 特殊流程
+
+- `setup()` 偵測 MQTT broker，不通 → `skip "MQTT unreachable"`
+- 用 `mosquitto_sub -C 1 -W 5` 等待 RPi5 ACK（5 秒 timeout）
+- ACK JSON 含 `r/g/b/pattern/is_lit/gpio`
+- 比對 `wsl/led-effects.json` 預期值
+- GPIO `is_lit=true` 表示 LED 實際有亮
+
+# Testing（pytest / Stream Deck）
+
+## 結構
+
+```
+streamdeck/
+└── test_rebuild.py    # Stream Deck Consumer 純邏輯測試
+```
+
+## 執行
+
+```bash
+cd streamdeck && python3 -m pytest test_rebuild.py -v
+```
+
+## Mock 基礎
+
+測試檔開頭用 `sys.modules` 替換所有硬體依賴（StreamDeck USB、PIL、paho），
+`reset()` autouse fixture 每個測試前重置全域狀態 + mock deck + patch `threading.Timer`。
+
+## 慣例
+
+- `make_msg(topic, state)` 建立 mock MQTT message
+- `state=None` 產生空 payload（模擬專案移除）
+- 測試只驗純邏輯（按鍵分配、狀態對照、callback 路由），不碰真實硬體
+- subprocess / _run_powershell 用 `patch` 隔離

@@ -244,3 +244,265 @@ class TestButtonAllocation:
 
         assert len(sd._projects) == 2
         assert "c" not in sd._projects
+
+
+# ═══════════════════════════════════════════════════════════
+# Button 回收：FIFO 順序、重用、跳過 date button
+# ═══════════════════════════════════════════════════════════
+
+
+class TestButtonRecycling:
+
+    def _setup_three_projects(self):
+        sd.on_connect(CLIENT, None, None, 0)
+        sd.on_message(CLIENT, None, make_msg("claude/led/A", "idle"))
+        sd.on_message(CLIENT, None, make_msg("claude/led/B", "idle"))
+        sd.on_message(CLIENT, None, make_msg("claude/led/C", "idle"))
+        sd._finish_rebuild()
+
+    def test_removed_slot_reused_by_next_project(self):
+        """A→0, B→1, C→2 → remove B → D gets slot 1。"""
+        self._setup_three_projects()
+        b_slot = sd._projects["B"]
+
+        sd.on_message(CLIENT, None, make_msg("claude/led/B", state=None))
+        sd.on_message(CLIENT, None, make_msg("claude/led/D", "running"))
+
+        assert sd._projects["D"] == b_slot
+
+    def test_free_buttons_fifo_order(self):
+        """remove B then A → next gets B's slot (FIFO)。"""
+        self._setup_three_projects()
+        b_slot = sd._projects["B"]
+
+        sd.on_message(CLIENT, None, make_msg("claude/led/B", state=None))
+        sd.on_message(CLIENT, None, make_msg("claude/led/A", state=None))
+        sd.on_message(CLIENT, None, make_msg("claude/led/D", "idle"))
+
+        assert sd._projects["D"] == b_slot  # FIFO: B's slot first
+
+    def test_recycle_skips_date_button(self):
+        """date=1, A→0, B→2 → remove A → slot 0 reusable, date still skipped。"""
+        sd._date_button_index = 1
+
+        sd.on_connect(CLIENT, None, None, 0)
+        sd.on_message(CLIENT, None, make_msg("claude/led/A", "idle"))
+        sd.on_message(CLIENT, None, make_msg("claude/led/B", "idle"))
+        sd._finish_rebuild()
+
+        assert 1 not in sd._projects.values()  # date skipped
+        a_slot = sd._projects["A"]
+
+        sd.on_message(CLIENT, None, make_msg("claude/led/A", state=None))
+        sd.on_message(CLIENT, None, make_msg("claude/led/C", "idle"))
+
+        assert sd._projects["C"] == a_slot
+        assert 1 not in sd._projects.values()
+
+
+# ═══════════════════════════════════════════════════════════
+# 正常模式 render：rebuild 後逐訊息即時更新
+# ═══════════════════════════════════════════════════════════
+
+
+class TestNormalModeRender:
+
+    def test_new_message_renders_immediately(self):
+        """finish_rebuild → on_message → render_button called。"""
+        sd.on_connect(CLIENT, None, None, 0)
+        sd._finish_rebuild()
+
+        with patch.object(sd, "render_button") as mock_rb:
+            sd.on_message(CLIENT, None, make_msg("claude/led/proj", "running"))
+            assert mock_rb.called
+
+    def test_state_update_uses_correct_display(self):
+        """state='running' → STATE_DISPLAY['running'] 的 bg/fg。"""
+        sd.on_connect(CLIENT, None, None, 0)
+        sd._finish_rebuild()
+
+        with patch.object(sd, "render_button") as mock_rb:
+            sd.on_message(CLIENT, None, make_msg("claude/led/proj", "running"))
+            state_info = mock_rb.call_args.args[3]
+            assert state_info == sd.STATE_DISPLAY["running"]
+
+    def test_unknown_state_uses_fallback(self):
+        """state='foobar' → UNKNOWN_DISPLAY。"""
+        sd.on_connect(CLIENT, None, None, 0)
+        sd._finish_rebuild()
+
+        msg = MagicMock()
+        msg.topic = "claude/led/proj"
+        msg.payload = json.dumps({"state": "foobar", "project": "proj"}).encode()
+
+        with patch.object(sd, "render_button") as mock_rb:
+            sd.on_message(CLIENT, None, msg)
+            state_info = mock_rb.call_args.args[3]
+            assert state_info == sd.UNKNOWN_DISPLAY
+
+
+# ═══════════════════════════════════════════════════════════
+# 錯誤 payload：不炸、靜默忽略
+# ═══════════════════════════════════════════════════════════
+
+
+class TestErrorResilience:
+
+    def test_malformed_json_ignored(self):
+        """payload = b'not json' → no crash, no state change。"""
+        sd.on_connect(CLIENT, None, None, 0)
+        sd._finish_rebuild()
+
+        msg = MagicMock()
+        msg.topic = "claude/led/proj"
+        msg.payload = b"not json"
+
+        sd.on_message(CLIENT, None, msg)
+        assert "proj" not in sd._project_states
+
+    def test_missing_state_field(self):
+        """payload = b'{"project":"x"}' → state=''。"""
+        sd.on_connect(CLIENT, None, None, 0)
+        sd._finish_rebuild()
+
+        msg = MagicMock()
+        msg.topic = "claude/led/x"
+        msg.payload = json.dumps({"project": "x"}).encode()
+
+        sd.on_message(CLIENT, None, msg)
+        assert sd._project_states["x"] == ""
+
+    def test_invalid_topic_depth_ignored(self):
+        """topic depth != 3 → ignored。"""
+        sd.on_connect(CLIENT, None, None, 0)
+        sd._finish_rebuild()
+
+        for topic in ["claude/led", "claude/led/a/b"]:
+            msg = MagicMock()
+            msg.topic = topic
+            msg.payload = json.dumps({"state": "idle"}).encode()
+            sd.on_message(CLIENT, None, msg)
+
+        assert len(sd._projects) == 0
+
+    def test_remove_nonexistent_project_no_crash(self):
+        """_remove_project('ghost') → no error。"""
+        sd._remove_project("ghost")  # should not raise
+
+
+# ═══════════════════════════════════════════════════════════
+# 按鍵回調路由（mock subprocess）
+# ═══════════════════════════════════════════════════════════
+
+
+class TestOnKeyPress:
+
+    def test_key_release_ignored(self):
+        """on_key_press(deck, 0, False) → no action。"""
+        with patch.object(sd, "_run_powershell") as mock_ps, \
+             patch("streamdeck_mqtt.subprocess") as mock_sp:
+            sd.on_key_press(sd._deck, 0, False)
+            mock_ps.assert_not_called()
+            mock_sp.Popen.assert_not_called()
+
+    def test_date_button_triggers_paste(self):
+        """按下 date button → _run_powershell called。"""
+        sd._date_button_index = 3
+        with patch.object(sd, "_run_powershell") as mock_ps:
+            sd.on_key_press(sd._deck, 3, True)
+            mock_ps.assert_called_once()
+
+    def test_project_button_triggers_switch(self):
+        """按下 project button → subprocess.Popen called。"""
+        sd.on_connect(CLIENT, None, None, 0)
+        sd.on_message(CLIENT, None, make_msg("claude/led/myproj", "idle"))
+        sd._finish_rebuild()
+
+        key_idx = sd._projects["myproj"]
+        with patch("streamdeck_mqtt.subprocess.Popen") as mock_popen, \
+             patch.object(sd, "_run_powershell"):
+            sd.on_key_press(sd._deck, key_idx, True)
+            assert mock_popen.called
+
+    def test_unmapped_key_ignored(self):
+        """按下未分配的 key → no subprocess call。"""
+        with patch("streamdeck_mqtt.subprocess.Popen") as mock_popen, \
+             patch.object(sd, "_run_powershell") as mock_ps:
+            sd.on_key_press(sd._deck, 99, True)
+            mock_popen.assert_not_called()
+            mock_ps.assert_not_called()
+
+
+# ═══════════════════════════════════════════════════════════
+# 閃爍 display 表設定
+# ═══════════════════════════════════════════════════════════
+
+
+class TestBlinkDisplay:
+
+    def test_idle_waiting_have_blink_display(self):
+        """BLINK_DISPLAY 只含 idle 和 waiting。"""
+        assert set(sd.BLINK_DISPLAY.keys()) == {"idle", "waiting"}
+
+    def test_running_completed_not_in_blink(self):
+        """running/completed/error 不在 BLINK_DISPLAY。"""
+        for state in ("running", "completed", "error"):
+            assert state not in sd.BLINK_DISPLAY
+
+
+# ═══════════════════════════════════════════════════════════
+# Timer debounce：rebuild 期間多則訊息重設 timer
+# ═══════════════════════════════════════════════════════════
+
+
+class TestTimerDebounce:
+
+    def test_rapid_messages_reset_timer(self):
+        """rebuild 中連續訊息 → timer.cancel 被呼叫。"""
+        with patch("streamdeck_mqtt.threading.Timer", return_value=MagicMock()) as MockTimer:
+            sd.on_connect(CLIENT, None, None, 0)
+            first_timer = MockTimer.return_value
+
+            sd.on_message(CLIENT, None, make_msg("claude/led/a", "idle"))
+            assert first_timer.cancel.called
+
+    def test_finish_rebuild_sets_flag_and_renders(self):
+        """_finish_rebuild() → _rebuilding=False + rerender_all 被呼叫。"""
+        sd._rebuilding = True
+        sd.on_connect(CLIENT, None, None, 0)
+        sd.on_message(CLIENT, None, make_msg("claude/led/a", "idle"))
+
+        with patch.object(sd, "render_button"):
+            sd._finish_rebuild()
+
+        assert sd._rebuilding is False
+
+
+# ═══════════════════════════════════════════════════════════
+# Rerender / Clear all
+# ═══════════════════════════════════════════════════════════
+
+
+class TestRerenderAndClear:
+
+    def test_rerender_all_renders_each_project(self):
+        """3 projects → rerender_all → render_button called for each + date。"""
+        sd.on_connect(CLIENT, None, None, 0)
+        sd.on_message(CLIENT, None, make_msg("claude/led/a", "idle"))
+        sd.on_message(CLIENT, None, make_msg("claude/led/b", "running"))
+        sd.on_message(CLIENT, None, make_msg("claude/led/c", "waiting"))
+        sd._finish_rebuild()
+
+        with patch.object(sd, "render_button") as mock_rb, \
+             patch.object(sd, "render_date_button"):
+            sd.rerender_all()
+            rendered = {c.args[2] for c in mock_rb.call_args_list}
+            assert rendered == {"a", "b", "c"}
+
+    def test_clear_all_buttons_renders_32_keys(self):
+        """_clear_all_buttons → render_button called 32 times with 'off'。"""
+        with patch.object(sd, "render_button") as mock_rb:
+            sd._clear_all_buttons(sd._deck)
+            assert mock_rb.call_count == 32
+            for call in mock_rb.call_args_list:
+                assert call.args[3] == sd.STATE_DISPLAY["off"]

@@ -45,7 +45,6 @@ dotfiles/
 │   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b.sh
-│   ├── test-hooks-auto.sh
 │   ├── test-hooks.sh
 │   ├── test-ime-local-hub.sh
 │   ├── test-mqtt.sh
@@ -215,13 +214,15 @@ python streamdeck_mqtt.py
 ### 測試指令
 
 ```bash
-# WSL 需安裝 mosquitto-clients
+# Hook 測試（Bats）
+sudo apt install bats
+bats tests/                    # 全跑（LED 在無 RPi5B 時 skip）
+bats tests/state_machine.bats  # 單檔
+bats tests/ --filter "T1"     # 過濾
+
+# MQTT 手動測試（需 mosquitto-clients）
 sudo apt install mosquitto-clients
-
-# 全部測試（LED + ntfy）
-~/dotfiles/scripts/test-mqtt.sh
-
-# 單獨測試
+~/dotfiles/scripts/test-mqtt.sh          # 全部測試（LED + ntfy）
 ~/dotfiles/scripts/test-mqtt.sh led      # LED 閃爍
 ~/dotfiles/scripts/test-mqtt.sh ntfy     # 手機通知
 ~/dotfiles/scripts/test-mqtt.sh buzzer   # 蜂鳴器
