@@ -10,6 +10,7 @@
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -465,10 +466,31 @@ def reconnect_loop():
             time.sleep(3)
 
 
+# --- Singleton：啟動時砍掉舊進程 ---
+
+_PID_FILE = Path(__file__).parent / "streamdeck_mqtt.pid"
+
+
+def _kill_stale_instances():
+    """讀 PID file，砍掉舊進程，寫入自己的 PID。"""
+    if _PID_FILE.exists():
+        try:
+            old_pid = int(_PID_FILE.read_text().strip())
+            if old_pid != os.getpid():
+                os.kill(old_pid, signal.SIGTERM)
+                print(f"  Killed stale process (PID {old_pid})")
+                time.sleep(1)  # 等舊進程釋放 USB
+        except (ValueError, ProcessLookupError, PermissionError):
+            pass  # PID 無效或進程已不存在
+    _PID_FILE.write_text(str(os.getpid()))
+
+
 # --- 主程式 ---
 
 def main():
     global _button_start, _max_projects
+
+    _kill_stale_instances()
 
     _button_start = config.get("claude_button_index", 0)
     _max_projects = config.get("max_projects", 8)
