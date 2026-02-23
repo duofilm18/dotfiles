@@ -15,6 +15,7 @@
 | [wsl-lan-connectivity](.claude/skills/wsl-lan-connectivity.md) | WSL2 無法連線本地區網的排查 |
 | [pihole-tplink](.claude/skills/pihole-tplink.md) | Pi-hole + TP-Link 路由器廣告攔截設定與排查 |
 | [background-script](.claude/skills/background-script.md) | 背景常駐腳本的進程組管理規範 |
+| [unidirectional-state](.claude/skills/unidirectional-state.md) | 單向資料流與被動顯示器架構規範 |
 | [skill-creator](.claude/skills/skill-creator.md) | Skill 撰寫規範（基於 Anthropic 官方） |
 
 ## 規則
