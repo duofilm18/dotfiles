@@ -12,6 +12,7 @@
       - build-essential
       - jq
       - zstd
+      - mosquitto
     state: present
     update_cache: true
     cache_valid_time: 3600
@@ -61,6 +62,23 @@
       # pre-commit hook - 自動更新 README.md 目錄結構
       ~/dotfiles/scripts/update-readme.sh
       git add README.md
+
+- name: Configure mosquitto local broker
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/mosquitto/conf.d/local.conf
+    content: |
+      listener 1883
+      allow_anonymous true
+    mode: "0644"
+  notify: Restart mosquitto
+
+- name: Enable mosquitto service
+  become: true
+  ansible.builtin.systemd:
+    name: mosquitto
+    enabled: true
+    state: started
 
 - name: Install Ollama
   ansible.builtin.shell: curl -fsSL https://ollama.com/install.sh | sh

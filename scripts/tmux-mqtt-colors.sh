@@ -11,7 +11,7 @@
 #   1. 啟動清理：清除所有 MQTT retained 訊息，從 tmux 重建
 #   2. 主迴圈：每秒輪詢 tmux，偵測變化 → 發 MQTT retained
 #   3. 閃爍 timer：idle/waiting 時每秒切換 @claude_blink
-#   4. IME 訂閱：ime/state → tmux @ime_state（獨立 domain，保持 MQTT→tmux）
+#   4. IME 訂閱：localhost:1883 ime/state → tmux @ime_state（本機 HUB，不依賴 RPi5B）
 #
 # 用法: 由 .tmux.conf run-shell -b 自動啟動
 
@@ -86,10 +86,10 @@ blink_loop() {
 blink_loop &
 
 # ── IME 訂閱（背景）──
-# ime/state → tmux @ime_state（事件驅動，獨立 domain，保持 MQTT→tmux）
+# 本機 HUB (localhost:1883) ime/state → tmux @ime_state（不依賴 RPi5B）
 ime_loop() {
     while true; do
-        mosquitto_sub -h "$MQTT_HOST" -p "$MQTT_PORT" -t "ime/state" 2>/dev/null | while IFS= read -r payload; do
+        mosquitto_sub -h "localhost" -p 1883 -t "ime/state" 2>/dev/null | while IFS= read -r payload; do
             tmux set -g @ime_state "$payload" 2>/dev/null
             tmux refresh-client -S 2>/dev/null
         done

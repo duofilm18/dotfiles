@@ -5,28 +5,27 @@
 ## 架構
 
 ```
-WSL (Master)                              rpi5b (Slave, 192.168.88.10)
-┌──────────────────────┐                  ┌──────────────────────────┐
-│ Claude Code Hooks    │                  │ mosquitto (port 1883)    │
-│   → qwen-*.sh        │   MQTT           │                          │
-│   → notify.sh ───────┼──────────────→  │ mqtt-led (GPIO 控制)     │
-│                      │  mosquitto_pub   │   └ claude/led topic     │
-│ wsl/led-effects.json │                  │   └ claude/buzzer topic  │
-│ (燈效設定,大腦在這)   │                  │                          │
-│                      │                  │ mqtt-ntfy (ntfy 橋接)    │
-│ Qwen (Ollama)        │                  │   └ claude/notify topic  │
-│ (本地 AI 摘要)        │                  │   └→ ntfy (port 8080)    │
-└──────────────────────┘                  └──────────────────────────┘
-                                                     ↑
-Windows (Stream Deck XL)                             │ MQTT subscribe
-┌──────────────────────┐                             │ (claude/led, retain)
-│ streamdeck_mqtt.py   │   paho-mqtt (TCP 1883)      │
-│   → Stream Deck XL ──┼─────────────────────────────┘
-│   (32 鍵 LCD 按鈕)    │
-└──────────────────────┘
+Windows                     WSL (Master)                       rpi5b (Slave, 192.168.88.10)
+┌──────────────────┐       ┌──────────────────────┐           ┌──────────────────────────┐
+│ IME_Indicator    │ MQTT  │ mosquitto (本機 HUB)  │           │ mosquitto (port 1883)    │
+│  → ime/state ────┼──────→│   port 1883           │           │                          │
+│                  │       │                      │           │ mqtt-led (GPIO 控制)     │
+│ Stream Deck XL   │       │ tmux-mqtt-colors.sh  │  MQTT     │   └ claude/led topic     │
+│  → streamdeck_  │       │   ime_loop ← 本機    │──────→   │   └ claude/buzzer topic  │
+│    mqtt.py ──────┼───────┼─→ claude/led → RPi5B │           │                          │
+│  (32 鍵 LCD)     │       │                      │           │ mqtt-ntfy (ntfy 橋接)    │
+└──────────────────┘       │ Claude Code Hooks    │           │   └ claude/notify topic  │
+                           │   → notify.sh ───────┼──────→   │   └→ ntfy (port 8080)    │
+                           │                      │           └──────────────────────────┘
+                           │ wsl/led-effects.json │
+                           │ Qwen (Ollama)        │
+                           └──────────────────────┘
 ```
 
-**設計原則**：WSL 是大腦（決定燈效、通知內容），rpi5b 是四肢（只執行 GPIO 指令）。rpi5b 部署一次很少動。
+**設計原則**：
+- WSL 是大腦（決定燈效、通知內容），rpi5b 是四肢（只執行 GPIO 指令）
+- IME 狀態走**本機 MQTT HUB**（`localhost:1883`），出門不依賴 RPi5B
+- Claude LED / Stream Deck / 通知走 **RPi5B MQTT**，不在家時靜默失敗
 
 ## 目錄結構
 
@@ -48,6 +47,7 @@ dotfiles/
 │   ├── setup-rpi5b.sh
 │   ├── test-hooks-auto.sh
 │   ├── test-hooks.sh
+│   ├── test-ime-local-hub.sh
 │   ├── test-mqtt.sh
 │   ├── tmux-mqtt-colors.sh
 │   ├── tmux-switch-project.sh
