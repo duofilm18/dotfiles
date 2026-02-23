@@ -20,6 +20,7 @@
 | [streamdeck](.claude/skills/streamdeck.md) | Stream Deck 硬體規格、按鍵佈局與操作 |
 | [skill-creator](.claude/skills/skill-creator.md) | Skill 撰寫規範（基於 Anthropic 官方） |
 | [testing](.claude/skills/testing.md) | Bats 測試慣例與 LED E2E 流程 |
+| [font-subset](.claude/skills/font-subset.md) | Noto Sans TC 字型 subset 流程 |
 
 ## 規則
 
