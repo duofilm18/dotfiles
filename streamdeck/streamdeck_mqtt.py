@@ -173,8 +173,11 @@ def blink_loop():
                 info = BLINK_DISPLAY[state]
             else:
                 info = STATE_DISPLAY[state]
-            with _deck:
-                render_button(_deck, button_idx, project_name, info)
+            try:
+                with _deck:
+                    render_button(_deck, button_idx, project_name, info)
+            except Exception:
+                break  # deck 斷線，等 reconnect
 
 
 # --- MQTT callbacks ---
@@ -206,38 +209,85 @@ def on_message(client, userdata, msg):
         return
 
     if _deck and _deck.is_open():
-        with _deck:
-            render_button(_deck, button_idx, project_name, state_info)
+        try:
+            with _deck:
+                render_button(_deck, button_idx, project_name, state_info)
+        except Exception:
+            pass  # deck 斷線，等 reconnect
+
+
+# --- Stream Deck 連線管理 ---
+
+def open_deck():
+    """開啟 Stream Deck，找不到回傳 None。"""
+    global _deck
+    try:
+        decks = DeviceManager().enumerate()
+        if not decks:
+            return None
+        _deck = decks[0]
+        _deck.open()
+        _deck.set_brightness(config.get("deck_brightness", 30))
+        _deck.set_key_callback(on_key_press)
+        print(f"Stream Deck: {_deck.deck_type()} ({_deck.key_count()} keys)")
+        return _deck
+    except Exception as e:
+        print(f"  Deck open failed: {e}")
+        return None
+
+
+def rerender_all():
+    """重連後重新繪製所有已知按鍵。"""
+    if not (_deck and _deck.is_open()):
+        return
+    for project_name, button_idx in list(_projects.items()):
+        state = _project_states.get(project_name, "")
+        state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
+        try:
+            with _deck:
+                render_button(_deck, button_idx, project_name, state_info)
+        except Exception:
+            break
+
+
+def reconnect_loop():
+    """背景 thread：偵測 USB 斷線，自動重連 + 重繪。"""
+    while True:
+        time.sleep(3)
+        if _deck is None:
+            continue
+        try:
+            if _deck.is_open():
+                continue
+        except Exception:
+            pass
+        # deck 斷線，嘗試重連
+        print("Stream Deck disconnected, reconnecting...")
+        while True:
+            if open_deck():
+                print("Stream Deck reconnected!")
+                rerender_all()
+                break
+            time.sleep(3)
 
 
 # --- 主程式 ---
 
 def main():
-    global _deck, _button_start, _max_projects
+    global _button_start, _max_projects
 
-    # Stream Deck 初始化
-    decks = DeviceManager().enumerate()
-    if not decks:
-        print("No Stream Deck found. Check:")
-        print("  1. hidapi.dll is in PATH")
-        print("  2. Official Stream Deck software is closed")
-        print("  3. Device is connected via USB")
-        return
-
-    _deck = decks[0]
-    _deck.open()
-    _deck.set_brightness(config.get("deck_brightness", 30))
     _button_start = config.get("claude_button_index", 0)
     _max_projects = config.get("max_projects", 8)
 
-    print(f"Stream Deck: {_deck.deck_type()} ({_deck.key_count()} keys)")
+    # Stream Deck 初始化（等到接上為止）
+    print("Waiting for Stream Deck...")
+    while not open_deck():
+        time.sleep(3)
     print(f"Claude buttons: Key {_button_start} ~ {_button_start + _max_projects - 1}")
 
-    # 註冊按鍵回調（按下 → 切換 Windows Terminal 分頁）
-    _deck.set_key_callback(on_key_press)
-
-    # 閃爍 timer（背景 thread）
+    # 背景 threads
     threading.Thread(target=blink_loop, daemon=True).start()
+    threading.Thread(target=reconnect_loop, daemon=True).start()
 
     # MQTT 連線
     broker = config.get("mqtt_broker", "192.168.88.10")
@@ -255,8 +305,12 @@ def main():
     except KeyboardInterrupt:
         print("\nShutting down...")
     finally:
-        _deck.reset()
-        _deck.close()
+        if _deck:
+            try:
+                _deck.reset()
+                _deck.close()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
