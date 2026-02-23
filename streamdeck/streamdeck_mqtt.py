@@ -11,6 +11,8 @@ import json
 import os
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 # hidapi.dll 搜尋：優先從腳本同目錄載入
@@ -43,13 +45,21 @@ STATE_DISPLAY = {
 }
 UNKNOWN_DISPLAY = {"label": "?", "bg": (50, 50, 50), "fg": (200, 200, 200)}
 
+# 閃爍時的交替顯示（白底）
+BLINK_DISPLAY = {
+    "idle":    {"label": "IDLE",    "bg": (255, 255, 255), "fg": (255, 13,  0)},
+    "waiting": {"label": "WAITING", "bg": (255, 255, 255), "fg": (200, 180, 0)},
+}
+
 # --- 全域變數 ---
 
 _deck = None
 _button_start = 0       # 起始按鍵 index
 _max_projects = 8       # 最多顯示幾個專案
 _projects = {}          # project_name → button_index
+_project_states = {}    # project_name → state string
 _next_button = 0        # 下一個可用的按鍵 index
+_blink_on = False       # 閃爍切換旗標
 
 
 def _load_font(size):
@@ -145,6 +155,28 @@ def on_key_press(deck, key, state):
         print(f"  Switch failed: {e}")
 
 
+# --- 閃爍 timer ---
+
+def blink_loop():
+    """每秒切換 idle/waiting 按鍵的顯示（狀態色 ↔ 白色）。"""
+    global _blink_on
+    while True:
+        time.sleep(1)
+        _blink_on = not _blink_on
+        if not (_deck and _deck.is_open()):
+            continue
+        for project_name, button_idx in list(_projects.items()):
+            state = _project_states.get(project_name, "")
+            if state not in BLINK_DISPLAY:
+                continue
+            if _blink_on:
+                info = BLINK_DISPLAY[state]
+            else:
+                info = STATE_DISPLAY[state]
+            with _deck:
+                render_button(_deck, button_idx, project_name, info)
+
+
 # --- MQTT callbacks ---
 
 def on_connect(client, userdata, flags, rc):
@@ -166,6 +198,7 @@ def on_message(client, userdata, msg):
     project_name = parts[2]
 
     state = data.get("state", "").lower()
+    _project_states[project_name] = state
     state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
 
     button_idx = _get_button_for_project(project_name)
@@ -202,6 +235,9 @@ def main():
 
     # 註冊按鍵回調（按下 → 切換 Windows Terminal 分頁）
     _deck.set_key_callback(on_key_press)
+
+    # 閃爍 timer（背景 thread）
+    threading.Thread(target=blink_loop, daemon=True).start()
 
     # MQTT 連線
     broker = config.get("mqtt_broker", "192.168.88.10")
