@@ -251,9 +251,19 @@ def on_message(client, userdata, msg):
 
 # --- Stream Deck 連線管理 ---
 
+def _clear_all_buttons(deck):
+    """清空所有按鍵畫面（純被動顯示器：啟動 = 空白）。"""
+    off = STATE_DISPLAY["off"]
+    for key in range(deck.key_count()):
+        try:
+            render_button(deck, key, "", off)
+        except Exception:
+            break
+
+
 def open_deck():
     """開啟 Stream Deck，找不到回傳 None。"""
-    global _deck
+    global _deck, _projects, _project_states, _next_button, _free_buttons
     try:
         decks = DeviceManager().enumerate()
         if not decks:
@@ -262,6 +272,12 @@ def open_deck():
         _deck.open()
         _deck.set_brightness(config.get("deck_brightness", 30))
         _deck.set_key_callback(on_key_press)
+        # 清空所有按鍵 + 重設狀態（純被動顯示器，不保留舊狀態）
+        _clear_all_buttons(_deck)
+        _projects.clear()
+        _project_states.clear()
+        _free_buttons.clear()
+        _next_button = 0
         print(f"Stream Deck: {_deck.deck_type()} ({_deck.key_count()} keys)")
         return _deck
     except Exception as e:
