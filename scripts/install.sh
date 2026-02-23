@@ -27,7 +27,8 @@ sudo apt install -y \
     curl \
     build-essential \
     jq \
-    zstd
+    zstd \
+    bats
 
 # 2. 設定 Git
 echo ""
@@ -101,6 +102,13 @@ if ! command -v ollama &>/dev/null; then
 else
     echo "  Ollama 已安裝，跳過"
 fi
+
+# 9. 安裝測試依賴
+echo ""
+echo "🧪 安裝測試依賴..."
+pip install -r "$DOTFILES/requirements-dev.txt" 2>/dev/null || \
+    pip3 install -r "$DOTFILES/requirements-dev.txt" 2>/dev/null || \
+    echo "  ⚠️  pip 未安裝，請手動執行: pip install -r requirements-dev.txt"
 
 echo ""
 echo "=========================================="
