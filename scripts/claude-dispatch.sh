@@ -8,7 +8,9 @@ EVENT="$1"
 MATCHER="${2:-}"
 SCRIPT_DIR="$(dirname "$0")"
 # git repo root 取名，不怕 cd 子目錄
-PROJECT="$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || basename "$PWD")"
+# 注意：basename "" 回傳空字串但 exit=0，所以不能用 || fallback
+PROJECT="$(git rev-parse --show-toplevel 2>/dev/null)"
+PROJECT="$(basename "${PROJECT:-$PWD}")"
 
 # 取得 tmux window index（供 claude-hook.sh 寫入 @claude_state）
 WINDOW_IDX=""

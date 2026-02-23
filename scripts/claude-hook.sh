@@ -11,24 +11,25 @@
 
 set -euo pipefail
 
-# 檔案鎖：防止多個 Hook 同時讀寫狀態檔造成競爭（per-project）
-exec 200>/tmp/claude-led-${3:-default}.lock
-flock -n 200 || exit 0
-
 EVENT="$1"
 MATCHER="${2:-}"
 PROJECT="${3:-default}"
 WINDOW_IDX="${4:-}"
 
-STATE_FILE="/tmp/claude-led-state-${PROJECT}"
-IDLE_PENDING="/tmp/claude-idle-pending-${PROJECT}"
 ACTIVITY_FILE="/tmp/claude-activity-${PROJECT}"
+
+# 記錄活動時間戳（在鎖之前，確保 catch-all hook 搶到鎖也能更新）
+date +%s > "$ACTIVITY_FILE"
 
 # 從 stdin 讀取 JSON（非阻塞，可能為空）
 INPUT=$(cat)
 
-# 記錄活動時間戳（所有事件都更新，供 RUNNING timeout 參考）
-date +%s > "$ACTIVITY_FILE"
+# 檔案鎖：防止多個 Hook 同時讀寫狀態檔造成競爭（per-project）
+exec 200>/tmp/claude-led-${PROJECT}.lock
+flock -n 200 || exit 0
+
+STATE_FILE="/tmp/claude-led-state-${PROJECT}"
+IDLE_PENDING="/tmp/claude-idle-pending-${PROJECT}"
 
 # ─── 事件→狀態映射 ───────────────────────────────────
 
