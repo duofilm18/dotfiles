@@ -1,8 +1,8 @@
 ---
 name: testing
 description: >
-  Bats 測試慣例、test_helper 用法、新增測試步驟、LED E2E 特殊流程。
-  當需要新增或修改 Hook 測試時使用。
+  全 repo 測試慣例：Bats（Hook 狀態機）+ pytest（Stream Deck / LED / ntfy）。
+  當需要新增或修改測試時使用。
 ---
 
 # Testing（Bats）
@@ -17,6 +17,8 @@ tests/
 ├── melody.bats            # T1-T6 dispatch 音效 + T10-T13 git 音效
 ├── dispatch.bats          # T-D1, T-D2: PROJECT 計算
 ├── flock.bats             # T-B1, T-B2: activity before lock
+├── timeout.bats           # T-TO1~TO8: 背景 timeout + flock 釋放
+├── state_publisher.bats   # SP-1~SP-10: build_payload、blink、debounce
 └── led_e2e.bats           # LED 端到端（需 RPi5B MQTT）
 ```
 
@@ -82,3 +84,54 @@ cd streamdeck && python3 -m pytest test_rebuild.py -v
 - `state=None` 產生空 payload（模擬專案移除）
 - 測試只驗純邏輯（按鍵分配、狀態對照、callback 路由），不碰真實硬體
 - subprocess / _run_powershell 用 `patch` 隔離
+
+# Testing（pytest / MQTT LED Service）
+
+## 結構
+
+```
+rpi5b/mqtt-led/
+└── test_mqtt_led.py   # LED 效果引擎純邏輯測試
+```
+
+## 執行
+
+```bash
+cd rpi5b/mqtt-led && python3 -m pytest test_mqtt_led.py -v
+```
+
+## Mock 基礎
+
+`sys.modules` 替換 lgpio / gpiozero / paho，`builtins.open` + `json.load` mock config.json。
+`reset()` fixture 重置 `_cancel`、`_melody_cancel`、`_off_timer`、`led` mock。
+
+## 覆蓋範圍
+
+- payload 解析（malformed JSON、預設值、RGB 正規化）
+- effect dispatch（solid/blink/pulse/rainbow 路由、參數傳遞）
+- timer 取消機制（_stop_custom、新效果取消舊效果）
+- rainbow 可取消（_cancel event）+ 完成後自動關燈
+- buzzer / melody dispatch（背景 thread、取消正在播放的旋律）
+- ACK 回報
+
+# Testing（pytest / MQTT ntfy Bridge）
+
+## 結構
+
+```
+rpi5b/mqtt-ntfy/
+└── test_mqtt_ntfy.py  # ntfy Bridge 純邏輯測試
+```
+
+## 執行
+
+```bash
+cd rpi5b/mqtt-ntfy && python3 -m pytest test_mqtt_ntfy.py -v
+```
+
+## 覆蓋範圍
+
+- payload 解析（malformed JSON、空欄位預設）
+- 雙端點發送（本地 + 雲端、雲端未設定時跳過）
+- _send_ntfy JSON API 格式驗證
+- HTTP 錯誤 / 超時不 crash
