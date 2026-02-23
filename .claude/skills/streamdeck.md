@@ -11,8 +11,8 @@ description: >
 
 | 項目 | 值 |
 |------|-----|
-| 型號 | Stream Deck MK.2 |
-| 按鍵數 | 15（3 行 × 5 列） |
+| 型號 | Stream Deck XL |
+| 按鍵數 | 32（4 行 × 8 列） |
 | 按鍵解析度 | **144 × 144 px** |
 | 連接 | USB 接 Windows 主機 |
 
@@ -63,7 +63,7 @@ powershell.exe -Command "Get-WmiObject Win32_Process -Filter \"Name='pythonw.exe
 | `claude_button_index` | 0 | 專案按鍵起始 index |
 | `date_button_index` | -1 | 日期按鍵 index（-1 = 停用） |
 | `max_projects` | 8 | 最多幾個專案按鍵 |
-| `font_size_title` | 11 | 專案名稱字型 |
+| `font_size_title` | 16 | 專案名稱字型 |
 | `font_size_state` | 18 | 狀態標籤字型 |
 | `font_size_date` | 32 | 日期按鍵字型 |
 
