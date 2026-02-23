@@ -22,6 +22,7 @@ WINDOW_IDX="${4:-}"
 
 STATE_FILE="/tmp/claude-led-state-${PROJECT}"
 IDLE_PENDING="/tmp/claude-idle-pending-${PROJECT}"
+ACTIVITY_FILE="/tmp/claude-activity-${PROJECT}"
 
 # 從 stdin 讀取 JSON（非阻塞，可能為空）
 INPUT=$(cat)

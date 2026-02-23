@@ -62,23 +62,44 @@ done
 - 同步清理完成後才進入主迴圈（避免競爭）
 - 偵測項目消失 → 主動清除 message bus 上的殘留
 
-### Consumer（被動顯示器）
+### Consumer（被動顯示器 + Rebuild Phase）
+
+**關鍵認知：MQTT retained ≠ 狀態同步協議。**
+retained 只保證「存在的 state」送達，已刪除的 topic 不會通知新 subscriber。
+因此 Consumer 必須視每次 MQTT 連線為 cold start（Stateless Consumer Reconstruction）。
 
 ```python
-def open_device():
-    clear_all_display()    # 啟動清空，不保留任何舊狀態
-    reset_internal_state() # 清除記憶體中的映射
+_rebuilding = False
+_rebuild_timer = None
+
+def on_connect(client, ...):
+    _rebuilding = True
+    reset_internal_state()       # 清空 cache，不碰硬體
+    client.subscribe("topic/+")
+    # Fallback：無 retained 時仍完成 rebuild
+    start_timer(1.0, finish_rebuild)
 
 def on_message(msg):
-    if not msg.payload:        # 空 payload = 項目已移除
-        remove_from_display()
+    if not msg.payload:
+        remove_from_cache()      # 更新 cache（rebuild 中不碰硬體）
         return
-    render(msg)                # 只渲染收到的
+    update_cache(msg)            # MQTT → cache
+    if _rebuilding:
+        reset_timer(0.3, finish_rebuild)  # debounce
+    else:
+        render(msg)              # 正常：逐訊息即時 render
+
+def finish_rebuild():
+    _rebuilding = False
+    clear_all_display()          # 先清空硬體
+    batch_render_from_cache()    # 一次性繪製所有按鍵
 ```
 
-- 啟動 = 空白畫面，等 message bus 告訴它該顯示什麼
-- 硬體（Stream Deck）會保留圖片，必須主動清空
-- 收到空 payload → 移除顯示 + 釋放 slot 供重用
+核心原則：
+- **reconnect = cold start**：每次連線清空 cache，由 retained 重建
+- **MQTT → cache → batch render**：UI 不逐訊息 render，收集完再一次性繪製
+- debounce 300ms 無新訊息 → rebuild 完成；fallback 1s 防無 retained 卡住
+- blink_loop 等背景 thread 在 rebuild 期間暫停，避免渲染半成品
 
 ## 反模式
 
@@ -86,7 +107,9 @@ def on_message(msg):
 |--------|------|----------|
 | Consumer 寫回 source | 循環依賴，狀態打架 | Consumer 只讀不寫 |
 | 各端直接發 MQTT | 沒人負責清除，幽靈殘留 | 統一由 Publisher 發佈 |
-| Consumer 快取舊狀態 | 重啟後顯示過期資料 | 啟動時清空，從 bus 重建 |
+| Consumer 信任本地快取 | 重連後幽靈殘留（已刪 topic 不通知） | reconnect = cold start |
+| Consumer 逐訊息 render | 重連時閃爍、按鍵亂跳 | Rebuild Phase batch render |
+| Consumer 用 TTL 清除 | idle 專案被誤刪、timing = truth | 不猜測，只信 retained |
 | Publisher 背景清理 | 與主迴圈 publish 競爭 | 同步清理完再進主迴圈 |
 
 ## 例外：不同 Domain 的反向流

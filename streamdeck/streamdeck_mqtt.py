@@ -4,7 +4,7 @@
 訂閱 RPi5B 的 MQTT broker，將多個 Claude Code instance 的狀態
 顯示在 Stream Deck 不同按鍵上。自動依專案資料夾名稱分配按鍵。
 
-需在 Windows 上執行（Stream Deck USB 接在 Windows）。
+支援 Windows（USB 直連）和 WSL（usbipd 轉發）。
 """
 
 import json
@@ -15,7 +15,7 @@ import threading
 import time
 from pathlib import Path
 
-# hidapi.dll 搜尋：優先從腳本同目錄載入
+# hidapi.dll 搜尋：優先從腳本同目錄載入（僅 Windows）
 _script_dir = str(Path(__file__).parent)
 if sys.platform == "win32":
     os.add_dll_directory(_script_dir)
@@ -63,13 +63,22 @@ _free_buttons = []      # 已釋放的 slot，可被新專案重用
 _blink_on = False       # 閃爍切換旗標
 _date_button_index = -1 # 日期按鍵 index（-1 = 停用）
 _last_date = ""         # 上次渲染的日期，用於偵測跨日
+_rebuilding = False     # Rebuild Phase：MQTT 重連時先收集 cache，最後 batch render
+_rebuild_timer = None   # Rebuild 完成的 debounce timer
 
 DATE_DISPLAY = {"label": "", "bg": (40, 40, 40), "fg": (255, 255, 255)}
 
+_IS_WSL = sys.platform != "win32"
+_CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+
 
 def _load_font(size, bold=False):
-    """載入字型，Windows 用 Arial（可選 Bold），找不到就用預設。"""
-    name = "arialbd.ttf" if bold else "arial.ttf"
+    """載入字型，跨平台支援。"""
+    if sys.platform == "win32":
+        name = "arialbd.ttf" if bold else "arial.ttf"
+    else:
+        name = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold \
+            else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
     try:
         return ImageFont.truetype(name, size)
     except IOError:
@@ -86,14 +95,15 @@ def render_button(deck, key_index, project_name, state_info):
     draw.rectangle([(0, 0), (w, h)], fill=state_info["bg"])
 
     # 上方：專案名稱（截斷顯示）
-    title_size = config.get("font_size_title", 16)
+    _labels = config.get("labels", {})
+    title_size = _labels.get("title_size", 16)
     font_small = _load_font(title_size)
     label = project_name[:10]
     draw.text((w // 2, h // 4), label, font=font_small,
               fill=state_info["fg"], anchor="mm")
 
     # 中央：狀態（粗體）
-    state_size = config.get("font_size_state", 18)
+    state_size = _labels.get("state_size", 18)
     font_large = _load_font(state_size, bold=True)
     draw.text((w // 2, h // 2 + 5), state_info["label"], font=font_large,
               fill=state_info["fg"], anchor="mm")
@@ -167,8 +177,8 @@ def _remove_project(project_name):
     _project_states.pop(project_name, None)
     _free_buttons.append(button_idx)
 
-    # 清除按鍵畫面（顯示為關閉狀態）
-    if _deck and _deck.is_open():
+    # Rebuild 中不碰硬體，等 batch render 統一處理
+    if not _rebuilding and _deck and _deck.is_open():
         try:
             with _deck:
                 render_button(_deck, button_idx, "", STATE_DISPLAY["off"])
@@ -188,6 +198,15 @@ def _reverse_lookup(button_idx):
     return None
 
 
+def _run_powershell(command):
+    """呼叫 powershell.exe（Windows 直接呼叫，WSL 透過 interop）。"""
+    subprocess.Popen(
+        ["powershell.exe", "-WindowStyle", "Hidden", "-Command", command],
+        creationflags=_CREATE_NO_WINDOW,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
+
 def on_key_press(deck, key, state):
     """按下按鍵時切換到對應的 tmux session 並拉起 Windows Terminal。"""
     if not state:  # key release, ignore
@@ -196,12 +215,10 @@ def on_key_press(deck, key, state):
     if key == _date_button_index:
         # 按下日期按鍵 → 輸入今天日期 YYYYMMDD
         today = time.strftime("%Y%m%d")
-        subprocess.Popen(
-            ["powershell.exe", "-WindowStyle", "Hidden", "-Command",
-             f"Set-Clipboard -Value '{today}'; "
-             "Add-Type -AssemblyName System.Windows.Forms; "
-             "[System.Windows.Forms.SendKeys]::SendWait('^v')"],
-            creationflags=0x08000000 if sys.platform == "win32" else 0,
+        _run_powershell(
+            f"Set-Clipboard -Value '{today}'; "
+            "Add-Type -AssemblyName System.Windows.Forms; "
+            "[System.Windows.Forms.SendKeys]::SendWait('^v')"
         )
         print(f"  Date typed: {today}")
         return
@@ -211,22 +228,22 @@ def on_key_press(deck, key, state):
         return
 
     try:
-        # 1. 找到 @project 匹配的 tmux window 並切換
-        #    Claude Code 跑在同一 session 的不同 window，用 @project 標記
+        # 1. 切換 tmux window
         cmd = (
             f"idx=$(tmux list-windows -F '#{{window_index}} #{{@project}}'"
             f" | grep ' {project}$' | head -1 | cut -d' ' -f1)"
             f" && [ -n \"$idx\" ] && tmux select-window -t :$idx"
         )
-        subprocess.Popen(
-            ["wsl.exe", "bash", "-c", cmd],
-            creationflags=0x08000000 if sys.platform == "win32" else 0,
-        )
+        if _IS_WSL:
+            subprocess.Popen(["bash", "-c", cmd],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.Popen(["wsl.exe", "bash", "-c", cmd],
+                             creationflags=_CREATE_NO_WINDOW)
+
         # 2. 把 Windows Terminal 拉到前景
-        subprocess.Popen(
-            ["powershell.exe", "-WindowStyle", "Hidden", "-Command",
-             "(New-Object -ComObject WScript.Shell).AppActivate('Terminal')"],
-            creationflags=0x08000000 if sys.platform == "win32" else 0,
+        _run_powershell(
+            "(New-Object -ComObject WScript.Shell).AppActivate('Terminal')"
         )
         print(f"  Switching to tmux window: {project}")
     except Exception as e:
@@ -241,7 +258,7 @@ def blink_loop():
     while True:
         time.sleep(1)
         _blink_on = not _blink_on
-        if not (_deck and _deck.is_open()):
+        if _rebuilding or not (_deck and _deck.is_open()):
             continue
         # 跨日更新日期按鍵
         if _date_button_index >= 0 and time.strftime("%Y%m%d") != _last_date:
@@ -263,13 +280,38 @@ def blink_loop():
 
 # --- MQTT callbacks ---
 
-def on_connect(client, userdata, flags, rc):
-    # 訂閱 claude/led/# 接收所有專案的狀態
+def _finish_rebuild():
+    """Rebuild Phase 完成：從 cache 一次性 batch render 所有按鍵。"""
+    global _rebuilding
+    _rebuilding = False
+    if _deck and _deck.is_open():
+        _clear_all_buttons(_deck)
+        render_date_button()
+        rerender_all()
+    print(f"  Rebuild complete: {len(_projects)} projects")
+
+
+def on_connect(client, userdata, flags, rc, properties=None):
+    # Retained Snapshot Rebuild：reconnect = cold start
+    # 清空 cache，訂閱後收集 retained 訊息，debounce 後 batch render
+    global _projects, _project_states, _next_button, _free_buttons
+    global _rebuilding, _rebuild_timer
+    _rebuilding = True
+    if _rebuild_timer:
+        _rebuild_timer.cancel()
+    _projects.clear()
+    _project_states.clear()
+    _free_buttons.clear()
+    _next_button = 0
     client.subscribe("claude/led/+")
-    print(f"MQTT connected (rc={rc}), subscribed to claude/led/+")
+    # Fallback：若 broker 無 retained 訊息，1 秒後仍完成 rebuild
+    _rebuild_timer = threading.Timer(1.0, _finish_rebuild)
+    _rebuild_timer.start()
+    print(f"MQTT connected (rc={rc}), rebuilding...")
 
 
 def on_message(client, userdata, msg):
+    global _rebuild_timer
     # 從 topic 取得專案名稱: claude/led/{project}
     parts = msg.topic.split("/")
     if len(parts) != 3:
@@ -288,18 +330,26 @@ def on_message(client, userdata, msg):
 
     state = data.get("state", "").lower()
     _project_states[project_name] = state
-    state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
 
     button_idx = _get_button_for_project(project_name)
     if button_idx is None:
         return
 
-    if _deck and _deck.is_open():
-        try:
-            with _deck:
-                render_button(_deck, button_idx, project_name, state_info)
-        except Exception:
-            pass  # deck 斷線，等 reconnect
+    if _rebuilding:
+        # Rebuild Phase：只更新 cache，debounce 後 batch render
+        if _rebuild_timer:
+            _rebuild_timer.cancel()
+        _rebuild_timer = threading.Timer(0.3, _finish_rebuild)
+        _rebuild_timer.start()
+    else:
+        # 正常運作：逐訊息即時 render
+        state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
+        if _deck and _deck.is_open():
+            try:
+                with _deck:
+                    render_button(_deck, button_idx, project_name, state_info)
+            except Exception:
+                pass  # deck 斷線，等 reconnect
 
 
 # --- Stream Deck 連線管理 ---
@@ -403,7 +453,7 @@ def main():
     broker = config.get("mqtt_broker", "192.168.88.10")
     port = config.get("mqtt_port", 1883)
 
-    client = mqtt.Client()
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(broker, port, 60)
