@@ -9,7 +9,13 @@ MATCHER="${2:-}"
 SCRIPT_DIR="$(dirname "$0")"
 PROJECT="$(basename "$PWD")"
 
-# 自動標記 tmux window（供 tmux-mqtt-colors.sh 匹配）
+# 取得 tmux window index（供 claude-hook.sh 寫入 @claude_state）
+WINDOW_IDX=""
+if [ -n "$TMUX" ]; then
+    WINDOW_IDX=$(tmux display-message -p '#{window_index}' 2>/dev/null || true)
+fi
+
+# 自動標記 tmux window（供 State Publisher 匹配）
 if [ -n "$TMUX" ] && [ "$EVENT" = "UserPromptSubmit" ]; then
     tmux rename-window "$PROJECT" 2>/dev/null || true
     tmux set-window-option @project "$PROJECT" 2>/dev/null || true
@@ -19,7 +25,7 @@ fi
 INPUT=$(timeout 1 cat 2>/dev/null || true)
 
 # ── LED 狀態機（背景） ──
-echo "$INPUT" | (timeout 5 "$SCRIPT_DIR/claude-hook.sh" "$EVENT" "$MATCHER" "$PROJECT" || true) &>/dev/null &
+echo "$INPUT" | (timeout 5 "$SCRIPT_DIR/claude-hook.sh" "$EVENT" "$MATCHER" "$PROJECT" "$WINDOW_IDX" || true) &>/dev/null &
 
 # ── 音效決策（所有音效邏輯集中於此） ──
 MELODY=""

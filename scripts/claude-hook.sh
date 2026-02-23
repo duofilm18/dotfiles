@@ -1,11 +1,13 @@
 #!/bin/bash
 # claude-hook.sh - 單一入口狀態機（對齊 ESP32 5 狀態）
 #
-# 用法: claude-hook.sh <event> [matcher]
+# 用法: claude-hook.sh <event> [matcher] [project] [window_index]
 #   由 settings.json hooks 統一呼叫，stdin 接收 Claude hook JSON
 #
 # 5 狀態: IDLE / RUNNING / WAITING / COMPLETED / ERROR
-# 功能: 事件→狀態映射 · 2 秒去重 · 智慧抑制 · LED 發送
+# 功能: 事件→狀態映射 · 2 秒去重 · 智慧抑制 · 寫入 tmux @claude_state
+#
+# 資料流: Hook → tmux @claude_state → [State Publisher] → MQTT → { Deck, LED }
 
 set -euo pipefail
 
@@ -16,7 +18,7 @@ flock -n 200 || exit 0
 EVENT="$1"
 MATCHER="${2:-}"
 PROJECT="${3:-default}"
-SCRIPT_DIR="$(dirname "$0")"
+WINDOW_IDX="${4:-}"
 
 STATE_FILE="/tmp/claude-led-state-${PROJECT}"
 IDLE_PENDING="/tmp/claude-idle-pending-${PROJECT}"
@@ -105,9 +107,11 @@ if [ "$NEW_STATE" = "RUNNING" ]; then
     rm -f "$IDLE_PENDING"
 fi
 
-# 發送 LED 燈效（狀態名轉小寫作為 notify.sh 的 key）
+# 寫入 tmux @claude_state（State Publisher 會輪詢並發 MQTT）
 LED_KEY=$(echo "$NEW_STATE" | tr '[:upper:]' '[:lower:]')
-"$SCRIPT_DIR/notify.sh" "$LED_KEY" "$PROJECT"
+if [ -n "$WINDOW_IDX" ]; then
+    tmux set-window-option -t ":$WINDOW_IDX" @claude_state "$LED_KEY" 2>/dev/null || true
+fi
 
 # ─── Stop 後自動回 IDLE ──────────────────────────────
 
@@ -118,7 +122,9 @@ if [ "$EVENT" = "Stop" ]; then
         sleep 22
         if [ -f "$IDLE_PENDING" ]; then
             echo "IDLE" > "$STATE_FILE"
-            "$SCRIPT_DIR/notify.sh" idle "$PROJECT"
+            if [ -n "$WINDOW_IDX" ]; then
+                tmux set-window-option -t ":$WINDOW_IDX" @claude_state "idle" 2>/dev/null || true
+            fi
         fi
     ) &
     disown

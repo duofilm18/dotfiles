@@ -1,9 +1,13 @@
 #!/bin/bash
-# notify.sh - 純 MQTT LED + 旋律發送器（無狀態邏輯）
-# 用法: notify.sh <state>
+# notify.sh - 手動 MQTT LED 測試工具
+# 用法: notify.sh <state> [project]
+#   例: notify.sh running dotfiles
 #
-# 從 led-effects.json 查詢燈效與旋律設定，透過 MQTT 發佈到 RPi5。
-# 所有狀態邏輯由 claude-hook.sh 管理。
+# ⚠️ 已不再被 hook 系統呼叫。
+# 正式資料流改由 State Publisher (tmux-mqtt-colors.sh) 負責：
+#   Hook → tmux @claude_state → State Publisher → MQTT
+#
+# 保留此腳本供手動測試 MQTT LED 燈效。
 
 STATE="$1"
 PROJECT="${2:-default}"

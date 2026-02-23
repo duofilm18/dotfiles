@@ -1,13 +1,17 @@
 #!/bin/bash
-# tmux-mqtt-colors.sh - MQTT 訂閱者，自動更新 tmux tab 狀態指示器
+# tmux-mqtt-colors.sh - State Publisher（tmux → MQTT 單向資料流）
 #
-# 訂閱 claude/led/+ topic，根據 Claude Code 狀態
-# 更新對應 tmux window 的 @claude_state 選項。
-# 搭配 .tmux.conf 的 window-status-format 顯示彩色 tab。
+# 以 tmux @claude_state 為 single source of truth，
+# 輪詢 tmux window 狀態並發佈到 MQTT，取代舊的 MQTT→tmux 反向流。
+#
+# 資料流:
+#   Hook → tmux @claude_state → [本腳本] → MQTT → { Stream Deck, LED }
 #
 # 功能:
-#   1. MQTT 訂閱：接收狀態變更，設定 @claude_state
-#   2. 閃爍 timer：idle/waiting 時每秒切換 @claude_blink（橘白互跳）
+#   1. 啟動清理：清除所有 MQTT retained 訊息，從 tmux 重建
+#   2. 主迴圈：每秒輪詢 tmux，偵測變化 → 發 MQTT retained
+#   3. 閃爍 timer：idle/waiting 時每秒切換 @claude_blink
+#   4. IME 訂閱：ime/state → tmux @ime_state（獨立 domain，保持 MQTT→tmux）
 #
 # 用法: 由 .tmux.conf run-shell -b 自動啟動
 
@@ -22,7 +26,7 @@ if [ -f "$PIDFILE" ]; then
 fi
 echo $$ > "$PIDFILE"
 
-# 確保退出時清理所有子進程（blink_loop + mosquitto_sub）
+# 確保退出時清理所有子進程
 cleanup() {
     rm -f "$PIDFILE"
     kill 0 2>/dev/null   # 殺整個進程組
@@ -31,6 +35,7 @@ trap cleanup EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$SCRIPT_DIR/../wsl/claude-hooks.json"
+EFFECTS_FILE="$SCRIPT_DIR/../wsl/led-effects.json"
 
 if [ -f "$CONFIG" ]; then
     MQTT_HOST=$(jq -r '.MQTT_HOST // "192.168.88.10"' "$CONFIG")
@@ -40,14 +45,26 @@ else
     MQTT_PORT="1883"
 fi
 
-# ── 閃爍 timer + 清理過期 retained（背景）──
+# ── 啟動清理：清除所有 MQTT retained 訊息 ──
+# 訂閱 claude/led/+ 取得所有 retained topic，逐一清除
+# State Publisher 隨即從 tmux 重建正確狀態
+startup_cleanup() {
+    # 清除全域 topic
+    mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" -t "claude/led" -n 2>/dev/null || true
+
+    # 收集所有 retained 的專案 topic 並清除
+    mosquitto_sub -h "$MQTT_HOST" -p "$MQTT_PORT" -t "claude/led/+" -W 2 -v 2>/dev/null | while IFS= read -r line; do
+        topic="${line%% *}"
+        mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" -t "$topic" -n 2>/dev/null || true
+    done
+}
+# 同步執行清理，完成後再進入主迴圈（避免與主迴圈的 publish 競爭）
+startup_cleanup
+
+# ── 閃爍 timer（背景）──
 # idle/waiting 狀態時，每秒切換 @claude_blink on/off
-# 同時追蹤活躍 @project，window 關閉時清掉 MQTT retained 訊息
 blink_loop() {
-    local prev_projects=""
-    local tick=0
     while true; do
-        # 閃爍邏輯
         tmux list-windows -F '#{window_index} #{@claude_state} #{@claude_blink}' 2>/dev/null | while read -r idx state blink; do
             case "$state" in
                 idle|waiting)
@@ -63,47 +80,90 @@ blink_loop() {
             esac
         done
         tmux refresh-client -S 2>/dev/null
-
-        # 每 5 秒檢查一次：清理已關閉 window 的 MQTT retained 訊息
-        tick=$(( (tick + 1) % 5 ))
-        if [ "$tick" -eq 0 ]; then
-            current_projects=$(tmux list-windows -F '#{@project}' 2>/dev/null | grep -v '^$' | sort -u)
-            for proj in $prev_projects; do
-                if ! echo "$current_projects" | grep -qx "$proj"; then
-                    mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" -t "claude/led/$proj" -n 2>/dev/null &
-                fi
-            done
-            prev_projects="$current_projects"
-        fi
-
         sleep 1
     done
 }
-
 blink_loop &
 
-# ── MQTT 訂閱 ──
-mosquitto_sub -h "$MQTT_HOST" -p "$MQTT_PORT" -t "claude/led/+" -t "ime/state" -v 2>/dev/null | while IFS= read -r line; do
-    topic="${line%% *}"
-    payload="${line#* }"
+# ── IME 訂閱（背景）──
+# ime/state → tmux @ime_state（事件驅動，獨立 domain，保持 MQTT→tmux）
+ime_loop() {
+    while true; do
+        mosquitto_sub -h "$MQTT_HOST" -p "$MQTT_PORT" -t "ime/state" 2>/dev/null | while IFS= read -r payload; do
+            tmux set -g @ime_state "$payload" 2>/dev/null
+            tmux refresh-client -S 2>/dev/null
+        done
+        # mosquitto_sub 斷線時自動重連
+        sleep 3
+    done
+}
+ime_loop &
 
-    # IME 狀態 → tmux 全域變數（事件驅動，零讀取成本）
-    if [ "$topic" = "ime/state" ]; then
-        tmux set -g @ime_state "$payload" 2>/dev/null
-        tmux refresh-client -S 2>/dev/null
-        continue
+# ── 建構 MQTT payload ──
+build_payload() {
+    local state="$1"
+    local project="$2"
+    if [ -f "$EFFECTS_FILE" ]; then
+        jq -c --arg state "$state" --arg project "$project" \
+            '.[$state] // empty | . + {state: $state, project: $project}' "$EFFECTS_FILE" 2>/dev/null
     fi
+}
 
-    # Claude 狀態 → 對應 window
-    project="${topic##*/}"
-    state=$(echo "$payload" | jq -r '.state // empty' 2>/dev/null)
+# ── 主迴圈：輪詢 tmux → 發 MQTT ──
+# 使用 associative array 追蹤各 window 的前一次狀態
+declare -A prev_states
+declare -A prev_projects
 
-    [ -z "$project" ] || [ -z "$state" ] && continue
+while true; do
+    # 收集當前所有 window 的狀態
+    declare -A current_states
+    declare -A current_projects
 
-    # 找 @project 匹配的 tmux window，更新 @claude_state
-    tmux list-windows -F '#{window_index} #{@project}' 2>/dev/null | while read -r idx proj; do
-        if [ "$proj" = "$project" ]; then
-            tmux set-window-option -t ":$idx" @claude_state "$state" 2>/dev/null
+    while read -r idx project state; do
+        if [ -n "$project" ] && [ -n "$state" ]; then
+            current_states["$project"]="$state"
+            current_projects["$project"]="$idx"
+        fi
+    done < <(tmux list-windows -F '#{window_index} #{@project} #{@claude_state}' 2>/dev/null)
+
+    # 偵測狀態變化 → 發 MQTT
+    for project in "${!current_states[@]}"; do
+        state="${current_states[$project]}"
+        if [ "${prev_states[$project]:-}" != "$state" ]; then
+            payload=$(build_payload "$state" "$project")
+            if [ -n "$payload" ]; then
+                # 發到專案 topic（Stream Deck）+ 全域 topic（RPi5B LED）
+                mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
+                    -t "claude/led/$project" -m "$payload" 2>/dev/null &
+                mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
+                    -t "claude/led" -m "$payload" 2>/dev/null &
+            fi
         fi
     done
+
+    # 偵測 window 消失 → 清除 MQTT retained
+    for project in "${!prev_states[@]}"; do
+        if [ -z "${current_states[$project]:-}" ]; then
+            mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
+                -t "claude/led/$project" -n 2>/dev/null &
+        fi
+    done
+
+    # 更新前一次狀態
+    unset prev_states
+    declare -A prev_states
+    for project in "${!current_states[@]}"; do
+        prev_states["$project"]="${current_states[$project]}"
+    done
+
+    unset prev_projects
+    declare -A prev_projects
+    for project in "${!current_projects[@]}"; do
+        prev_projects["$project"]="${current_projects[$project]}"
+    done
+
+    unset current_states
+    unset current_projects
+
+    sleep 1
 done

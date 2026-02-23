@@ -59,6 +59,7 @@ _max_projects = 8       # 最多顯示幾個專案
 _projects = {}          # project_name → button_index
 _project_states = {}    # project_name → state string
 _next_button = 0        # 下一個可用的按鍵 index
+_free_buttons = []      # 已釋放的 slot，可被新專案重用
 _blink_on = False       # 閃爍切換旗標
 
 
@@ -97,11 +98,18 @@ def render_button(deck, key_index, project_name, state_info):
 
 
 def _get_button_for_project(project_name):
-    """取得專案對應的按鍵 index，新專案自動分配下一個。"""
+    """取得專案對應的按鍵 index，新專案自動分配下一個（優先重用已釋放 slot）。"""
     global _next_button
 
     if project_name in _projects:
         return _projects[project_name]
+
+    # 優先使用已釋放的 slot
+    if _free_buttons:
+        idx = _free_buttons.pop(0)
+        _projects[project_name] = idx
+        print(f"  Key {idx} → {project_name} (reused)")
+        return idx
 
     if _next_button >= _max_projects:
         return None  # 按鍵已滿
@@ -111,6 +119,26 @@ def _get_button_for_project(project_name):
     _next_button += 1
     print(f"  Key {idx} → {project_name}")
     return idx
+
+
+def _remove_project(project_name):
+    """移除專案：清除按鍵畫面、釋放 slot 供新專案重用。"""
+    if project_name not in _projects:
+        return
+
+    button_idx = _projects.pop(project_name)
+    _project_states.pop(project_name, None)
+    _free_buttons.append(button_idx)
+
+    # 清除按鍵畫面（顯示為關閉狀態）
+    if _deck and _deck.is_open():
+        try:
+            with _deck:
+                render_button(_deck, button_idx, "", STATE_DISPLAY["off"])
+        except Exception:
+            pass
+
+    print(f"  Key {button_idx} ← {project_name} (removed)")
 
 
 # --- 按鍵回調 ---
@@ -189,16 +217,21 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_message(client, userdata, msg):
-    try:
-        data = json.loads(msg.payload.decode())
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return
-
     # 從 topic 取得專案名稱: claude/led/{project}
     parts = msg.topic.split("/")
     if len(parts) != 3:
         return
     project_name = parts[2]
+
+    # 空 payload = 專案已關閉，清除按鍵
+    if not msg.payload:
+        _remove_project(project_name)
+        return
+
+    try:
+        data = json.loads(msg.payload.decode())
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return
 
     state = data.get("state", "").lower()
     _project_states[project_name] = state

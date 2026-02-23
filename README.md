@@ -50,6 +50,7 @@ dotfiles/
 │   ├── test-hooks.sh
 │   ├── test-mqtt.sh
 │   ├── tmux-mqtt-colors.sh
+│   ├── tmux-switch-project.sh
 │   └── update-readme.sh
 ├── shared/
 │   ├── .tmux.conf
