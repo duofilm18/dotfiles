@@ -214,6 +214,18 @@ def on_message(client, userdata, msg):
         duration = data.get("duration", 5)
         interval = data.get("interval", 0.3)
         _run_effect(r, g, b, pattern, times, duration, interval)
+        # ACK：回報已接收並執行的燈效 + GPIO 實際輸出（供自動化測試端到端驗證）
+        time.sleep(0.05)  # 等 gpiozero blink/pulse 啟動
+        gpio_rgb = led.color  # gpiozero 回報的實際 GPIO 輸出 (0.0~1.0)
+        client.publish("claude/led/ack", json.dumps({
+            "r": data.get("r", 0),
+            "g": data.get("g", 0),
+            "b": data.get("b", 0),
+            "pattern": pattern,
+            "is_lit": led.is_lit,
+            "gpio": [round(gpio_rgb[0], 3), round(gpio_rgb[1], 3), round(gpio_rgb[2], 3)],
+            "ts": int(time.time()),
+        }))
 
     elif msg.topic == "claude/buzzer":
         frequency = data.get("frequency", 1000)

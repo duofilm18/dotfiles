@@ -113,6 +113,7 @@ if [ "$NEW_STATE" = "RUNNING" ]; then
     # RUNNING timeout：超過 60 秒無活動自動切 IDLE
     # 處理中斷回應等 Stop 事件未觸發的情況
     (
+        exec 200>&-  # 釋放 flock，避免背景進程占住鎖
         while true; do
             sleep 30
             [ "$(head -1 "$STATE_FILE" 2>/dev/null)" = "RUNNING" ] || exit 0
@@ -138,6 +139,7 @@ fi
 
 if [ "$EVENT" = "Stop" ]; then
     (
+        exec 200>&-  # 釋放 flock，避免背景進程占住鎖
         # Rainbow 3輪×7色×1秒=21秒，等 22 秒後自動切 IDLE
         touch "$IDLE_PENDING"
         sleep 22
