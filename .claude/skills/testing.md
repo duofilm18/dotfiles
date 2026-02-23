@@ -85,6 +85,14 @@ cd streamdeck && python3 -m pytest test_rebuild.py -v
 - 測試只驗純邏輯（按鍵分配、狀態對照、callback 路由），不碰真實硬體
 - subprocess / _run_powershell 用 `patch` 隔離
 
+## Thread Safety 測試
+
+`TestThreadSafety` 用真正的多 thread 重現 race condition：
+
+- `threading.Barrier` 同步啟動，迴圈數百次提高觸發機率
+- `render_button` / `render_date_button` / `_clear_all_buttons` 用 `patch` mock 掉硬體
+- 驗 `_state_lock` 存在且不卡死（`acquire(timeout=1)`）
+
 # Testing（pytest / MQTT LED Service）
 
 ## 結構
@@ -135,3 +143,28 @@ cd rpi5b/mqtt-ntfy && python3 -m pytest test_mqtt_ntfy.py -v
 - 雙端點發送（本地 + 雲端、雲端未設定時跳過）
 - _send_ntfy JSON API 格式驗證
 - HTTP 錯誤 / 超時不 crash
+
+# TDD 工作流
+
+修 bug 或加功能時，優先採用 RED → GREEN → REFACTOR 循環：
+
+## 步驟
+
+1. **RED** — 先寫測試重現問題（測試應 FAIL 或偶發 crash）
+   - Race condition：用 `threading.Barrier` + 迴圈數百次重現
+   - 邏輯 bug：直接 assert 預期行為
+   - 跑測試確認 FAIL，證明 bug 存在
+
+2. **GREEN** — 最小改動讓測試通過
+   - 只改必要的 code，不順便重構
+   - 跑全部測試確認新舊都 PASS
+
+3. **REFACTOR**（可選）— 通過後再整理
+   - 提取 helper、改名、清理重複
+   - 每次小改動後跑測試確認沒壞
+
+## 實務要點
+
+- Thread safety 修復用 **Snapshot Under Lock** 模式：lock 內拍快照，lock 外做 I/O
+- `bare except` → `log.debug(..., exc_info=True)` 保留除錯資訊
+- 測試命名：`test_<場景>_<預期行為>`，一看就懂驗什麼

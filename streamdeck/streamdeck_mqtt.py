@@ -8,12 +8,15 @@
 """
 
 import json
+import logging
 import os
 import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 # hidapi.dll 搜尋：優先從腳本同目錄載入（僅 Windows）
 _script_dir = str(Path(__file__).parent)
@@ -53,6 +56,7 @@ BLINK_DISPLAY = {
 
 # --- 全域變數 ---
 
+_state_lock = threading.Lock()
 _deck = None
 _button_start = 0       # 起始按鍵 index
 _max_projects = 8       # 最多顯示幾個專案
@@ -145,12 +149,14 @@ def _get_button_for_project(project_name):
 def render_date_button():
     """渲染日期按鍵，顯示 YYYYMMDD（上下兩行）。"""
     global _last_date
-    if _date_button_index < 0 or not (_deck and _deck.is_open()):
+    with _state_lock:
+        deck_ref = _deck
+    if _date_button_index < 0 or not (deck_ref and deck_ref.is_open()):
         return
     today = time.strftime("%Y%m%d")
     _last_date = today
     try:
-        image = PILHelper.create_key_image(_deck)
+        image = PILHelper.create_key_image(deck_ref)
         draw = ImageDraw.Draw(image)
         w, h = image.size
         draw.rectangle([(0, 0), (w, h)], fill=DATE_DISPLAY["bg"])
@@ -160,29 +166,31 @@ def render_date_button():
                   fill=DATE_DISPLAY["fg"], anchor="mm")
         draw.text((w // 2, h * 2 // 3), today[4:], font=font,
                   fill=DATE_DISPLAY["fg"], anchor="mm")
-        native = PILHelper.to_native_key_format(_deck, image)
-        with _deck:
-            _deck.set_key_image(_date_button_index, native)
+        native = PILHelper.to_native_key_format(deck_ref, image)
+        with deck_ref:
+            deck_ref.set_key_image(_date_button_index, native)
     except Exception:
-        pass
+        log.debug("render_date_button failed", exc_info=True)
 
 
 def _remove_project(project_name):
     """移除專案：清除按鍵畫面、釋放 slot 供新專案重用。"""
-    if project_name not in _projects:
-        return
-
-    button_idx = _projects.pop(project_name)
-    _project_states.pop(project_name, None)
-    _free_buttons.append(button_idx)
+    with _state_lock:
+        if project_name not in _projects:
+            return
+        button_idx = _projects.pop(project_name)
+        _project_states.pop(project_name, None)
+        _free_buttons.append(button_idx)
+        rebuilding = _rebuilding
+        deck_ref = _deck
 
     # Rebuild 中不碰硬體，等 batch render 統一處理
-    if not _rebuilding and _deck and _deck.is_open():
+    if not rebuilding and deck_ref and deck_ref.is_open():
         try:
-            with _deck:
-                render_button(_deck, button_idx, "", STATE_DISPLAY["off"])
+            with deck_ref:
+                render_button(deck_ref, button_idx, "", STATE_DISPLAY["off"])
         except Exception:
-            pass
+            log.debug("_remove_project render failed", exc_info=True)
 
     print(f"  Key {button_idx} ← {project_name} (removed)")
 
@@ -191,9 +199,10 @@ def _remove_project(project_name):
 
 def _reverse_lookup(button_idx):
     """從按鍵 index 反查專案名稱。"""
-    for name, idx in _projects.items():
-        if idx == button_idx:
-            return name
+    with _state_lock:
+        for name, idx in _projects.items():
+            if idx == button_idx:
+                return name
     return None
 
 
@@ -257,13 +266,19 @@ def blink_loop():
     while True:
         time.sleep(1)
         _blink_on = not _blink_on
-        if _rebuilding or not (_deck and _deck.is_open()):
+        with _state_lock:
+            if _rebuilding:
+                continue
+            snapshot = list(_projects.items())
+            states = dict(_project_states)
+            deck_ref = _deck
+        if not (deck_ref and deck_ref.is_open()):
             continue
         # 跨日更新日期按鍵
         if _date_button_index >= 0 and time.strftime("%Y%m%d") != _last_date:
             render_date_button()
-        for project_name, button_idx in list(_projects.items()):
-            state = _project_states.get(project_name, "")
+        for project_name, button_idx in snapshot:
+            state = states.get(project_name, "")
             if state not in BLINK_DISPLAY:
                 continue
             if _blink_on:
@@ -271,9 +286,10 @@ def blink_loop():
             else:
                 info = STATE_DISPLAY[state]
             try:
-                with _deck:
-                    render_button(_deck, button_idx, project_name, info)
+                with deck_ref:
+                    render_button(deck_ref, button_idx, project_name, info)
             except Exception:
+                log.debug("blink_loop render failed", exc_info=True)
                 break  # deck 斷線，等 reconnect
 
 
@@ -282,30 +298,34 @@ def blink_loop():
 def _finish_rebuild():
     """Rebuild Phase 完成：從 cache 一次性 batch render 所有按鍵。"""
     global _rebuilding
-    _rebuilding = False
-    if _deck and _deck.is_open():
-        _clear_all_buttons(_deck)
+    with _state_lock:
+        _rebuilding = False
+        snapshot = list(_projects.items())
+        states = dict(_project_states)
+        deck_ref = _deck
+    if deck_ref and deck_ref.is_open():
+        _clear_all_buttons(deck_ref)
         render_date_button()
-        rerender_all()
-    print(f"  Rebuild complete: {len(_projects)} projects")
+        _rerender_from_snapshot(deck_ref, snapshot, states)
+    print(f"  Rebuild complete: {len(snapshot)} projects")
 
 
 def on_connect(client, userdata, flags, rc, properties=None):
     # Retained Snapshot Rebuild：reconnect = cold start
     # 清空 cache，訂閱後收集 retained 訊息，debounce 後 batch render
-    global _projects, _project_states, _next_button, _free_buttons
-    global _rebuilding, _rebuild_timer
-    _rebuilding = True
-    if _rebuild_timer:
-        _rebuild_timer.cancel()
-    _projects.clear()
-    _project_states.clear()
-    _free_buttons.clear()
-    _next_button = 0
+    global _next_button, _rebuilding, _rebuild_timer
+    with _state_lock:
+        _rebuilding = True
+        if _rebuild_timer:
+            _rebuild_timer.cancel()
+        _projects.clear()
+        _project_states.clear()
+        _free_buttons.clear()
+        _next_button = 0
+        # Fallback：若 broker 無 retained 訊息，1 秒後仍完成 rebuild
+        _rebuild_timer = threading.Timer(1.0, _finish_rebuild)
+        _rebuild_timer.start()
     client.subscribe("claude/led/+")
-    # Fallback：若 broker 無 retained 訊息，1 秒後仍完成 rebuild
-    _rebuild_timer = threading.Timer(1.0, _finish_rebuild)
-    _rebuild_timer.start()
     print(f"MQTT connected (rc={rc}), rebuilding...")
 
 
@@ -328,27 +348,30 @@ def on_message(client, userdata, msg):
         return
 
     state = data.get("state", "").lower()
-    _project_states[project_name] = state
 
-    button_idx = _get_button_for_project(project_name)
-    if button_idx is None:
-        return
+    with _state_lock:
+        _project_states[project_name] = state
+        button_idx = _get_button_for_project(project_name)
+        if button_idx is None:
+            return
+        rebuilding = _rebuilding
+        if rebuilding:
+            # Rebuild Phase：只更新 cache，debounce 後 batch render
+            if _rebuild_timer:
+                _rebuild_timer.cancel()
+            _rebuild_timer = threading.Timer(0.3, _finish_rebuild)
+            _rebuild_timer.start()
+            return
+        deck_ref = _deck
 
-    if _rebuilding:
-        # Rebuild Phase：只更新 cache，debounce 後 batch render
-        if _rebuild_timer:
-            _rebuild_timer.cancel()
-        _rebuild_timer = threading.Timer(0.3, _finish_rebuild)
-        _rebuild_timer.start()
-    else:
-        # 正常運作：逐訊息即時 render
-        state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
-        if _deck and _deck.is_open():
-            try:
-                with _deck:
-                    render_button(_deck, button_idx, project_name, state_info)
-            except Exception:
-                pass  # deck 斷線，等 reconnect
+    # 正常運作：逐訊息即時 render（lock 外）
+    state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
+    if deck_ref and deck_ref.is_open():
+        try:
+            with deck_ref:
+                render_button(deck_ref, button_idx, project_name, state_info)
+        except Exception:
+            log.debug("on_message render failed", exc_info=True)
 
 
 # --- Stream Deck 連線管理 ---
@@ -369,52 +392,66 @@ def open_deck(reset_state=True):
     reset_state=True: 首次啟動，清空內部狀態等 MQTT retained 重建。
     reset_state=False: USB 重連，保留內部狀態只重設硬體。
     """
-    global _deck, _projects, _project_states, _next_button, _free_buttons
+    global _deck, _next_button
     try:
         decks = DeviceManager().enumerate()
         if not decks:
             return None
-        _deck = decks[0]
-        _deck.open()
-        _deck.set_brightness(config.get("deck_brightness", 30))
-        _deck.set_key_callback(on_key_press)
-        _clear_all_buttons(_deck)
+        new_deck = decks[0]
+        new_deck.open()
+        new_deck.set_brightness(config.get("deck_brightness", 30))
+        new_deck.set_key_callback(on_key_press)
+        _clear_all_buttons(new_deck)
+        with _state_lock:
+            _deck = new_deck
+            if reset_state:
+                _projects.clear()
+                _project_states.clear()
+                _free_buttons.clear()
+                _next_button = 0
         render_date_button()
-        if reset_state:
-            _projects.clear()
-            _project_states.clear()
-            _free_buttons.clear()
-            _next_button = 0
-        print(f"Stream Deck: {_deck.deck_type()} ({_deck.key_count()} keys)")
-        return _deck
+        print(f"Stream Deck: {new_deck.deck_type()} ({new_deck.key_count()} keys)")
+        return new_deck
     except Exception as e:
         print(f"  Deck open failed: {e}")
         return None
 
 
-def rerender_all():
-    """重連後重新繪製所有已知按鍵。"""
-    if not (_deck and _deck.is_open()):
-        return
-    render_date_button()
-    for project_name, button_idx in list(_projects.items()):
-        state = _project_states.get(project_name, "")
+def _rerender_from_snapshot(deck_ref, snapshot, states):
+    """用 snapshot 重繪所有按鍵（lock 外呼叫，不阻塞 USB I/O）。"""
+    for project_name, button_idx in snapshot:
+        state = states.get(project_name, "")
         state_info = STATE_DISPLAY.get(state, UNKNOWN_DISPLAY)
         try:
-            with _deck:
-                render_button(_deck, button_idx, project_name, state_info)
+            with deck_ref:
+                render_button(deck_ref, button_idx, project_name, state_info)
         except Exception:
+            log.debug("_rerender_from_snapshot failed", exc_info=True)
             break
+
+
+def rerender_all():
+    """重連後重新繪製所有已知按鍵。"""
+    with _state_lock:
+        snapshot = list(_projects.items())
+        states = dict(_project_states)
+        deck_ref = _deck
+    if not (deck_ref and deck_ref.is_open()):
+        return
+    render_date_button()
+    _rerender_from_snapshot(deck_ref, snapshot, states)
 
 
 def reconnect_loop():
     """背景 thread：偵測 USB 斷線，自動重連 + 重繪。"""
     while True:
         time.sleep(3)
-        if _deck is None:
+        with _state_lock:
+            deck_ref = _deck
+        if deck_ref is None:
             continue
         try:
-            if _deck.is_open():
+            if deck_ref.is_open():
                 continue
         except Exception:
             pass
@@ -469,7 +506,7 @@ def main():
                 _deck.reset()
                 _deck.close()
             except Exception:
-                pass
+                log.debug("Deck cleanup failed", exc_info=True)
 
 
 if __name__ == "__main__":

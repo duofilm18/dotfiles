@@ -5,12 +5,14 @@
   - MQTT retained → cache → batch render（無逐訊息閃爍）
   - reconnect 消除幽靈按鍵
   - 按鍵分配正確（無重複、跳過 date button）
+  - Thread Safety：多 thread 併發存取共用狀態
 
 用法: cd streamdeck && python -m pytest test_rebuild.py -v
 """
 
 import json
 import sys
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -506,3 +508,139 @@ class TestRerenderAndClear:
             assert mock_rb.call_count == 32
             for call in mock_rb.call_args_list:
                 assert call.args[3] == sd.STATE_DISPLAY["off"]
+
+
+# ═══════════════════════════════════════════════════════════
+# Thread Safety：多 thread 併發存取共用狀態
+# ═══════════════════════════════════════════════════════════
+
+
+class TestThreadSafety:
+    """驗證 _state_lock 保護共用狀態，防止 race condition crash。"""
+
+    def test_finish_rebuild_and_on_connect_race(self):
+        """Timer _finish_rebuild + on_connect 同時操作 state → 不 crash。"""
+        barrier = threading.Barrier(2, timeout=5)
+        errors = []
+
+        def run_finish():
+            try:
+                barrier.wait()
+                for _ in range(200):
+                    sd._finish_rebuild()
+            except Exception as e:
+                errors.append(e)
+
+        def run_connect():
+            try:
+                barrier.wait()
+                for _ in range(200):
+                    sd.on_connect(CLIENT, None, None, 0)
+            except Exception as e:
+                errors.append(e)
+
+        with patch.object(sd, "render_button"), \
+             patch.object(sd, "render_date_button"), \
+             patch.object(sd, "_clear_all_buttons"):
+            t1 = threading.Thread(target=run_finish)
+            t2 = threading.Thread(target=run_connect)
+            t1.start(); t2.start()
+            t1.join(timeout=10); t2.join(timeout=10)
+
+        assert not errors, f"Race condition crash: {errors}"
+
+    def test_blink_iteration_during_clear(self):
+        """blink_loop 讀 _projects 時 on_connect 清空 → 不 crash。"""
+        errors = []
+
+        # 填充狀態讓 blink 有東西迭代
+        for i in range(10):
+            sd._projects[f"proj{i}"] = i
+            sd._project_states[f"proj{i}"] = "idle"
+
+        barrier = threading.Barrier(2, timeout=5)
+
+        def run_blink_iteration():
+            try:
+                barrier.wait()
+                for _ in range(500):
+                    # 模擬 blink_loop 核心迭代（不含 sleep/USB）
+                    for name, idx in list(sd._projects.items()):
+                        _ = sd._project_states.get(name, "")
+            except Exception as e:
+                errors.append(e)
+
+        def run_clear():
+            try:
+                barrier.wait()
+                for _ in range(500):
+                    sd.on_connect(CLIENT, None, None, 0)
+                    # 重新填充讓 blink 有東西讀
+                    for i in range(10):
+                        sd._projects[f"proj{i}"] = i
+                        sd._project_states[f"proj{i}"] = "idle"
+            except Exception as e:
+                errors.append(e)
+
+        with patch.object(sd, "render_button"), \
+             patch.object(sd, "render_date_button"), \
+             patch.object(sd, "_clear_all_buttons"):
+            t1 = threading.Thread(target=run_blink_iteration)
+            t2 = threading.Thread(target=run_clear)
+            t1.start(); t2.start()
+            t1.join(timeout=10); t2.join(timeout=10)
+
+        assert not errors, f"Dict iteration crash: {errors}"
+
+    def test_deck_swap_during_render(self):
+        """_deck 被換掉時另一 thread 在 render → 不 crash。"""
+        errors = []
+        barrier = threading.Barrier(2, timeout=5)
+
+        sd._projects["test"] = 0
+        sd._project_states["test"] = "running"
+
+        def run_render():
+            try:
+                barrier.wait()
+                for _ in range(300):
+                    sd.rerender_all()
+            except Exception as e:
+                errors.append(e)
+
+        def run_swap():
+            try:
+                barrier.wait()
+                for _ in range(300):
+                    new_deck = MagicMock()
+                    new_deck.is_open.return_value = True
+                    new_deck.key_count.return_value = 32
+                    sd._deck = new_deck
+            except Exception as e:
+                errors.append(e)
+
+        with patch.object(sd, "render_button"), \
+             patch.object(sd, "render_date_button"):
+            t1 = threading.Thread(target=run_render)
+            t2 = threading.Thread(target=run_swap)
+            t1.start(); t2.start()
+            t1.join(timeout=10); t2.join(timeout=10)
+
+        assert not errors, f"Deck swap crash: {errors}"
+
+    def test_state_lock_exists(self):
+        """streamdeck_mqtt 必須有 _state_lock (threading.Lock)。"""
+        assert hasattr(sd, "_state_lock"), "_state_lock not found"
+        assert isinstance(sd._state_lock, type(threading.Lock()))
+
+    def test_finish_rebuild_releases_lock(self):
+        """_finish_rebuild 後 _state_lock 不能卡住（可立即 acquire）。"""
+        with patch.object(sd, "render_button"), \
+             patch.object(sd, "render_date_button"), \
+             patch.object(sd, "_clear_all_buttons"):
+            sd._rebuilding = True
+            sd._finish_rebuild()
+
+        acquired = sd._state_lock.acquire(timeout=1)
+        assert acquired, "_state_lock stuck after _finish_rebuild"
+        sd._state_lock.release()
