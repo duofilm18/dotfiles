@@ -40,10 +40,14 @@ else
     MQTT_PORT="1883"
 fi
 
-# ── 閃爍 timer（背景）──
+# ── 閃爍 timer + 清理過期 retained（背景）──
 # idle/waiting 狀態時，每秒切換 @claude_blink on/off
+# 同時追蹤活躍 @project，window 關閉時清掉 MQTT retained 訊息
 blink_loop() {
+    local prev_projects=""
+    local tick=0
     while true; do
+        # 閃爍邏輯
         tmux list-windows -F '#{window_index} #{@claude_state} #{@claude_blink}' 2>/dev/null | while read -r idx state blink; do
             case "$state" in
                 idle|waiting)
@@ -59,6 +63,19 @@ blink_loop() {
             esac
         done
         tmux refresh-client -S 2>/dev/null
+
+        # 每 5 秒檢查一次：清理已關閉 window 的 MQTT retained 訊息
+        tick=$(( (tick + 1) % 5 ))
+        if [ "$tick" -eq 0 ]; then
+            current_projects=$(tmux list-windows -F '#{@project}' 2>/dev/null | grep -v '^$' | sort -u)
+            for proj in $prev_projects; do
+                if ! echo "$current_projects" | grep -qx "$proj"; then
+                    mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" -t "claude/led/$proj" -n 2>/dev/null &
+                fi
+            done
+            prev_projects="$current_projects"
+        fi
+
         sleep 1
     done
 }
