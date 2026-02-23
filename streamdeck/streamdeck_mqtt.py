@@ -133,16 +133,26 @@ def _get_button_for_project(project_name):
 
 
 def render_date_button():
-    """渲染日期按鍵，顯示 YYYYMMDD。"""
+    """渲染日期按鍵，顯示 YYYYMMDD（上下兩行）。"""
     global _last_date
     if _date_button_index < 0 or not (_deck and _deck.is_open()):
         return
     today = time.strftime("%Y%m%d")
     _last_date = today
     try:
+        image = PILHelper.create_key_image(_deck)
+        draw = ImageDraw.Draw(image)
+        w, h = image.size
+        draw.rectangle([(0, 0), (w, h)], fill=DATE_DISPLAY["bg"])
+        font = _load_font(config.get("font_size_date", 32))
+        # YYYY 上方、MMDD 下方
+        draw.text((w // 2, h // 3), today[:4], font=font,
+                  fill=DATE_DISPLAY["fg"], anchor="mm")
+        draw.text((w // 2, h * 2 // 3), today[4:], font=font,
+                  fill=DATE_DISPLAY["fg"], anchor="mm")
+        native = PILHelper.to_native_key_format(_deck, image)
         with _deck:
-            render_button(_deck, _date_button_index, "DATE",
-                          {"label": today, **DATE_DISPLAY})
+            _deck.set_key_image(_date_button_index, native)
     except Exception:
         pass
 
