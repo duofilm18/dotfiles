@@ -19,6 +19,7 @@
 | [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md) | IME MQTT 資料流契約（payload 格式、broker 位置） |
 | [streamdeck](.claude/skills/streamdeck.md) | Stream Deck 硬體規格、按鍵佈局與操作 |
 | [skill-creator](.claude/skills/skill-creator.md) | Skill 撰寫規範（基於 Anthropic 官方） |
+| [testing](.claude/skills/testing.md) | Bats 測試慣例與 LED E2E 流程 |
 
 ## 規則
 
@@ -38,6 +39,7 @@ dotfiles/
 │   └── rpi5b.yml     # RPi5B playbook
 ├── scripts/          # Shell 安裝腳本（備援）
 ├── shared/           # 共用配置 (vim, tmux)
+├── tests/            # Bats 測試
 └── wsl/              # WSL 專用配置 + Claude hooks
 ```
 
