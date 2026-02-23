@@ -67,10 +67,11 @@ _last_date = ""         # 上次渲染的日期，用於偵測跨日
 DATE_DISPLAY = {"label": "", "bg": (40, 40, 40), "fg": (255, 255, 255)}
 
 
-def _load_font(size):
-    """載入字型，Windows 用 arial.ttf，找不到就用預設。"""
+def _load_font(size, bold=False):
+    """載入字型，Windows 用 Arial（可選 Bold），找不到就用預設。"""
+    name = "arialbd.ttf" if bold else "arial.ttf"
     try:
-        return ImageFont.truetype("arial.ttf", size)
+        return ImageFont.truetype(name, size)
     except IOError:
         return ImageFont.load_default()
 
@@ -85,15 +86,15 @@ def render_button(deck, key_index, project_name, state_info):
     draw.rectangle([(0, 0), (w, h)], fill=state_info["bg"])
 
     # 上方：專案名稱（截斷顯示）
-    title_size = config.get("font_size_title", 11)
+    title_size = config.get("font_size_title", 16)
     font_small = _load_font(title_size)
     label = project_name[:10]
     draw.text((w // 2, h // 4), label, font=font_small,
               fill=state_info["fg"], anchor="mm")
 
-    # 中央：狀態
+    # 中央：狀態（粗體）
     state_size = config.get("font_size_state", 18)
-    font_large = _load_font(state_size)
+    font_large = _load_font(state_size, bold=True)
     draw.text((w // 2, h // 2 + 5), state_info["label"], font=font_large,
               fill=state_info["fg"], anchor="mm")
 
@@ -144,7 +145,7 @@ def render_date_button():
         draw = ImageDraw.Draw(image)
         w, h = image.size
         draw.rectangle([(0, 0), (w, h)], fill=DATE_DISPLAY["bg"])
-        font = _load_font(config.get("font_size_date", 32))
+        font = _load_font(config.get("font_size_date", 32), bold=True)
         # YYYY 上方、MMDD 下方
         draw.text((w // 2, h // 3), today[:4], font=font,
                   fill=DATE_DISPLAY["fg"], anchor="mm")
@@ -313,8 +314,12 @@ def _clear_all_buttons(deck):
             break
 
 
-def open_deck():
-    """開啟 Stream Deck，找不到回傳 None。"""
+def open_deck(reset_state=True):
+    """開啟 Stream Deck，找不到回傳 None。
+
+    reset_state=True: 首次啟動，清空內部狀態等 MQTT retained 重建。
+    reset_state=False: USB 重連，保留內部狀態只重設硬體。
+    """
     global _deck, _projects, _project_states, _next_button, _free_buttons
     try:
         decks = DeviceManager().enumerate()
@@ -324,13 +329,13 @@ def open_deck():
         _deck.open()
         _deck.set_brightness(config.get("deck_brightness", 30))
         _deck.set_key_callback(on_key_press)
-        # 清空所有按鍵 + 重設狀態（純被動顯示器，不保留舊狀態）
         _clear_all_buttons(_deck)
         render_date_button()
-        _projects.clear()
-        _project_states.clear()
-        _free_buttons.clear()
-        _next_button = 0
+        if reset_state:
+            _projects.clear()
+            _project_states.clear()
+            _free_buttons.clear()
+            _next_button = 0
         print(f"Stream Deck: {_deck.deck_type()} ({_deck.key_count()} keys)")
         return _deck
     except Exception as e:
@@ -367,7 +372,7 @@ def reconnect_loop():
         # deck 斷線，嘗試重連
         print("Stream Deck disconnected, reconnecting...")
         while True:
-            if open_deck():
+            if open_deck(reset_state=False):
                 print("Stream Deck reconnected!")
                 rerender_all()
                 break
