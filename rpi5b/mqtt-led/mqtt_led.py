@@ -58,6 +58,7 @@ lgpio.gpio_claim_input(_h, _buzzer_pin)
 _cancel = threading.Event()
 _off_timer = None
 _melody_cancel = threading.Event()  # 旋律中斷機制
+_last_led_payload = ""  # LED 去重：相同 payload 不重複執行
 
 _RAINBOW_COLORS = [
     (1, 0, 0),  # 紅
@@ -193,6 +194,8 @@ def _play_melody(notes):
 # ─── MQTT callbacks ───────────────────────────────────
 
 def on_connect(client, userdata, flags, rc):
+    global _last_led_payload
+    _last_led_payload = ""  # 重連後清除，讓 retained 訊息正常執行
     print(f"Connected to MQTT broker (rc={rc})")
     client.subscribe("claude/led")
     client.subscribe("claude/buzzer")
@@ -206,6 +209,12 @@ def on_message(client, userdata, msg):
         return
 
     if msg.topic == "claude/led":
+        global _last_led_payload
+        raw = msg.payload.decode()
+        if raw == _last_led_payload:
+            return  # 同樣的指令不重複執行（retained 重送等）
+        _last_led_payload = raw
+
         r = data.get("r", 0) / 255.0
         g = data.get("g", 0) / 255.0
         b = data.get("b", 0) / 255.0
