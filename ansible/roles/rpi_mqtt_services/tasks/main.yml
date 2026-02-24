@@ -1,6 +1,14 @@
 ---
 # roles/rpi_mqtt_services - mqtt-led + mqtt-ntfy + mqtt-sysstat + systemd
 
+# --- sync scripts（確保 --tags mqtt 也能部署腳本） ---
+- name: Sync rpi5b scripts to remote
+  ansible.posix.synchronize:
+    src: "{{ dotfiles_local }}/rpi5b/scripts/"
+    dest: "{{ remote_dotfiles }}/rpi5b/scripts/"
+  become: false
+  tags: [mqtt, sysstat]
+
 # --- mqtt-led ---
 - name: Create mqtt-led directory
   ansible.builtin.file:
