@@ -109,6 +109,19 @@ build_payload() {
     fi
 }
 
+# ── 狀態優先序（同名專案取最需關注的） ──
+state_priority() {
+    case "$1" in
+        waiting)   echo 6 ;;
+        error)     echo 5 ;;
+        idle)      echo 4 ;;
+        running)   echo 3 ;;
+        completed) echo 2 ;;
+        off)       echo 1 ;;
+        *)         echo 0 ;;
+    esac
+}
+
 # ── 主迴圈：輪詢 tmux → 發 MQTT ──
 # 使用 associative array 追蹤各 window 的前一次狀態
 declare -A prev_states
@@ -121,8 +134,11 @@ while true; do
 
     while read -r idx project state; do
         if [ -n "$project" ] && [ -n "$state" ]; then
-            current_states["$project"]="$state"
-            current_projects["$project"]="$idx"
+            existing="${current_states[$project]:-}"
+            if [ -z "$existing" ] || [ "$(state_priority "$state")" -gt "$(state_priority "$existing")" ]; then
+                current_states["$project"]="$state"
+                current_projects["$project"]="$idx"
+            fi
         fi
     done < <(tmux list-windows -F '#{window_index} #{@project} #{@claude_state}' 2>/dev/null)
 
