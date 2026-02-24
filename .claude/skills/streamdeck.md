@@ -1,8 +1,8 @@
 ---
 name: streamdeck
 description: >
-  Stream Deck 硬體規格與操作規範。當修改 streamdeck_mqtt.py、調整按鍵佈局、
-  變更字型大小、或需要啟動/重啟 Stream Deck 腳本時使用。
+  Stream Deck 硬體規格、SDK 效能規範與操作指南。當修改 Stream Deck plugin、
+  調整按鍵佈局、變更字型大小、或需要啟動/重啟時使用。
 ---
 
 # Stream Deck：規格與操作
@@ -31,29 +31,42 @@ description: >
 ```
 RPi5B MQTT Broker ←── WSL Publisher (tmux-mqtt-colors.sh)
        ↓
-Windows: streamdeck_mqtt.py (Consumer，被動顯示器)
+Windows: Elgato Stream Deck 軟體 → Node.js plugin (claude-monitor)
        ↓
 Stream Deck USB
 ```
 
-腳本跑在 **Windows**（`C:\Python312\pythonw.exe`），不是 WSL。
+Plugin 由 Elgato Stream Deck 軟體管理，透過 `@elgato/streamdeck` SDK (Node.js) 通訊。
+部署路徑：`C:\Users\duofilm\com.duofilm.claude-monitor.sdPlugin\`
 
-## 啟動 / 重啟
+## SDK 效能規範（Elgato 官方）
+
+### API 成本比較
+
+| 方法 | 成本 | 說明 |
+|------|------|------|
+| `setState(0/1)` | **最輕** | 只送數字，manifest 定義的預設圖 |
+| `setTitle("text")` | 輕 | 純文字，SD 軟體渲染 |
+| `setImage(svg)` | **最重** | 完整 SVG/PNG payload |
+
+### 關鍵限制
+
+- **`setImage` 上限 10 次/秒**（全域，含所有按鍵）
+- SDK 內部**零節流、零快取、零去重** — 每次 `setImage` 都直送 WebSocket
+- **不支援 animated GIF**
+
+### 必須遵守的模式
+
+1. **事件驅動** — 只在狀態真正改變時才呼叫 `setImage`，絕不用 `setInterval` 輪詢刷畫面
+2. **去重** — 呼叫前比對新舊值，相同就跳過（SDK 不會幫你擋）
+3. **閃爍用 setState** — 若需要動畫效果，在 manifest 定義 2 個 States，用 `setState(0/1)` 切換，不要每次重新生成 SVG
+4. **SVG 優先** — 比 base64 PNG 輕很多，且自動適配所有 SD 型號
+
+## 建構與部署
 
 ```bash
-# 從 WSL 啟動（透過 powershell.exe）
-powershell.exe -Command "Start-Process -FilePath 'C:\Python312\pythonw.exe' \
-  -ArgumentList '\\\\wsl$\\Ubuntu\\home\\duofilm\\dotfiles\\streamdeck\\streamdeck_mqtt.py' \
-  -WindowStyle Hidden"
-
-# 查看執行中的 Python 進程
-powershell.exe -Command "Get-WmiObject Win32_Process -Filter \"Name='pythonw.exe'\" \
-  | Select-Object ProcessId, CommandLine | Format-List"
-
-# 停止（排除 IME Indicator）
-powershell.exe -Command "Get-WmiObject Win32_Process -Filter \"Name='pythonw.exe'\" \
-  | Where-Object { \$_.CommandLine -like '*streamdeck*' } \
-  | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }"
+cd ~/dotfiles/streamdeck-plugin
+npm run build    # rollup 編譯 + 自動 deploy 到 Windows
 ```
 
 ## 按鍵佈局（config.json）
@@ -73,5 +86,4 @@ powershell.exe -Command "Get-WmiObject Win32_Process -Filter \"Name='pythonw.exe
 
 - `config.json` 在 `.gitignore`，機器特定設定不進 repo
 - `config.json.example` 是模板，新增設定要同步更新
-- Windows 上的 `pythonw.exe` 不會有 console 輸出，除錯時改用 `python.exe`
-- IME Indicator 也用 `pythonw.exe`，停止進程時要排除它
+- Plugin 的 Node.js 由 Stream Deck 軟體內建管理，不需另外安裝
