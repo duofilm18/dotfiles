@@ -9,9 +9,7 @@ import streamDeck from "@elgato/streamdeck";
 import { execFile } from "node:child_process";
 import {
   STATE_DISPLAY,
-  BLINK_DISPLAY,
   UNKNOWN_DISPLAY,
-  type StateDisplay,
 } from "../types";
 import { renderStatusSvg, renderOffSvg, svgToDataUri } from "../renderer";
 
@@ -29,13 +27,6 @@ export class ClaudeStatusAction extends SingletonAction {
   private assignments = new Map<string, string | null>();
   /** project → current state */
   private projectStates = new Map<string, string>();
-  /** blink toggle */
-  private blinkOn = false;
-
-  constructor() {
-    super();
-    setInterval(() => this.blinkTick(), 1000);
-  }
 
   override async onWillAppear(ev: WillAppearEvent): Promise<void> {
     if (!this.assignments.has(ev.action.id)) {
@@ -157,21 +148,4 @@ export class ClaudeStatusAction extends SingletonAction {
     return undefined;
   }
 
-  /** 每秒閃爍：只重繪 idle/waiting 的按鍵（狀態色 ↔ 白色） */
-  private blinkTick(): void {
-    this.blinkOn = !this.blinkOn;
-    for (const [ctxId, project] of this.assignments) {
-      if (!project) continue;
-      const state = this.projectStates.get(project);
-      if (!state || !(state in BLINK_DISPLAY)) continue;
-
-      const display: StateDisplay = this.blinkOn
-        ? BLINK_DISPLAY[state]
-        : STATE_DISPLAY[state];
-
-      const svg = renderStatusSvg(project, display);
-      const act = this.findAction(ctxId);
-      act?.setImage(svgToDataUri(svg));
-    }
-  }
 }

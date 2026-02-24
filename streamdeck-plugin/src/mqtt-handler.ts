@@ -20,6 +20,7 @@ export class MqttHandler {
   private rebuildTimer: ReturnType<typeof setTimeout> | null = null;
   private currentBroker = "";
   private currentPort = 0;
+  private lastSysStats = "";  // JSON 字串比對，避免重複渲染
 
   constructor(
     private onStateChange: StateChangeCallback,
@@ -58,8 +59,11 @@ export class MqttHandler {
     this.client.on("message", (_topic, payload, packet) => {
       // system/stats → 獨立處理，不走 rebuild
       if (packet.topic === "system/stats" && this.onSysStats) {
+        const raw = payload.toString();
+        if (raw === this.lastSysStats) return;  // 值沒變，跳過
+        this.lastSysStats = raw;
         try {
-          const data = JSON.parse(payload.toString());
+          const data = JSON.parse(raw);
           this.onSysStats(data.temp ?? 0, data.ram ?? 0);
         } catch { /* ignore malformed */ }
         return;
@@ -83,6 +87,11 @@ export class MqttHandler {
         const data = JSON.parse(payload.toString());
         state = (data.state || "").toLowerCase();
       } catch {
+        return;
+      }
+
+      // 狀態沒變 → 跳過（避免 retained 訊息重複渲染）
+      if (this.cache.get(project) === state && !this.rebuilding) {
         return;
       }
 

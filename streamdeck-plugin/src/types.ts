@@ -23,12 +23,6 @@ export const UNKNOWN_DISPLAY: StateDisplay = {
   fg: [200, 200, 200],
 };
 
-/** 閃爍時的交替顯示（白底），只有 idle 和 waiting 閃爍 */
-export const BLINK_DISPLAY: Record<string, StateDisplay> = {
-  idle:    { label: "IDLE",    bg: [255, 255, 255], fg: [255, 13,  0]   },
-  waiting: { label: "WAITING", bg: [255, 255, 255], fg: [200, 180, 0]   },
-};
-
 export const DATE_DISPLAY: StateDisplay = {
   label: "",
   bg: [40, 40, 40],
