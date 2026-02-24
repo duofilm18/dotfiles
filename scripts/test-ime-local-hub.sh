@@ -85,6 +85,18 @@ else
     fail "claude/led 未使用 \$MQTT_HOST"
 fi
 
+# ── T9: STATE_POLL_INTERVAL ≤ 50ms（防止回歸） ──
+echo "[T9] IME_Indicator config.py: STATE_POLL_INTERVAL ≤ 50ms"
+if [ -f "$CONFIG_FILE" ]; then
+    INTERVAL=$(grep '^STATE_POLL_INTERVAL' "$CONFIG_FILE" | head -1 | grep -oP '[0-9]+\.[0-9]+')
+    # awk: 1 if interval <= 0.05, 0 otherwise
+    if [ -n "$INTERVAL" ] && [ "$(echo "$INTERVAL" | awk '{print ($1 <= 0.05)}')" = "1" ]; then
+        pass "STATE_POLL_INTERVAL = ${INTERVAL}s (≤ 50ms)"
+    else
+        fail "STATE_POLL_INTERVAL = ${INTERVAL}s（超過 50ms，延遲會被感知）"
+    fi
+fi
+
 # ────────────────────────────────────
 # E2E 測試：模擬 IME_Indicator → tmux
 # ────────────────────────────────────
