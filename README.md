@@ -200,6 +200,18 @@ python streamdeck_mqtt.py
 
 **自動啟動：** 用 Windows Task Scheduler，程式設定 `pythonw.exe`，參數指向 `streamdeck_mqtt.py`，觸發條件「登入時」。
 
+### Stream Deck SDK Plugin（推薦）
+
+使用 Elgato Stream Deck SDK 重寫的版本，不獨佔 Stream Deck，可搭配其他 plugin。
+
+```bash
+cd ~/dotfiles/streamdeck-plugin
+npm install && npm run build
+# 在 Windows 上: streamdeck link com.duofilm.claude-monitor.sdPlugin
+```
+
+詳見 [streamdeck-plugin/README.md](streamdeck-plugin/README.md)。
+
 ### rpi5b 服務列表（192.168.88.10）
 
 | 服務 | Port | 用途 |

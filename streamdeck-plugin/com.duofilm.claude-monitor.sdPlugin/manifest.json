@@ -1,0 +1,56 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Actions": [
+    {
+      "Icon": "imgs/claude-status",
+      "Name": "Claude Status",
+      "UUID": "com.duofilm.claude-monitor.claude-status",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/claude-status-state"
+        }
+      ],
+      "Tooltip": "Displays Claude Code project status from MQTT"
+    },
+    {
+      "Icon": "imgs/claude-date",
+      "Name": "Claude Date",
+      "UUID": "com.duofilm.claude-monitor.claude-date",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/claude-date-state"
+        }
+      ],
+      "Tooltip": "Shows today's date, pastes YYYYMMDD on press"
+    }
+  ],
+  "Author": "duofilm",
+  "Category": "Claude Monitor",
+  "CategoryIcon": "imgs/category",
+  "CodePath": "bin/plugin.js",
+  "Description": "Monitor Claude Code instances via MQTT on Stream Deck",
+  "Icon": "imgs/plugin-icon",
+  "Name": "Claude Monitor",
+  "Nodejs": {
+    "Version": "20"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "PropertyInspectorPath": "ui/global-settings.html",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.9"
+  },
+  "UUID": "com.duofilm.claude-monitor",
+  "Version": "1.0.0.0"
+}

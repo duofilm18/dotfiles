@@ -43,6 +43,11 @@ env/
 *.egg-info/
 *.egg
 
+# Stream Deck SDK Plugin
+streamdeck-plugin/node_modules/
+streamdeck-plugin/com.duofilm.claude-monitor.sdPlugin/bin/
+streamdeck-plugin/dist/
+
 # IDE
 .vscode/
 .idea/
