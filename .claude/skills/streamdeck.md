@@ -69,21 +69,14 @@ cd ~/dotfiles/streamdeck-plugin
 npm run build    # rollup 編譯 + 自動 deploy 到 Windows
 ```
 
-## 按鍵佈局（config.json）
+## 按鍵配置
 
-| 設定 | 預設 | 說明 |
-|------|------|------|
-| `claude_button_index` | 0 | 專案按鍵起始 index |
-| `date_button_index` | -1 | 日期按鍵 index（-1 = 停用） |
-| `max_projects` | 8 | 最多幾個專案按鍵 |
-| `font_size_title` | 16 | 專案名稱字型 |
-| `font_size_state` | 18 | 狀態標籤字型 |
-| `font_size_date` | 32 | 日期按鍵字型 |
+Plugin 的 MQTT broker 設定透過 Stream Deck 軟體的 Property Inspector UI 修改（Global Settings）。
+預設值：`192.168.88.10:1883`
 
-專案按鍵自動分配時會跳過 `date_button_index`。
+專案按鍵由 plugin 自動分配（拖幾個 "Claude Status" action 到面板即可）。
 
 ## 注意事項
 
-- `config.json` 在 `.gitignore`，機器特定設定不進 repo
-- `config.json.example` 是模板，新增設定要同步更新
 - Plugin 的 Node.js 由 Stream Deck 軟體內建管理，不需另外安裝
+- 原 Python 版 (`streamdeck_mqtt.py`) 已移除，完全由 SDK plugin 取代

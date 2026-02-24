@@ -11,9 +11,9 @@ Windows                     WSL (Master)                       rpi5b (Slave, 192
 │  → ime/state ────┼──────→│   port 1883           │           │                          │
 │                  │       │                      │           │ mqtt-led (GPIO 控制)     │
 │ Stream Deck XL   │       │ tmux-mqtt-colors.sh  │  MQTT     │   └ claude/led topic     │
-│  → streamdeck_  │       │   ime_loop ← 本機    │──────→   │   └ claude/buzzer topic  │
-│    mqtt.py ──────┼───────┼─→ claude/led → RPi5B │           │                          │
-│  (32 鍵 LCD)     │       │                      │           │ mqtt-ntfy (ntfy 橋接)    │
+│  → SD Plugin ────┼───────┼─→ ime_loop ← 本機    │──────→   │   └ claude/buzzer topic  │
+│  (Node.js SDK)   │       │   claude/led → RPi5B │           │                          │
+│                  │       │                      │           │ mqtt-ntfy (ntfy 橋接)    │
 └──────────────────┘       │ Claude Code Hooks    │           │   └ claude/notify topic  │
                            │   → notify.sh ───────┼──────→   │   └→ ntfy (port 8080)    │
                            │                      │           └──────────────────────────┘
@@ -173,44 +173,25 @@ cd C:\Users\<user>\dotfiles\windows
 
 ### Stream Deck XL 監控（Windows）
 
-在 Stream Deck 上即時顯示 Claude Code 開發狀態。透過 MQTT 訂閱 RPi5B broker。
-
-**前置需求：**
-1. Windows 安裝 Python 3.x（[python.org](https://www.python.org/)，不是 MS Store 版）
-2. 下載 [`hidapi.dll`](https://github.com/libusb/hidapi/releases) 放到 `%PATH%` 目錄
-3. 關閉官方 Stream Deck 軟體
+使用 Elgato Stream Deck SDK (Node.js) 的原生 plugin，不獨佔 Stream Deck，可搭配其他 plugin。
+透過 MQTT 訂閱 RPi5B broker，即時顯示 Claude Code 開發狀態。
 
 **安裝：**
-```powershell
-cd C:\Users\<user>\dotfiles\streamdeck
-pip install -r requirements.txt
-copy config.json.example config.json
-# 編輯 config.json 確認 mqtt_broker IP
-
-python streamdeck_mqtt.py
-```
-
-**按鍵顯示：**
-
-| 按鍵 | 狀態 | 顏色 | 含義 |
-|------|------|------|------|
-| Key 0 | RUNNING | 藍色 | Claude 執行中 |
-| Key 0 | WAITING | 黃色 | 需要你操作 |
-| Key 0 | DONE | 綠色 | 任務完成 |
-| Key 0 | IDLE | 橘色 | 閒置中 |
-| Key 0 | ERROR | 紅色 | 出錯了 |
-
-**自動啟動：** 用 Windows Task Scheduler，程式設定 `pythonw.exe`，參數指向 `streamdeck_mqtt.py`，觸發條件「登入時」。
-
-### Stream Deck SDK Plugin（推薦）
-
-使用 Elgato Stream Deck SDK 重寫的版本，不獨佔 Stream Deck，可搭配其他 plugin。
-
 ```bash
 cd ~/dotfiles/streamdeck-plugin
 npm install && npm run build
 # 在 Windows 上: streamdeck link com.duofilm.claude-monitor.sdPlugin
 ```
+
+**按鍵顯示：**
+
+| 狀態 | 顏色 | 含義 |
+|------|------|------|
+| RUNNING | 藍色 | Claude 執行中 |
+| WAITING | 黃色 | 需要你操作 |
+| DONE | 綠色 | 任務完成 |
+| IDLE | 橘色 | 閒置中 |
+| ERROR | 紅色 | 出錯了 |
 
 詳見 [streamdeck-plugin/README.md](streamdeck-plugin/README.md)。
 

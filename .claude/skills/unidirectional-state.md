@@ -124,5 +124,5 @@ IME 狀態（`ime/state` → tmux `@ime_state`）是 MQTT→tmux 的反向流，
 |------|------|
 | `scripts/claude-hook.sh` | Source：寫 tmux `@claude_state` |
 | `scripts/tmux-mqtt-colors.sh` | Publisher：輪詢 tmux → 發 MQTT |
-| `streamdeck/streamdeck_mqtt.py` | Consumer：被動顯示 MQTT 狀態 |
+| `streamdeck-plugin/` | Consumer：Stream Deck SDK plugin（Node.js） |
 | `rpi5b/mqtt-led/mqtt_led.py` | Consumer：LED 燈效 |

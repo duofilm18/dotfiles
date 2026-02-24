@@ -5,7 +5,7 @@ export interface StateDisplay {
 }
 
 /**
- * 狀態顯示對照表（對齊 Python streamdeck_mqtt.py）
+ * 狀態顯示對照表（對齊 wsl/led-effects.json）
  * bg: 按鍵背景色, fg: 文字色
  */
 export const STATE_DISPLAY: Record<string, StateDisplay> = {
