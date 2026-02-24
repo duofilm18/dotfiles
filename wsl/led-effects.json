@@ -5,5 +5,7 @@
   "waiting":    {"r": 255, "g": 255, "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.3, "melody": "nokia"},
   "completed":  {"r": 0,   "g": 0,   "b": 0,   "pattern": "rainbow", "times": 3,   "interval": 1.0, "melody": "star_wars"},
   "error":      {"r": 255, "g": 0,   "b": 0,   "pattern": "solid",   "duration": 5, "melody": "short_error"},
-  "off":        {"r": 0,   "g": 0,   "b": 0,   "pattern": "solid",   "duration": 1}
+  "off":        {"r": 0,   "g": 0,   "b": 0,   "pattern": "solid",   "duration": 1},
+  "ime_zh":     {"r": 255, "g": 34,  "b": 0,   "pattern": "solid",   "duration": 0},
+  "ime_en":     {"r": 0,   "g": 19,  "b": 74,  "pattern": "solid",   "duration": 0}
 }

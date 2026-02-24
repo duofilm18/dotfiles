@@ -37,6 +37,7 @@ dotfiles/
 ├── scripts/
 │   ├── claude-dispatch.sh
 │   ├── claude-hook.sh
+│   ├── deploy-ime-indicator.sh
 │   ├── install-docker.sh
 │   ├── install-lighthouse.sh
 │   ├── install.sh
@@ -163,10 +164,10 @@ cd C:\Users\<user>\dotfiles\windows
 
 會自動：clone IME_Indicator → 安裝 pip 依賴 → 設定開機自動啟動
 
-**更新：**
-```powershell
-cd %LOCALAPPDATA%\IME_Indicator
-git pull
+**更新（從 WSL 部署）：**
+```bash
+~/dotfiles/scripts/deploy-ime-indicator.sh          # 部署 + 自動重啟
+~/dotfiles/scripts/deploy-ime-indicator.sh --diff    # 只看差異
 ```
 
 ### Stream Deck XL 監控（Windows）
