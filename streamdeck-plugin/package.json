@@ -5,8 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rollup -c",
-    "watch": "rollup -c -w"
+    "build": "rollup -c && npm run deploy",
+    "watch": "rollup -c -w",
+    "deploy": "cp -r com.duofilm.claude-monitor.sdPlugin/bin com.duofilm.claude-monitor.sdPlugin/imgs com.duofilm.claude-monitor.sdPlugin/ui com.duofilm.claude-monitor.sdPlugin/manifest.json /mnt/c/Users/duofilm/com.duofilm.claude-monitor.sdPlugin/"
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.0.1",
