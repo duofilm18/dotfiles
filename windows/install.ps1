@@ -104,7 +104,7 @@ Write-Host "  來源: RickAsli/IME_Indicator (Python)" -ForegroundColor White
 Write-Host "  安裝: $InstallDir" -ForegroundColor White
 Write-Host "  功能: 游標旁顯示中/英輸入法狀態圓點" -ForegroundColor White
 Write-Host "  自動啟動: 登入 Windows 時自動執行" -ForegroundColor White
-Write-Host "  更新: cd $InstallDir && git pull" -ForegroundColor White
+Write-Host "  更新: cd $InstallDir; git pull" -ForegroundColor White
 Write-Host "  移除排程: Unregister-ScheduledTask -TaskName '$TaskName'" -ForegroundColor White
 Write-Host ""
 
