@@ -2,5 +2,4 @@
 - name: Reload and restart mqtt services
   ansible.builtin.shell: |
     systemctl daemon-reload
-    systemctl restart mqtt-sysstat mqtt-ntfy
-    systemctl restart mqtt-led || true
+    systemctl restart mqtt-led mqtt-ntfy

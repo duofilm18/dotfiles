@@ -1,13 +1,5 @@
 ---
-# roles/rpi_mqtt_services - mqtt-led + mqtt-ntfy + mqtt-sysstat + systemd
-
-# --- sync scripts（確保 --tags mqtt 也能部署腳本） ---
-- name: Sync rpi5b scripts to remote
-  ansible.posix.synchronize:
-    src: "{{ dotfiles_local }}/rpi5b/scripts/"
-    dest: "{{ remote_dotfiles }}/rpi5b/scripts/"
-  become: false
-  tags: [mqtt, sysstat]
+# roles/rpi_mqtt_services - mqtt-led + mqtt-ntfy + systemd
 
 # --- mqtt-led ---
 - name: Create mqtt-led directory
@@ -90,14 +82,6 @@
   notify: Reload and restart mqtt services
   tags: [mqtt, ntfy, systemd]
 
-- name: Deploy mqtt-sysstat systemd service
-  ansible.builtin.template:
-    src: mqtt-sysstat.service.j2
-    dest: /etc/systemd/system/mqtt-sysstat.service
-    mode: "0644"
-  notify: Reload and restart mqtt services
-  tags: [mqtt, sysstat, systemd]
-
 - name: Enable mqtt services
   ansible.builtin.systemd:
     name: "{{ item }}"
@@ -106,6 +90,5 @@
   loop:
     - mqtt-led
     - mqtt-ntfy
-    - mqtt-sysstat
   tags: [mqtt, systemd]
 

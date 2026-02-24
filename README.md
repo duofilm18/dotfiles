@@ -223,7 +223,6 @@ npm install && npm run build
 | ntfy | 8080 | 手機推播引擎（Docker） |
 | mqtt-led | — | MQTT → GPIO（LED + 蜂鳴器） |
 | mqtt-ntfy | — | MQTT → ntfy 橋接 |
-| mqtt-sysstat | — | 系統狀態 → MQTT（溫度 + RAM） |
 | Uptime Kuma | 3001 | 監控服務（Docker） |
 
 ### 測試指令

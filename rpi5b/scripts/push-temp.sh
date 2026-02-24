@@ -66,3 +66,7 @@ else
     STATUS_RAM="up"
 fi
 curl -s "${URL_RAM}?status=${STATUS_RAM}&msg=${RAM_PCT}%&ping=${RAM_PCT}" > /dev/null
+
+# === 推送到 MQTT（供 Stream Deck 顯示） ===
+mosquitto_pub -h localhost -t "system/stats" -r \
+    -m "{\"temp\":${TEMP},\"ram\":${RAM_PCT}}"
