@@ -3,6 +3,7 @@ import streamDeck from "@elgato/streamdeck";
 
 export type StateChangeCallback = (project: string, state: string | null) => void;
 export type RebuildCallback = (cache: Map<string, string>) => void;
+export type SysStatsCallback = (temp: number, ram: number) => void;
 
 /**
  * MQTT 連線管理 + Rebuild Phase
@@ -23,6 +24,7 @@ export class MqttHandler {
   constructor(
     private onStateChange: StateChangeCallback,
     private onRebuild: RebuildCallback,
+    private onSysStats?: SysStatsCallback,
   ) {}
 
   connect(broker: string, port: number): void {
@@ -50,9 +52,19 @@ export class MqttHandler {
       streamDeck.logger.info("MQTT connected, rebuilding...");
       this.startRebuild();
       this.client!.subscribe("claude/led/+");
+      this.client!.subscribe("system/stats");
     });
 
     this.client.on("message", (_topic, payload, packet) => {
+      // system/stats → 獨立處理，不走 rebuild
+      if (packet.topic === "system/stats" && this.onSysStats) {
+        try {
+          const data = JSON.parse(payload.toString());
+          this.onSysStats(data.temp ?? 0, data.ram ?? 0);
+        } catch { /* ignore malformed */ }
+        return;
+      }
+
       const parts = packet.topic.split("/");
       if (parts.length !== 3) return;
       const project = parts[2];

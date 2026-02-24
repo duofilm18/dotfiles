@@ -28,6 +28,20 @@
         }
       ],
       "Tooltip": "Shows today's date, pastes YYYYMMDD on press"
+    },
+    {
+      "Icon": "imgs/system-stats",
+      "Name": "System Stats",
+      "UUID": "com.duofilm.claude-monitor.system-stats",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/system-stats-state"
+        }
+      ],
+      "Tooltip": "RPi5B CPU temperature and RAM usage from MQTT"
     }
   ],
   "Author": "duofilm",

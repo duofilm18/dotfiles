@@ -43,6 +43,25 @@ font-family="Arial,sans-serif" font-size="32" font-weight="bold" fill="${fg}">${
 </svg>`;
 }
 
+/** 系統狀態按鍵 SVG：RPi5B 標題 / 溫度（色溫） / RAM% */
+export function renderSysStatsSvg(temp: number, ram: number): string {
+  // 溫度色碼：<50 綠、50-64 黃、≥65 紅
+  let tempColor: string;
+  if (temp >= 65) tempColor = "rgb(255,60,60)";
+  else if (temp >= 50) tempColor = "rgb(255,220,0)";
+  else tempColor = "rgb(0,210,80)";
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144">\
+<rect width="144" height="144" fill="rgb(30,30,30)"/>\
+<text x="72" y="28" text-anchor="middle" dominant-baseline="middle" \
+font-family="Arial,sans-serif" font-size="16" fill="rgb(160,160,160)">RPi5B</text>\
+<text x="72" y="72" text-anchor="middle" dominant-baseline="middle" \
+font-family="Arial,sans-serif" font-size="36" font-weight="bold" fill="${tempColor}">${temp}\u00B0C</text>\
+<text x="72" y="116" text-anchor="middle" dominant-baseline="middle" \
+font-family="Arial,sans-serif" font-size="20" fill="rgb(255,255,255)">RAM ${ram}%</text>\
+</svg>`;
+}
+
 /** 暗灰色空按鍵 SVG */
 export function renderOffSvg(): string {
   return renderStatusSvg("", STATE_DISPLAY.off);

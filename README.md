@@ -131,6 +131,7 @@ notify.sh 會自動：
 | `claude/notify` | 手機推播 | `{"title": "...", "body": "..."}` |
 | `claude/led` | RGB LED + Stream Deck | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "...", "state": "idle\|running\|waiting\|completed\|error"}` |
 | `claude/buzzer` | 蜂鳴器 | `{"frequency": Hz, "duration": ms}` |
+| `system/stats` | RPi5B 系統狀態（Stream Deck） | `{"temp": °C, "ram": %}` |
 
 ### LED 燈效對應
 
@@ -222,6 +223,7 @@ npm install && npm run build
 | ntfy | 8080 | 手機推播引擎（Docker） |
 | mqtt-led | — | MQTT → GPIO（LED + 蜂鳴器） |
 | mqtt-ntfy | — | MQTT → ntfy 橋接 |
+| mqtt-sysstat | — | 系統狀態 → MQTT（溫度 + RAM） |
 | Uptime Kuma | 3001 | 監控服務（Docker） |
 
 ### 測試指令
