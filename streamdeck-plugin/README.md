@@ -12,6 +12,9 @@
 
 ```
 RPi5B MQTT Broker ←── WSL Publisher (tmux-mqtt-colors.sh)
+       ↑                ↑
+       │                └── RPi5B cron (push-temp.sh → system/stats)
+       │                └── Windows Task Scheduler (push-win-stats.ps1 → system/stats/win)
        ↓
 Stream Deck App → Claude Monitor Plugin (此目錄)
        ↓
@@ -58,6 +61,8 @@ streamdeck link com.duofilm.claude-monitor.sdPlugin
 |--------|------|------|
 | Claude Status | 專案名 + 狀態色塊 | 切 tmux window + 喚起 Terminal |
 | Claude Date | YYYY / MMDD | 貼上今天日期 (YYYYMMDD) |
+| System Stats | RPi5B 溫度 + RAM | — |
+| Win Stats | Win PC 溫度 + 頻率 + RAM | — |
 
 ### 狀態顏色
 
@@ -81,7 +86,9 @@ streamdeck-plugin/
 │   ├── types.ts               # 型別 + 色彩常數
 │   └── actions/
 │       ├── claude-status.ts   # 狀態 action
-│       └── claude-date.ts     # 日期 action
+│       ├── claude-date.ts     # 日期 action
+│       ├── system-stats.ts    # RPi5B 系統狀態
+│       └── win-stats.ts       # Windows PC 系統狀態
 ├── com.duofilm.claude-monitor.sdPlugin/
 │   ├── manifest.json
 │   ├── bin/                   # Rollup 輸出

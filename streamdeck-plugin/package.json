@@ -7,7 +7,7 @@
   "scripts": {
     "build": "rollup -c && npm run deploy",
     "watch": "rollup -c -w",
-    "deploy": "cp -r com.duofilm.claude-monitor.sdPlugin/bin com.duofilm.claude-monitor.sdPlugin/imgs com.duofilm.claude-monitor.sdPlugin/ui com.duofilm.claude-monitor.sdPlugin/manifest.json /mnt/c/Users/duofilm/com.duofilm.claude-monitor.sdPlugin/"
+    "deploy": "bash -c 'source ../windows/deploy-paths.sh && cp -r com.duofilm.claude-monitor.sdPlugin/bin com.duofilm.claude-monitor.sdPlugin/imgs com.duofilm.claude-monitor.sdPlugin/ui com.duofilm.claude-monitor.sdPlugin/manifest.json \"$DEPLOY_SD_PLUGIN/\"'"
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.0.1",

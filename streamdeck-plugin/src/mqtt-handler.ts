@@ -4,6 +4,7 @@ import streamDeck from "@elgato/streamdeck";
 export type StateChangeCallback = (project: string, state: string | null) => void;
 export type RebuildCallback = (cache: Map<string, string>) => void;
 export type SysStatsCallback = (temp: number, ram: number) => void;
+export type WinStatsCallback = (temp: number, freq: number, ram: number) => void;
 
 /**
  * MQTT 連線管理 + Rebuild Phase
@@ -21,11 +22,13 @@ export class MqttHandler {
   private currentBroker = "";
   private currentPort = 0;
   private lastSysStats = "";  // JSON 字串比對，避免重複渲染
+  private lastWinStats = "";
 
   constructor(
     private onStateChange: StateChangeCallback,
     private onRebuild: RebuildCallback,
     private onSysStats?: SysStatsCallback,
+    private onWinStats?: WinStatsCallback,
   ) {}
 
   connect(broker: string, port: number): void {
@@ -54,6 +57,7 @@ export class MqttHandler {
       this.startRebuild();
       this.client!.subscribe("claude/led/+");
       this.client!.subscribe("system/stats");
+      this.client!.subscribe("system/stats/win");
     });
 
     this.client.on("message", (_topic, payload, packet) => {
@@ -65,6 +69,18 @@ export class MqttHandler {
         try {
           const data = JSON.parse(raw);
           this.onSysStats(data.temp ?? 0, data.ram ?? 0);
+        } catch { /* ignore malformed */ }
+        return;
+      }
+
+      // system/stats/win → Windows PC 狀態
+      if (packet.topic === "system/stats/win" && this.onWinStats) {
+        const raw = payload.toString();
+        if (raw === this.lastWinStats) return;
+        this.lastWinStats = raw;
+        try {
+          const data = JSON.parse(raw);
+          this.onWinStats(data.temp ?? 0, data.freq ?? 0, data.ram ?? 0);
         } catch { /* ignore malformed */ }
         return;
       }

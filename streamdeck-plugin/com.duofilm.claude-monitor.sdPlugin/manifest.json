@@ -42,6 +42,20 @@
         }
       ],
       "Tooltip": "RPi5B CPU temperature and RAM usage from MQTT"
+    },
+    {
+      "Icon": "imgs/win-stats",
+      "Name": "Win Stats",
+      "UUID": "com.duofilm.claude-monitor.win-stats",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/win-stats-state"
+        }
+      ],
+      "Tooltip": "Windows PC CPU temp, frequency and RAM from MQTT"
     }
   ],
   "Author": "duofilm",

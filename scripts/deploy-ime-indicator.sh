@@ -2,7 +2,7 @@
 # deploy-ime-indicator.sh - 部署 IME_Indicator 到 Windows
 #
 # dotfiles 的 IME_Indicator/ 是 source of truth，
-# Windows 端 C:\Users\duofilm\IME_Indicator 是執行副本。
+# Windows 端路徑由 windows/deploy-paths.sh 定義。
 # 本腳本同步兩邊並重啟 Windows 進程。
 #
 # 用法:
@@ -11,8 +11,11 @@
 
 set -euo pipefail
 
-SRC="$(cd "$(dirname "$0")/../IME_Indicator/python_indicator" && pwd)"
-DEST="/mnt/c/Users/duofilm/IME_Indicator/python_indicator"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/../windows/deploy-paths.sh"
+
+SRC="$(cd "$SCRIPT_DIR/../IME_Indicator/python_indicator" && pwd)"
+DEST="$DEPLOY_IME_PYTHON"
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -89,8 +92,10 @@ powershell.exe -Command "Get-Process python*, pythonw* 2>\$null | Where-Object {
 powershell.exe -Command "Stop-Process -Name pythonw -Force -ErrorAction SilentlyContinue" 2>/dev/null || true
 sleep 1
 
-# 啟動新進程
-powershell.exe -Command "Start-Process pythonw -ArgumentList 'C:\Users\duofilm\IME_Indicator\python_indicator\main.py' -WorkingDirectory 'C:\Users\duofilm\IME_Indicator\python_indicator'" 2>/dev/null
+# 啟動新進程（轉成 Windows 路徑）
+WIN_MAIN=$(echo "$DEPLOY_IME_MAIN" | sed 's|/mnt/c|C:|;s|/|\\|g')
+WIN_DIR=$(echo "$DEPLOY_IME_PYTHON" | sed 's|/mnt/c|C:|;s|/|\\|g')
+powershell.exe -Command "Start-Process pythonw -ArgumentList '$WIN_MAIN' -WorkingDirectory '$WIN_DIR'" 2>/dev/null
 
 sleep 2
 if powershell.exe -Command "(Get-Process pythonw -ErrorAction SilentlyContinue).Count" 2>/dev/null | grep -q '[1-9]'; then

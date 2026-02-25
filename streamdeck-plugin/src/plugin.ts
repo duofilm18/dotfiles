@@ -2,6 +2,7 @@ import streamDeck from "@elgato/streamdeck";
 import { ClaudeStatusAction } from "./actions/claude-status";
 import { ClaudeDateAction } from "./actions/claude-date";
 import { SystemStatsAction } from "./actions/system-stats";
+import { WinStatsAction } from "./actions/win-stats";
 import { MqttHandler } from "./mqtt-handler";
 import { DEFAULT_SETTINGS, type GlobalSettings } from "./types";
 
@@ -9,6 +10,7 @@ import { DEFAULT_SETTINGS, type GlobalSettings } from "./types";
 const statusAction = new ClaudeStatusAction();
 const dateAction = new ClaudeDateAction();
 const sysStatsAction = new SystemStatsAction();
+const winStatsAction = new WinStatsAction();
 
 // --- MQTT ---
 const mqttHandler = new MqttHandler(
@@ -28,6 +30,10 @@ const mqttHandler = new MqttHandler(
   (temp, ram) => {
     sysStatsAction.updateStats(temp, ram);
   },
+  // onWinStats
+  (temp, freq, ram) => {
+    winStatsAction.updateStats(temp, freq, ram);
+  },
 );
 
 /** 從 globalSettings 讀取 MQTT broker 設定並連線 */
@@ -43,6 +49,7 @@ async function connectMqtt(): Promise<void> {
 streamDeck.actions.registerAction(statusAction);
 streamDeck.actions.registerAction(dateAction);
 streamDeck.actions.registerAction(sysStatsAction);
+streamDeck.actions.registerAction(winStatsAction);
 
 // --- Settings 變更時重連 MQTT ---
 streamDeck.settings.onDidReceiveGlobalSettings<GlobalSettings>(() => {

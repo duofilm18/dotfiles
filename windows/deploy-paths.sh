@@ -1,0 +1,19 @@
+#!/bin/bash
+# Windows 部署路徑登記表（WSL 側，/mnt/c 版本）
+#
+# 所有 WSL 腳本引用此檔案的變數，禁止自行硬寫 /mnt/c 路徑。
+# 此檔案必須與 deploy-paths.ps1 保持一致。
+#
+# 用法: source ~/dotfiles/windows/deploy-paths.sh
+
+WIN_USER="duofilm"
+WIN_HOME="/mnt/c/Users/${WIN_USER}"
+WIN_LOCALAPPDATA="${WIN_HOME}/AppData/Local"
+
+DEPLOY_IME_DIR="${WIN_LOCALAPPDATA}/IME_Indicator"
+DEPLOY_IME_PYTHON="${DEPLOY_IME_DIR}/python_indicator"
+DEPLOY_IME_MAIN="${DEPLOY_IME_PYTHON}/main.py"
+
+DEPLOY_LHM_DIR="${WIN_LOCALAPPDATA}/LibreHardwareMonitor"
+
+DEPLOY_SD_PLUGIN="${WIN_HOME}/com.duofilm.claude-monitor.sdPlugin"

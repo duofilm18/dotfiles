@@ -7,8 +7,9 @@
 # https://github.com/duofilm18/IME_Indicator (fork of RickAsli/IME_Indicator)
 
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\deploy-paths.ps1"
 $TaskName = "IME Indicator"
-$InstallDir = "$env:LOCALAPPDATA\IME_Indicator"
+$InstallDir = $DEPLOY_IME_DIR
 
 Write-Host "=== IME 中英指示器安裝 ===" -ForegroundColor Cyan
 Write-Host ""

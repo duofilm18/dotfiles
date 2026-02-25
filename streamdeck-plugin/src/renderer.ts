@@ -62,6 +62,29 @@ font-family="Arial,sans-serif" font-size="20" fill="rgb(255,255,255)">RAM ${ram}
 </svg>`;
 }
 
+/** Windows PC 狀態按鍵 SVG：標題 / 溫度（色溫） / 頻率 / RAM% */
+export function renderWinStatsSvg(temp: number, freq: number, ram: number): string {
+  // 桌機溫度色碼：<65 綠、65-79 黃、≥80 紅
+  let tempColor: string;
+  if (temp >= 80) tempColor = "rgb(255,60,60)";
+  else if (temp >= 65) tempColor = "rgb(255,220,0)";
+  else tempColor = "rgb(0,210,80)";
+
+  const ghz = (freq / 1000).toFixed(1);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144">\
+<rect width="144" height="144" fill="rgb(30,30,30)"/>\
+<text x="72" y="24" text-anchor="middle" dominant-baseline="middle" \
+font-family="Arial,sans-serif" font-size="16" fill="rgb(160,160,160)">Win PC</text>\
+<text x="72" y="58" text-anchor="middle" dominant-baseline="middle" \
+font-family="Arial,sans-serif" font-size="32" font-weight="bold" fill="${tempColor}">${temp}\u00B0C</text>\
+<text x="72" y="92" text-anchor="middle" dominant-baseline="middle" \
+font-family="Arial,sans-serif" font-size="18" fill="rgb(255,255,255)">${ghz} GHz</text>\
+<text x="72" y="122" text-anchor="middle" dominant-baseline="middle" \
+font-family="Arial,sans-serif" font-size="18" fill="rgb(255,255,255)">RAM ${ram}%</text>\
+</svg>`;
+}
+
 /** 暗灰色空按鍵 SVG */
 export function renderOffSvg(): string {
   return renderStatusSvg("", STATE_DISPLAY.off);
