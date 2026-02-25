@@ -9,7 +9,7 @@ User={{ ansible_user }}
 WorkingDirectory={{ mqtt_led_dir }}
 Environment=GPIOZERO_PIN_FACTORY=lgpio
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/bin/python3 {{ mqtt_led_dir }}/mqtt_led.py
+ExecStart={{ mqtt_led_dir }}/venv/bin/python {{ mqtt_led_dir }}/mqtt_led.py
 WatchdogSec=60
 Restart=always
 RestartSec=5

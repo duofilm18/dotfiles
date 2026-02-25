@@ -32,7 +32,8 @@
 - name: Install mqtt-led requirements
   ansible.builtin.pip:
     requirements: "{{ mqtt_led_dir }}/requirements.txt"
-    extra_args: --break-system-packages
+    virtualenv: "{{ mqtt_led_dir }}/venv"
+    virtualenv_command: python3 -m venv --system-site-packages
   tags: [mqtt, led]
 
 # --- mqtt-ntfy ---
@@ -65,7 +66,8 @@
 - name: Install mqtt-ntfy requirements
   ansible.builtin.pip:
     requirements: "{{ mqtt_ntfy_dir }}/requirements.txt"
-    extra_args: --break-system-packages
+    virtualenv: "{{ mqtt_ntfy_dir }}/venv"
+    virtualenv_command: python3 -m venv --system-site-packages
   tags: [mqtt, ntfy]
 
 # --- systemd services ---

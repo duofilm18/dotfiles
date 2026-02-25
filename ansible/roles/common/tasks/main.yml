@@ -43,8 +43,6 @@
     regexp: "bash_aliases"
     state: present
 
-- name: Make scripts executable
-  ansible.builtin.file:
-    path: "{{ dotfiles_local }}/scripts"
-    mode: "u+x"
-    recurse: true
+- name: Make shell scripts executable
+  ansible.builtin.shell: chmod u+x {{ dotfiles_local }}/scripts/*.sh {{ dotfiles_local }}/scripts/*.py
+  changed_when: false

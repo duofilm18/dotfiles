@@ -8,7 +8,7 @@ Type=simple
 User={{ ansible_user }}
 WorkingDirectory={{ mqtt_ntfy_dir }}
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/bin/python3 {{ mqtt_ntfy_dir }}/mqtt_ntfy.py
+ExecStart={{ mqtt_ntfy_dir }}/venv/bin/python {{ mqtt_ntfy_dir }}/mqtt_ntfy.py
 Restart=on-failure
 RestartSec=5
 

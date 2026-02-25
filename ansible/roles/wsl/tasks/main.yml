@@ -16,6 +16,7 @@
       - mosquitto-clients
       - bats
       - python3-pip
+      - python3-venv
     state: present
     update_cache: true
     cache_valid_time: 3600
@@ -86,4 +87,5 @@
 - name: Install Python dev dependencies
   ansible.builtin.pip:
     requirements: "{{ dotfiles_local }}/requirements-dev.txt"
-    extra_args: --break-system-packages
+    virtualenv: "{{ dotfiles_local }}/.venv"
+    virtualenv_command: python3 -m venv
