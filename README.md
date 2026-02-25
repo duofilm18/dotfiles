@@ -247,6 +247,8 @@ ansible-playbook rpi5b.yml --tags mqtt
 ansible-playbook rpi5b.yml --check --diff
 ```
 
+**CI**：push 到 `ansible/` 目錄時，GitHub Actions 會自動跑 `ansible-lint` + `--syntax-check`（見 `.github/workflows/ansible-lint.yml`）。
+
 > 機器特定敏感值（Uptime Kuma token 等）放在 `ansible/host_vars/rpi5b.yml`（已 gitignore），模板見 `rpi5b.yml.example`。
 
 ---
