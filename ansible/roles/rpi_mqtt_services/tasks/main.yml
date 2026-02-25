@@ -16,7 +16,9 @@
     remote_src: true
   loop:
     - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-led/mqtt_led.py", dest: mqtt_led.py }
+    - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-led/melodies.py", dest: melodies.py }
     - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-led/requirements.txt", dest: requirements.txt }
+  notify: Reload and restart mqtt services
   tags: [mqtt, led]
 
 - name: Deploy mqtt-led config (example if no config exists)
@@ -49,6 +51,7 @@
   loop:
     - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-ntfy/mqtt_ntfy.py", dest: mqtt_ntfy.py }
     - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-ntfy/requirements.txt", dest: requirements.txt }
+  notify: Reload and restart mqtt services
   tags: [mqtt, ntfy]
 
 - name: Deploy mqtt-ntfy config (example if no config exists)
