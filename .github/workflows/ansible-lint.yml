@@ -32,6 +32,25 @@ jobs:
       - name: Install Ansible Galaxy collections
         run: ansible-galaxy collection install ansible.posix community.docker community.general
 
+      - name: Check banned patterns
+        run: |
+          echo "=== Checking for banned Ansible patterns ==="
+          err=0
+          # 禁止 --break-system-packages（用 venv）
+          if grep -r 'break-system-packages' ansible/; then
+            echo "❌ 禁止 --break-system-packages，改用 virtualenv"; err=1
+          fi
+          # 禁止 ansible_env.HOME（用 ansible_facts.user_dir）
+          if grep -r 'ansible_env\.HOME' ansible/; then
+            echo "❌ 禁止 ansible_env.HOME，改用 ansible_facts.user_dir"; err=1
+          fi
+          # 禁止 /usr/bin/python3 在 systemd template（用 venv/bin/python）
+          if grep -r '/usr/bin/python3' ansible/roles/*/templates/ 2>/dev/null; then
+            echo "❌ systemd ExecStart 禁止 /usr/bin/python3，改用 venv/bin/python"; err=1
+          fi
+          if [ $err -ne 0 ]; then exit 1; fi
+          echo "✅ All checks passed"
+
       - name: Run ansible-lint
         run: ansible-lint ansible/
 
