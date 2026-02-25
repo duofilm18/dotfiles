@@ -36,8 +36,5 @@ alias dcu='docker compose up -d'
 alias dcd='docker compose down'
 alias dps='docker ps'
 
-# 安全檢查
-alias safe='~/dotfiles/scripts/safe-check.sh'
-
 # WSL 專用：複製到 Windows 剪貼板
 alias clip='clip.exe'

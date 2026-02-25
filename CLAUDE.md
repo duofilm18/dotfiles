@@ -30,6 +30,7 @@
 2. **更新文件** - 新增檔案要更新 README.md
 3. **記得推送** - 改完要 `git push`，不要只 commit
 4. **模板分離** - 機器特定設定用 `.example` 模板 + `.gitignore`
+5. **安裝/設定功能 → Ansible** - 新增系統套件、設定檔、服務等安裝邏輯，一律加進 `ansible/roles/` 對應的 role，不碰 `scripts/install.sh`（它只是 bootstrap）
 
 ## 目錄結構
 
@@ -40,7 +41,7 @@ dotfiles/
 │   ├── roles/        # common, wsl, rpi_*, tinkerboard
 │   ├── site.yml      # 主 playbook
 │   └── rpi5b.yml     # RPi5B playbook
-├── scripts/          # Shell 安裝腳本（備援）
+├── scripts/          # Shell 腳本（install.sh 為 bootstrap）
 ├── shared/           # 共用配置 (vim, tmux)
 ├── tests/            # Bats 測試
 └── wsl/              # WSL 專用配置 + Claude hooks
@@ -56,15 +57,13 @@ ssh root@192.168.88.10
 cd ~/dotfiles/ansible && ansible-playbook site.yml
 ansible-playbook rpi5b.yml --tags mqtt
 
-# Shell 備援
+# Bootstrap（安裝 Ansible + 跑 playbook）
 ~/dotfiles/scripts/install.sh
 ~/dotfiles/scripts/setup-rpi5b.sh
 
 # 設定 Claude Hooks
 ~/dotfiles/scripts/setup-claude-hooks.sh
 
-# 安全審查
-~/dotfiles/scripts/safe-check.sh "要審查的指令"
 ```
 
 ---

@@ -13,6 +13,9 @@
       - jq
       - zstd
       - mosquitto
+      - mosquitto-clients
+      - bats
+      - python3-pip
     state: present
     update_cache: true
     cache_valid_time: 3600
@@ -80,7 +83,7 @@
     enabled: true
     state: started
 
-- name: Install Ollama
-  ansible.builtin.shell: curl -fsSL https://ollama.com/install.sh | sh
-  args:
-    creates: /usr/local/bin/ollama
+- name: Install Python dev dependencies
+  ansible.builtin.pip:
+    requirements: "{{ dotfiles_local }}/requirements-dev.txt"
+    extra_args: --break-system-packages

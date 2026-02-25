@@ -18,7 +18,7 @@ Windows                     WSL (Master)                       rpi5b (Slave, 192
                            │   → notify.sh ───────┼──────→   │   └→ ntfy (port 8080)    │
                            │                      │           └──────────────────────────┘
                            │ wsl/led-effects.json │
-                           │ Qwen (Ollama)        │
+                           │                      │
                            └──────────────────────┘
 ```
 
@@ -43,7 +43,6 @@ dotfiles/
 │   ├── install.sh
 │   ├── notify.sh
 │   ├── play-melody.sh
-│   ├── safe-check.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b.sh
 │   ├── test-hooks.sh
@@ -82,16 +81,6 @@ SD 卡壞了？新的 Pi 要設定？一個指令搞定：
 會依序安裝：系統設定 → Docker（含 Pi-hole）→ MQTT → Tailscale → crontab
 
 需要互動的步驟會暫停提示，不會跳過。
-
-### 安全審查工具
-
-> 在執行危險指令前，先用 Ollama 審查
-
-```bash
-~/dotfiles/scripts/safe-check.sh "rm -rf /tmp/test"
-```
-
-需要先在 **Windows** 上啟動 Ollama。
 
 ### Claude Code Hooks（MQTT 通知 + LED 燈效）
 
@@ -283,20 +272,9 @@ git commit -m "update"
 git push  # 這步不能忘！
 ```
 
-> **2. 危險指令用 safe-check 審查**
+> **2. 危險指令要三思**
 >
-> 在執行 `rm`、`prune`、`clean` 相關指令前，先審查。
-
-**特別危險的指令：**
-- `rm -rf` - 刪除檔案/目錄
-- `docker system prune -a` - 清除所有 Docker 資源
-- `git reset --hard` - 丟棄所有未提交的更改
-- `chmod -R 777` - 危險的權限設定
-
-> **3. Ollama 裝 Windows，不要裝 WSL**
->
-> WSL 的 Ollama 會佔用大量記憶體，Windows 版本可以更好地利用 GPU。
-> WSL 透過 `localhost:11434` 直接存取 Windows 的 Ollama。
+> 在執行 `rm -rf`、`docker system prune -a`、`git reset --hard`、`chmod -R 777` 前，先想清楚。
 
 ---
 
