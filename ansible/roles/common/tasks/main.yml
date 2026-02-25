@@ -4,43 +4,41 @@
 - name: Symlink .vimrc
   ansible.builtin.file:
     src: "{{ dotfiles_local }}/shared/.vimrc"
-    dest: "{{ ansible_env.HOME }}/.vimrc"
+    dest: "{{ ansible_facts.user_dir }}/.vimrc"
     state: link
     force: true
 
 - name: Install vim-plug
   ansible.builtin.get_url:
     url: https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-    dest: "{{ ansible_env.HOME }}/.vim/autoload/plug.vim"
+    dest: "{{ ansible_facts.user_dir }}/.vim/autoload/plug.vim"
     mode: "0644"
-  args:
-    creates: "{{ ansible_env.HOME }}/.vim/autoload/plug.vim"
+    force: false
 
 - name: Symlink .tmux.conf
   ansible.builtin.file:
     src: "{{ dotfiles_local }}/shared/.tmux.conf"
-    dest: "{{ ansible_env.HOME }}/.tmux.conf"
+    dest: "{{ ansible_facts.user_dir }}/.tmux.conf"
     state: link
     force: true
 
 - name: Clone TPM (Tmux Plugin Manager)
   ansible.builtin.git:
     repo: https://github.com/tmux-plugins/tpm
-    dest: "{{ ansible_env.HOME }}/.tmux/plugins/tpm"
+    dest: "{{ ansible_facts.user_dir }}/.tmux/plugins/tpm"
     depth: 1
-  args:
-    creates: "{{ ansible_env.HOME }}/.tmux/plugins/tpm"
+    update: false
 
 - name: Symlink .bash_aliases
   ansible.builtin.file:
     src: "{{ dotfiles_local }}/wsl/.bash_aliases"
-    dest: "{{ ansible_env.HOME }}/.bash_aliases"
+    dest: "{{ ansible_facts.user_dir }}/.bash_aliases"
     state: link
     force: true
 
 - name: Ensure .bashrc loads .bash_aliases
   ansible.builtin.lineinfile:
-    path: "{{ ansible_env.HOME }}/.bashrc"
+    path: "{{ ansible_facts.user_dir }}/.bashrc"
     line: "[ -f ~/.bash_aliases ] && . ~/.bash_aliases"
     regexp: "bash_aliases"
     state: present
