@@ -132,6 +132,7 @@ notify.sh 會自動：
 | `claude/led` | RGB LED + Stream Deck | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "...", "state": "idle\|running\|waiting\|completed\|error"}` |
 | `claude/buzzer` | 蜂鳴器 | `{"frequency": Hz, "duration": ms}` |
 | `system/stats` | RPi5B 系統狀態（Stream Deck） | `{"temp": °C, "ram": %}` |
+| `system/stats/win` | Windows PC 系統狀態（Stream Deck） | `{"temp": °C, "freq": MHz, "ram": %}` |
 
 ### LED 燈效對應
 
@@ -194,6 +195,21 @@ npm install && npm run build
 | ERROR | 紅色 | 出錯了 |
 
 詳見 [streamdeck-plugin/README.md](streamdeck-plugin/README.md)。
+
+### Windows PC 系統監控（Stream Deck）
+
+透過 LibreHardwareMonitor + PowerShell 腳本，每分鐘將 CPU 溫度、頻率、RAM 發布到 MQTT，Stream Deck 即時顯示。
+
+**前置需求：**
+1. [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) — 以管理員身分背景執行
+2. mosquitto-clients — `choco install mosquitto` 或手動安裝
+
+**安裝：**
+```powershell
+cd C:\Users\<user>\dotfiles\windows
+.\push-win-stats.ps1 -Install     # 註冊 Task Scheduler（每分鐘，需管理員）
+.\push-win-stats.ps1 -Uninstall   # 移除
+```
 
 ### rpi5b 服務列表（192.168.88.10）
 

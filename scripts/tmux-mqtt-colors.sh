@@ -11,7 +11,7 @@
 #   1. 啟動清理：清除所有 MQTT retained 訊息，從 tmux 重建
 #   2. 主迴圈：每秒輪詢 tmux，偵測變化 → 發 MQTT retained
 #   3. 閃爍 timer：idle/waiting 時每秒切換 @claude_blink
-#   4. IME 訂閱：localhost:1883 ime/state → tmux @ime_state（本機 HUB，不依賴 RPi5B）
+#   4. IME 讀檔：輪詢 /mnt/c/Temp/ime_state → tmux @ime_state（不依賴 MQTT）
 #
 # 用法: 由 .tmux.conf run-shell -b 自動啟動
 
@@ -87,17 +87,21 @@ blink_loop() {
 }
 blink_loop &
 
-# ── IME 訂閱（背景）──
-# 純 subscriber → tmux bridge：localhost:1883 ime/state → tmux @ime_state
-# 不發 LED、不寫 file，主迴圈是 claude/led 的唯一 publisher
+# ── IME 讀檔（背景）──
+# 輪詢 /mnt/c/Temp/ime_state → tmux @ime_state
+# 不依賴 MQTT，install.ps1 更新 IME_Indicator 不影響 tmux
+IME_STATE_FILE="/mnt/c/Temp/ime_state"
 ime_loop() {
+    local prev=""
     while true; do
-        while IFS= read -r payload; do
-            tmux set -g @ime_state "$payload" 2>/dev/null
+        cur=$(cat "$IME_STATE_FILE" 2>/dev/null || echo "")
+        if [ -n "$cur" ] && [ "$cur" != "$prev" ]; then
+            tmux set -g @ime_state "$cur" 2>/dev/null
             tmux refresh-client -S 2>/dev/null
             kill -USR1 $$ 2>/dev/null   # 喚醒主迴圈，立即處理 IME 變化
-        done < <(mosquitto_sub -h "localhost" -p 1883 -t "ime/state" 2>/dev/null)
-        sleep 3
+            prev="$cur"
+        fi
+        sleep 0.2
     done
 }
 ime_loop &

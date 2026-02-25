@@ -16,10 +16,11 @@
 | [pihole-tplink](.claude/skills/pihole-tplink.md) | Pi-hole + TP-Link 路由器廣告攔截設定與排查 |
 | [background-script](.claude/skills/background-script.md) | 背景常駐腳本的進程組管理規範 |
 | [unidirectional-state](.claude/skills/unidirectional-state.md) | 單向資料流與被動顯示器架構規範 |
-| [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md) | IME MQTT 資料流契約（payload 格式、broker 位置） |
+| [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md) | IME 檔案介面契約（格式、路徑） |
 | [streamdeck](.claude/skills/streamdeck.md) | Stream Deck 硬體規格、按鍵佈局與操作 |
 | [skill-creator](.claude/skills/skill-creator.md) | Skill 撰寫規範（基於 Anthropic 官方） |
 | [testing](.claude/skills/testing.md) | Bats 測試慣例與 LED E2E 流程 |
+| [deploy-paths](.claude/skills/deploy-paths.md) | Windows 部署路徑契約（禁止硬寫路徑） |
 | [font-subset](.claude/skills/font-subset.md) | Noto Sans TC 字型 subset 流程 |
 | [lighthouse](.claude/skills/lighthouse.md) | Lighthouse 效能測試（WSL 限制與替代方案） |
 
