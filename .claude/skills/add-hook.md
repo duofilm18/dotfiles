@@ -25,15 +25,19 @@ claude-dispatch.sh（事件分發器）
 
 ## 步驟
 
-### 1. 建立 hook 腳本
+### 1. 在 dispatch.sh 加入事件處理
 
-新增 `scripts/your-hook.sh`，在需要通知時呼叫 notify.sh：
+所有 hook 事件由 `scripts/claude-dispatch.sh` 統一分發。在對應的 case 或 if 區塊加入邏輯：
 
 ```bash
-SCRIPT_DIR="$(dirname "$0")"
+# 音效範例（在 case "$EVENT/$MATCHER" 區塊）
+YourEvent/)  MELODY="your_melody" ;;
 
-# notify.sh <事件類型> <標題> <內容>
-"$SCRIPT_DIR/notify.sh" your_event "標題" "內容"
+# 手機推播範例（在 Stop 區塊附近）
+if [ "$EVENT" = "YourEvent" ]; then
+    curl -s -X POST "https://ntfy.sh/claude-notify-rpi5b" \
+        -H "Title: $PROJECT" -d "描述" &>/dev/null &
+fi
 ```
 
 ### 2. 新增燈效（如需要）
@@ -77,26 +81,11 @@ git commit -m "feat: add XXX hook"
 git push    # 不要忘記 push！
 ```
 
-## notify.sh 接口規範
-
-所有通知 **必須** 透過 `scripts/notify.sh` 發送：
-
-```bash
-"$SCRIPT_DIR/notify.sh" <event_type> <title> <body>
-```
-
-### 參數
-
-| 參數 | 說明 | 範例 |
-|------|------|------|
-| `event_type` | 事件類型，對應 led-effects.json 的 key | `stop`, `permission`, `advisor` |
-| `title` | 通知標題，顯示在 ntfy 列表 | `✅ Claude 完成回應` |
-| `body` | 通知內容，點進去看到的詳細資訊 | Qwen 總結、指令內容等 |
-
-### 禁止事項
+## 禁止事項
 
 - **不可繞過 dispatch.sh 直接呼叫 mosquitto_pub** — dispatch.sh 是統一入口
-- **不可省略 title** — ntfy 點進去會看不到內容
+- **不可直接呼叫 notify.sh**（已降級為手動測試工具）
+- **不可省略 ntfy title** — 手機推播點進去會看不到內容
 
 ## MQTT Topic 規範
 
@@ -122,6 +111,8 @@ git push    # 不要忘記 push！
 - `wsl/claude-hooks.json.example` - MQTT 設定模板
 - `wsl/claude-hooks.json` - 實際設定（被 gitignore）
 - `wsl/led-effects.json` - 事件→燈效對應表
-- `scripts/notify.sh` - 通知單一入口（DRY）
+- `scripts/claude-dispatch.sh` - 事件分發器（統一入口）
+- `scripts/claude-hook.sh` - LED 狀態機
+- `scripts/notify.sh` - 手動 MQTT LED 測試工具（不被 hook 呼叫）
 - `scripts/setup-claude-hooks.sh` - 安裝腳本
 - `~/.claude/settings.json` - Claude Code 設定檔
