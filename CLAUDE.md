@@ -10,7 +10,7 @@
 
 | Skill | 用途 |
 |-------|------|
-| [add-hook](.claude/skills/add-hook.md) | 新增 Claude Code Hook |
+| [add-hook](.claude/skills/add-hook.md) | Claude Code Hook 與 dispatch.sh 事件分發 |
 | [tailscale-route-conflict](.claude/skills/tailscale-route-conflict.md) | Tailscale 路由衝突診斷與修復 |
 | [wsl-lan-connectivity](.claude/skills/wsl-lan-connectivity.md) | WSL2 無法連線本地區網的排查 |
 | [pihole-tplink](.claude/skills/pihole-tplink.md) | Pi-hole + TP-Link 路由器廣告攔截設定與排查 |
@@ -25,7 +25,7 @@
 | [lighthouse](.claude/skills/lighthouse.md) | Lighthouse 效能測試（WSL 限制與替代方案） |
 | [ansible-conventions](.claude/skills/ansible-conventions.md) | Ansible 撰寫規範（venv、變數、權限） |
 | [mqtt-wiring](.claude/skills/mqtt-wiring.md) | MQTT topic 接線契約與登記表 |
-| [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面與 API 約束 |
+| [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面、手機推播、API 約束 |
 
 ## 規則
 

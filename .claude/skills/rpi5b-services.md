@@ -2,7 +2,8 @@
 name: rpi5b-services
 description: >
   RPi5B 上所有服務的外部介面與 API 約束。當新增/修改 RPi5B 服務、
-  連接 Uptime Kuma / ntfy / Mosquitto API、或處理 paho-mqtt 版本問題時使用。
+  手機推播/ntfy 收不到通知、連接 Uptime Kuma / Mosquitto API、
+  或處理 paho-mqtt 版本問題時使用。
 ---
 
 # RPi5B 服務介面

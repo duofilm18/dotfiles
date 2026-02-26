@@ -1,8 +1,8 @@
 ---
 name: add-hook
 description: >
-  在 dotfiles 中新增 Claude Code Hook 的標準流程。當需要新增 Notification、
-  PreToolUse、PostToolUse 等 hook，或修改現有 hook 的通知/燈效行為時使用。
+  Claude Code Hook 與 dispatch.sh 事件分發器的標準流程。當需要新增 Notification、
+  PreToolUse、PostToolUse 等 hook，或修改 claude-dispatch.sh 的通知/燈效/音效行為時使用。
 ---
 
 # 新增 Claude Code Hook
