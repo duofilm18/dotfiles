@@ -3,14 +3,20 @@
 # setup-rpi5b.sh - RPi5B 一鍵部署
 # ============================================
 #
-# 從零開始部署 RPi5B 所有服務：
-#   系統設定 → Docker（含 Pi-hole）→ MQTT → Tailscale → crontab
+# ⚠️ DEPRECATED — 此腳本為 Ansible 導入前的遺留 bootstrap，
+# 所有功能已被 Ansible roles 覆蓋，請改用：
 #
-# 用法：~/dotfiles/scripts/setup-rpi5b.sh
+#   cd ~/dotfiles/ansible && ansible-playbook rpi5b.yml
 #
-# 需要互動的步驟會暫停提示，不會跳過。
+# 保留僅供參考，不再維護。
 #
 # ============================================
+
+echo "⚠️  此腳本已 deprecated，請改用："
+echo "    cd ~/dotfiles/ansible && ansible-playbook rpi5b.yml"
+echo ""
+read -rp "仍要繼續執行？(y/N) " confirm
+[[ "$confirm" =~ ^[Yy]$ ]] || exit 0
 
 set -e
 

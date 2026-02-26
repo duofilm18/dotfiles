@@ -71,17 +71,17 @@ git clone https://github.com/duofilm18/dotfiles.git ~/dotfiles
 ~/dotfiles/scripts/install.sh
 ```
 
-### RPi5B 一鍵部署
+### RPi5B 部署
 
-SD 卡壞了？新的 Pi 要設定？一個指令搞定：
+SD 卡壞了？新的 Pi 要設定？用 Ansible 一次搞定：
 
 ```bash
-~/dotfiles/scripts/setup-rpi5b.sh
+cd ~/dotfiles/ansible && ansible-playbook rpi5b.yml
 ```
 
 會依序安裝：系統設定 → Docker（含 Pi-hole）→ MQTT → Tailscale → crontab
 
-需要互動的步驟會暫停提示，不會跳過。
+> `scripts/setup-rpi5b.sh` 為 Ansible 導入前的遺留腳本，已 deprecated。
 
 ### Claude Code Hooks（MQTT 通知 + LED 燈效）
 
