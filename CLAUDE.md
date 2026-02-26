@@ -24,6 +24,8 @@
 | [font-subset](.claude/skills/font-subset.md) | Noto Sans TC 字型 subset 流程 |
 | [lighthouse](.claude/skills/lighthouse.md) | Lighthouse 效能測試（WSL 限制與替代方案） |
 | [ansible-conventions](.claude/skills/ansible-conventions.md) | Ansible 撰寫規範（venv、變數、權限） |
+| [mqtt-wiring](.claude/skills/mqtt-wiring.md) | MQTT topic 接線契約與登記表 |
+| [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面與 API 約束 |
 
 ## 規則
 
@@ -34,6 +36,7 @@
 5. **安裝/設定功能 → Ansible** - 新增系統套件、設定檔、服務等安裝邏輯，一律加進 `ansible/roles/` 對應的 role，不碰 `scripts/install.sh`（它只是 bootstrap）
 6. **禁止直接 SSH 改 RPi** - 所有 RPi 變更必須透過 Ansible role，不准 SSH 進去手動裝套件或改設定（否則下次 playbook 會覆蓋或遺漏）
 7. **Ansible 撰寫規範** - 詳見 [ansible-conventions](.claude/skills/ansible-conventions.md)
+8. **MQTT 接線登記** - 新增/修改 MQTT topic 必須更新 [mqtt-wiring](.claude/skills/mqtt-wiring.md) 登記表
 
 ## 目錄結構
 

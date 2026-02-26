@@ -54,4 +54,10 @@ if [ -n "$MELODY" ]; then
     nohup "$SCRIPT_DIR/play-melody.sh" "$MELODY" </dev/null &>/dev/null &
 fi
 
+# ── 手機通知（Stop 事件） ──
+if [ "$EVENT" = "Stop" ]; then
+    curl -s -X POST "https://ntfy.sh/claude-notify-rpi5b" \
+        -H "Title: $PROJECT" -d "Claude Code 完成" &>/dev/null &
+fi
+
 exit 0

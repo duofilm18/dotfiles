@@ -163,12 +163,11 @@ ssh "$RPI_USER@$RPI_HOST" "pip3 install --break-system-packages --upgrade gpioze
 info "Step 4 完成 ✅"
 
 # ============================================
-# Step 5: mqtt-led + mqtt-ntfy + systemd
+# Step 5: mqtt-led + systemd
 # ============================================
-step "Step 5/9: MQTT 服務部署（mqtt-led + mqtt-ntfy）"
+step "Step 5/9: MQTT 服務部署（mqtt-led）"
 
 REMOTE_LED="$REMOTE_HOME/mqtt-led"
-REMOTE_NTFY_SVC="$REMOTE_HOME/mqtt-ntfy"
 
 # mqtt-led
 info "部署 mqtt-led..."
@@ -184,19 +183,9 @@ fi
 
 ssh "$RPI_USER@$RPI_HOST" "cd $REMOTE_LED && pip3 install --break-system-packages -r requirements.txt"
 
-# mqtt-ntfy
-info "部署 mqtt-ntfy..."
-ssh "$RPI_USER@$RPI_HOST" "mkdir -p $REMOTE_NTFY_SVC"
-scp "$RPI5B/mqtt-ntfy/mqtt_ntfy.py" "$RPI5B/mqtt-ntfy/requirements.txt" "$RPI_USER@$RPI_HOST:$REMOTE_NTFY_SVC/"
-
-if [ -f "$RPI5B/mqtt-ntfy/config.json" ]; then
-    scp "$RPI5B/mqtt-ntfy/config.json" "$RPI_USER@$RPI_HOST:$REMOTE_NTFY_SVC/"
-else
-    scp "$RPI5B/mqtt-ntfy/config.json.example" "$RPI_USER@$RPI_HOST:$REMOTE_NTFY_SVC/config.json"
-    warn "使用預設 ntfy config，請到 rpi5b 確認 ntfy URL"
-fi
-
-ssh "$RPI_USER@$RPI_HOST" "cd $REMOTE_NTFY_SVC && pip3 install --break-system-packages -r requirements.txt"
+# 清理舊 mqtt-ntfy（已移除，通知改用 dispatch.sh 直接 curl ntfy.sh）
+info "清理舊 mqtt-ntfy..."
+ssh "$RPI_USER@$RPI_HOST" "sudo systemctl stop mqtt-ntfy 2>/dev/null; sudo systemctl disable mqtt-ntfy 2>/dev/null; sudo rm -f /etc/systemd/system/mqtt-ntfy.service; rm -rf $REMOTE_HOME/mqtt-ntfy" || true
 
 # systemd services
 info "設定 systemd services..."
@@ -221,26 +210,7 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-ssh "$RPI_USER@$RPI_HOST" "sudo tee /etc/systemd/system/mqtt-ntfy.service > /dev/null" <<EOF
-[Unit]
-Description=MQTT ntfy Bridge
-After=mosquitto.service
-Requires=mosquitto.service
-
-[Service]
-Type=simple
-User=$RPI_USER
-WorkingDirectory=$REMOTE_NTFY_SVC
-Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/bin/python3 $REMOTE_NTFY_SVC/mqtt_ntfy.py
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-ssh "$RPI_USER@$RPI_HOST" "sudo systemctl daemon-reload && sudo systemctl enable mqtt-led mqtt-ntfy && sudo systemctl restart mqtt-led mqtt-ntfy"
+ssh "$RPI_USER@$RPI_HOST" "sudo systemctl daemon-reload && sudo systemctl enable mqtt-led && sudo systemctl restart mqtt-led"
 
 info "Step 5 完成 ✅"
 
@@ -322,7 +292,7 @@ echo ""
 echo "服務狀態："
 ssh "$RPI_USER@$RPI_HOST" "
     echo '--- systemd ---'
-    for svc in mosquitto mqtt-led mqtt-ntfy; do
+    for svc in mosquitto mqtt-led; do
         status=\$(systemctl is-active \$svc 2>/dev/null || echo 'inactive')
         printf '  %-15s %s\n' \$svc \$status
     done
@@ -335,7 +305,7 @@ echo ""
 echo "⚠️  手動檢查事項："
 echo "  1. push-temp.sh 的 Uptime Kuma Push URLs（含 API token）"
 echo "  2. mqtt-led/config.json 的 GPIO 接線設定"
-echo "  3. mqtt-ntfy/config.json 的 ntfy URL"
+echo "  3. ntfy 推播已改用 dispatch.sh 直接 curl ntfy.sh 雲端"
 echo "  4. fstab 根目錄掛載加上 noatime,commit=3600"
 echo "  5. Pi-hole Web UI 密碼（PIHOLE_PASSWORD 環境變數，預設 changeme）"
 echo "  6. 路由器 DHCP DNS 指向 192.168.88.10"

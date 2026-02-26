@@ -8,7 +8,6 @@ docker_compose_dir: "{{ remote_dotfiles }}/rpi5b/docker"
 
 # MQTT 服務部署路徑
 mqtt_led_dir: "{{ ansible_facts.user_dir }}/mqtt-led"
-mqtt_ntfy_dir: "{{ ansible_facts.user_dir }}/mqtt-ntfy"
 
 # 系統監控閾值
 temp_warn: 70

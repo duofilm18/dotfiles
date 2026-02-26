@@ -1,5 +1,27 @@
 ---
-# roles/rpi_mqtt_services - mqtt-led + mqtt-ntfy + systemd
+# roles/rpi_mqtt_services - mqtt-led + systemd
+
+# --- 清理舊 mqtt-ntfy（一次性） ---
+- name: Stop and disable mqtt-ntfy (removed)
+  ansible.builtin.systemd:
+    name: mqtt-ntfy
+    state: stopped
+    enabled: false
+  failed_when: false
+  tags: [mqtt, cleanup]
+
+- name: Remove mqtt-ntfy service file
+  ansible.builtin.file:
+    path: /etc/systemd/system/mqtt-ntfy.service
+    state: absent
+  notify: Reload systemd daemon
+  tags: [mqtt, cleanup]
+
+- name: Remove mqtt-ntfy directory
+  ansible.builtin.file:
+    path: "{{ ansible_facts.user_dir }}/mqtt-ntfy"
+    state: absent
+  tags: [mqtt, cleanup]
 
 # --- mqtt-led ---
 - name: Create mqtt-led directory
@@ -36,40 +58,6 @@
     virtualenv_command: python3 -m venv --system-site-packages
   tags: [mqtt, led]
 
-# --- mqtt-ntfy ---
-- name: Create mqtt-ntfy directory
-  ansible.builtin.file:
-    path: "{{ mqtt_ntfy_dir }}"
-    state: directory
-    mode: "0755"
-  tags: [mqtt, ntfy]
-
-- name: Deploy mqtt-ntfy files
-  ansible.builtin.copy:
-    src: "{{ item.src }}"
-    dest: "{{ mqtt_ntfy_dir }}/{{ item.dest }}"
-    remote_src: true
-  loop:
-    - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-ntfy/mqtt_ntfy.py", dest: mqtt_ntfy.py }
-    - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-ntfy/requirements.txt", dest: requirements.txt }
-  notify: Reload and restart mqtt services
-  tags: [mqtt, ntfy]
-
-- name: Deploy mqtt-ntfy config (example if no config exists)
-  ansible.builtin.copy:
-    src: "{{ remote_dotfiles }}/rpi5b/mqtt-ntfy/config.json.example"
-    dest: "{{ mqtt_ntfy_dir }}/config.json"
-    remote_src: true
-    force: false
-  tags: [mqtt, ntfy]
-
-- name: Install mqtt-ntfy requirements
-  ansible.builtin.pip:
-    requirements: "{{ mqtt_ntfy_dir }}/requirements.txt"
-    virtualenv: "{{ mqtt_ntfy_dir }}/venv"
-    virtualenv_command: python3 -m venv --system-site-packages
-  tags: [mqtt, ntfy]
-
 # --- systemd services ---
 - name: Deploy mqtt-led systemd service
   ansible.builtin.template:
@@ -79,21 +67,10 @@
   notify: Reload and restart mqtt services
   tags: [mqtt, led, systemd]
 
-- name: Deploy mqtt-ntfy systemd service
-  ansible.builtin.template:
-    src: mqtt-ntfy.service.j2
-    dest: /etc/systemd/system/mqtt-ntfy.service
-    mode: "0644"
-  notify: Reload and restart mqtt services
-  tags: [mqtt, ntfy, systemd]
-
-- name: Enable mqtt services
+- name: Enable mqtt-led service
   ansible.builtin.systemd:
-    name: "{{ item }}"
+    name: mqtt-led
     enabled: true
     state: started
-  loop:
-    - mqtt-led
-    - mqtt-ntfy
   tags: [mqtt, systemd]
 

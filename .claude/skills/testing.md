@@ -1,7 +1,7 @@
 ---
 name: testing
 description: >
-  全 repo 測試慣例：Bats（Hook 狀態機）+ pytest（Stream Deck / LED / ntfy）。
+  全 repo 測試慣例：Bats（Hook 狀態機）+ pytest（Stream Deck / LED）。
   當需要新增或修改測試時使用。
 ---
 
@@ -121,28 +121,6 @@ cd rpi5b/mqtt-led && python3 -m pytest test_mqtt_led.py -v
 - rainbow 可取消（_cancel event）+ 完成後自動關燈
 - buzzer / melody dispatch（背景 thread、取消正在播放的旋律）
 - ACK 回報
-
-# Testing（pytest / MQTT ntfy Bridge）
-
-## 結構
-
-```
-rpi5b/mqtt-ntfy/
-└── test_mqtt_ntfy.py  # ntfy Bridge 純邏輯測試
-```
-
-## 執行
-
-```bash
-cd rpi5b/mqtt-ntfy && python3 -m pytest test_mqtt_ntfy.py -v
-```
-
-## 覆蓋範圍
-
-- payload 解析（malformed JSON、空欄位預設）
-- 雙端點發送（本地 + 雲端、雲端未設定時跳過）
-- _send_ntfy JSON API 格式驗證
-- HTTP 錯誤 / 超時不 crash
 
 # TDD 工作流
 

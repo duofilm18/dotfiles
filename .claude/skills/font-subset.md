@@ -1,3 +1,10 @@
+---
+name: font-subset
+description: >
+  Noto Sans TC 字型 subset 流程。當需要重新產生 subset woff2、
+  新增內容含罕見字、或修改字型 CSS 設定時使用。
+---
+
 # Font Subset — Noto Sans TC
 
 ## 目的

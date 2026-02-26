@@ -221,7 +221,6 @@ http://192.168.88.10:8080
 | mosquitto | 1883 | MQTT broker |
 | ntfy | 8080 | 本地通知服務 |
 | mqtt-led | — | MQTT → GPIO 控制（LED + 蜂鳴器） |
-| mqtt-ntfy | — | MQTT → ntfy 橋接 |
 | Homepage | 3000 | 儀表板 |
 | Uptime Kuma | 3001 | 監控服務 |
 | Portainer | 9000 | Docker 管理 |

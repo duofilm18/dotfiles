@@ -13,9 +13,9 @@ Windows                     WSL (Master)                       rpi5b (Slave, 192
 │ Stream Deck XL   │       │ tmux-mqtt-colors.sh  │  MQTT     │   └ claude/led topic     │
 │  → SD Plugin ────┼───────┼─→ ime_loop ← 本機    │──────→   │   └ claude/buzzer topic  │
 │  (Node.js SDK)   │       │   claude/led → RPi5B │           │                          │
-│                  │       │                      │           │ mqtt-ntfy (ntfy 橋接)    │
-└──────────────────┘       │ Claude Code Hooks    │           │   └ claude/notify topic  │
-                           │   → notify.sh ───────┼──────→   │   └→ ntfy (port 8080)    │
+│                  │       │                      │           │ ntfy (port 8080, Docker) │
+└──────────────────┘       │ Claude Code Hooks    │           │   └→ 手機推播             │
+                           │   → dispatch.sh ─────┼─ curl ──→│                          │
                            │                      │           └──────────────────────────┘
                            │ wsl/led-effects.json │
                            │                      │
@@ -25,7 +25,8 @@ Windows                     WSL (Master)                       rpi5b (Slave, 192
 **設計原則**：
 - WSL 是大腦（決定燈效、通知內容），rpi5b 是四肢（只執行 GPIO 指令）
 - IME 狀態走**本機 MQTT HUB**（`localhost:1883`），出門不依賴 RPi5B
-- Claude LED / Stream Deck / 通知走 **RPi5B MQTT**，不在家時靜默失敗
+- Claude LED / Stream Deck 走 **RPi5B MQTT**，不在家時靜默失敗
+- 手機推播走 **ntfy.sh 雲端**（dispatch.sh 直接 curl），不依賴 RPi5B
 
 ## 目錄結構
 
@@ -109,15 +110,14 @@ vim ~/dotfiles/wsl/claude-hooks.json  # 修改 MQTT_HOST
 ~/dotfiles/scripts/notify.sh stop "✅ Claude 完成回應" "Qwen 總結內容..."
 ```
 
-notify.sh 會自動：
-1. 發送 `claude/notify` → 手機推播
-2. 讀取 `wsl/led-effects.json` → 發送 `claude/led` → LED 燈效
+通知流程：
+- **LED 燈效**：`claude-hook.sh` → MQTT `claude/led` → mqtt-led → GPIO
+- **手機推播**：`claude-dispatch.sh` → curl ntfy.sh 雲端（Stop 事件）
 
 ### MQTT Topic 規範
 
 | Topic | 用途 | Payload |
 |-------|------|---------|
-| `claude/notify` | 手機推播 | `{"title": "...", "body": "..."}` |
 | `claude/led` | RGB LED + Stream Deck | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "...", "state": "idle\|running\|waiting\|completed\|error"}` |
 | `claude/buzzer` | 蜂鳴器 | `{"frequency": Hz, "duration": ms}` |
 | `system/stats` | RPi5B 系統狀態（Stream Deck） | `{"temp": °C, "ram": %}` |
@@ -208,7 +208,6 @@ cd C:\Users\<user>\dotfiles\windows
 | Pi-hole | 53, 80 | DNS 廣告過濾（Docker） |
 | ntfy | 8080 | 手機推播引擎（Docker） |
 | mqtt-led | — | MQTT → GPIO（LED + 蜂鳴器） |
-| mqtt-ntfy | — | MQTT → ntfy 橋接 |
 | Uptime Kuma | 3001 | 監控服務（Docker） |
 
 ### 測試指令
@@ -222,9 +221,8 @@ bats tests/ --filter "T1"     # 過濾
 
 # MQTT 手動測試（需 mosquitto-clients）
 sudo apt install mosquitto-clients
-~/dotfiles/scripts/test-mqtt.sh          # 全部測試（LED + ntfy）
+~/dotfiles/scripts/test-mqtt.sh          # 全部測試（LED）
 ~/dotfiles/scripts/test-mqtt.sh led      # LED 閃爍
-~/dotfiles/scripts/test-mqtt.sh ntfy     # 手機通知
 ~/dotfiles/scripts/test-mqtt.sh buzzer   # 蜂鳴器
 ~/dotfiles/scripts/test-mqtt.sh off      # 關燈
 ```

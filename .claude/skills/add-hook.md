@@ -15,12 +15,13 @@ description: >
 ## 架構
 
 ```
-Hook 腳本 → notify.sh（單一入口）→ mosquitto_pub
-                                      ├→ topic: claude/notify → mqtt-ntfy → ntfy（手機）
-                                      └→ topic: claude/led    → mqtt-led  → GPIO（燈效）
+claude-dispatch.sh（事件分發器）
+  ├→ claude-hook.sh → mosquitto_pub → claude/led → mqtt-led → GPIO（燈效）
+  ├→ play-melody.sh → 音效
+  └→ curl ntfy.sh   → 手機推播（Stop 事件，直接雲端，不經 MQTT）
 ```
 
-所有通知 **必須** 透過 `scripts/notify.sh` 發送，禁止直接呼叫 mosquitto_pub 或 curl。
+通知由 `claude-dispatch.sh` 統一分發，燈效走 MQTT，手機推播直接 curl ntfy.sh 雲端。
 
 ## 步驟
 
@@ -94,15 +95,15 @@ git push    # 不要忘記 push！
 
 ### 禁止事項
 
-- **不可直接呼叫 mosquitto_pub** — 用 notify.sh 統一入口
-- **不可直接 curl ntfy 或 Apprise** — 已改用 MQTT 架構
+- **不可繞過 dispatch.sh 直接呼叫 mosquitto_pub** — dispatch.sh 是統一入口
 - **不可省略 title** — ntfy 點進去會看不到內容
 
 ## MQTT Topic 規範
 
+詳見 [mqtt-wiring](mqtt-wiring.md) 登記表。
+
 | Topic | 用途 | Payload |
 |-------|------|---------|
-| `claude/notify` | 手機推播 | `{"title": "...", "body": "..."}` |
 | `claude/led` | RGB LED 控制 | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "blink\|solid\|pulse", "times": N, "duration": N}` |
 | `claude/buzzer` | 蜂鳴器控制 | `{"frequency": Hz, "duration": ms}` |
 

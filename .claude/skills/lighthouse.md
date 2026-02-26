@@ -1,3 +1,10 @@
+---
+name: lighthouse
+description: >
+  Lighthouse 效能測試（WSL 限制與替代方案）。當需要測量網頁效能分數、
+  FCP/LCP/TBT/CLS 指標、或設定 Puppeteer 跑 Lighthouse 時使用。
+---
+
 # Lighthouse 效能測試
 
 ## 測試 URL
