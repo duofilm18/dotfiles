@@ -17,34 +17,12 @@
 #
 # 用法: 由 .tmux.conf run-shell -b 自動啟動
 
-# 防止重複啟動（殺舊進程組，確保乾淨接管）
-PIDFILE="/tmp/tmux-mqtt-colors.pid"
-if [ -f "$PIDFILE" ]; then
-    OLD_PID="$(cat "$PIDFILE")"
-    if [ "$$" != "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        kill -- -"$OLD_PID" 2>/dev/null   # 殺整個舊進程組
-        sleep 0.2
-    fi
-fi
-echo $$ > "$PIDFILE"
-
-# 確保退出時清理所有子進程
-cleanup() {
-    rm -f "$PIDFILE"
-    kill 0 2>/dev/null   # 殺整個進程組
-}
-trap cleanup EXIT
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG="$SCRIPT_DIR/../wsl/claude-hooks.json"
+source "$SCRIPT_DIR/lib/pidfile.sh"
+source "$SCRIPT_DIR/lib/mqtt.sh"
 
-if [ -f "$CONFIG" ]; then
-    MQTT_HOST=$(jq -r '.MQTT_HOST // "192.168.88.10"' "$CONFIG")
-    MQTT_PORT=$(jq -r '.MQTT_PORT // "1883"' "$CONFIG")
-else
-    MQTT_HOST="192.168.88.10"
-    MQTT_PORT="1883"
-fi
+pidfile_acquire "/tmp/tmux-mqtt-colors.pid"
+load_mqtt_config
 
 # ── 啟動清理：清除所有 MQTT retained 訊息 ──
 # 訂閱 claude/led/+ 取得所有 retained topic，逐一清除
@@ -87,9 +65,8 @@ blink_loop() {
 blink_loop &
 
 # ── IME 讀檔（背景）──
-# 輪詢 /mnt/c/Temp/ime_state → tmux @ime_state
+# 輪詢 IME_STATE_FILE（來自 lib/mqtt.sh）→ tmux @ime_state
 # 不依賴 MQTT，install.ps1 更新 IME_Indicator 不影響 tmux
-IME_STATE_FILE="/mnt/c/Temp/ime_state"
 ime_loop() {
     local prev=""
     while true; do
@@ -104,14 +81,7 @@ ime_loop() {
 }
 ime_loop &
 
-# ── 建構 MQTT payload（語意：domain + state + project）──
-build_payload() {
-    local domain="$1"
-    local state="$2"
-    local project="$3"
-    jq -cn --arg domain "$domain" --arg state "$state" --arg project "$project" \
-        '{domain: $domain, state: $state, project: $project}'
-}
+# build_payload() 來自 lib/mqtt.sh
 
 # ── 狀態優先序（同名專案取最需關注的） ──
 state_priority() {

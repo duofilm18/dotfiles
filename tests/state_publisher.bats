@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
-# state_publisher.bats - tmux-mqtt-colors.sh 純邏輯測試
+# state_publisher.bats - State Publisher 純邏輯測試
 #
-# 測試 build_payload、blink 狀態切換邏輯、window 消失偵測。
+# 測試 lib/mqtt.sh build_payload、blink 狀態切換邏輯、window 消失偵測。
 # 不啟動真實主迴圈（需要 tmux + MQTT），只 source 函式逐一驗證。
 
 setup() {
@@ -9,24 +9,17 @@ setup() {
     common_setup
     SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../scripts" && pwd)"
     EFFECTS_FILE="$SCRIPT_DIR/../rpi5b/mqtt-led/led-effects.json"
+    source "$SCRIPT_DIR/lib/mqtt.sh"
 }
 
 teardown() {
     common_teardown
 }
 
-# ── build_payload ──────────────────────────────────────
+# ── build_payload（來自 lib/mqtt.sh）─────────────────
 
 @test "SP-1: build_payload claude idle → 含 domain/state/project" {
-    source_build_payload() {
-        build_payload() {
-            local domain="$1" state="$2" project="$3"
-            jq -cn --arg domain "$domain" --arg state "$state" --arg project "$project" \
-                '{domain: $domain, state: $state, project: $project}'
-        }
-        build_payload "claude" "idle" "dotfiles"
-    }
-    run source_build_payload
+    run build_payload "claude" "idle" "dotfiles"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.domain == "claude"'
     echo "$output" | jq -e '.state == "idle"'
@@ -34,15 +27,7 @@ teardown() {
 }
 
 @test "SP-2: build_payload claude running → 含 domain/state" {
-    source_build_payload() {
-        build_payload() {
-            local domain="$1" state="$2" project="$3"
-            jq -cn --arg domain "$domain" --arg state "$state" --arg project "$project" \
-                '{domain: $domain, state: $state, project: $project}'
-        }
-        build_payload "claude" "running" "landtw"
-    }
-    run source_build_payload
+    run build_payload "claude" "running" "landtw"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.domain == "claude"'
     echo "$output" | jq -e '.state == "running"'
@@ -50,29 +35,13 @@ teardown() {
 }
 
 @test "SP-3: build_payload unknown state → 仍有 domain 輸出" {
-    source_build_payload() {
-        build_payload() {
-            local domain="$1" state="$2" project="$3"
-            jq -cn --arg domain "$domain" --arg state "$state" --arg project "$project" \
-                '{domain: $domain, state: $state, project: $project}'
-        }
-        build_payload "claude" "foobar" "test"
-    }
-    run source_build_payload
+    run build_payload "claude" "foobar" "test"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.domain == "claude"'
 }
 
 @test "SP-4: build_payload claude completed → 含 domain/state" {
-    source_build_payload() {
-        build_payload() {
-            local domain="$1" state="$2" project="$3"
-            jq -cn --arg domain "$domain" --arg state "$state" --arg project "$project" \
-                '{domain: $domain, state: $state, project: $project}'
-        }
-        build_payload "claude" "completed" "duofilm"
-    }
-    run source_build_payload
+    run build_payload "claude" "completed" "duofilm"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.domain == "claude"'
     echo "$output" | jq -e '.state == "completed"'
@@ -169,30 +138,14 @@ teardown() {
 # ── IME LED 暫態顯示 ─────────────────────────────────
 
 @test "SP-11: build_payload ime zh → 含 domain=ime, state=zh" {
-    source_build_payload() {
-        build_payload() {
-            local domain="$1" state="$2" project="$3"
-            jq -cn --arg domain "$domain" --arg state "$state" --arg project "$project" \
-                '{domain: $domain, state: $state, project: $project}'
-        }
-        build_payload "ime" "zh" ""
-    }
-    run source_build_payload
+    run build_payload "ime" "zh" ""
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.domain == "ime"'
     echo "$output" | jq -e '.state == "zh"'
 }
 
 @test "SP-12: build_payload ime en → 含 domain=ime, state=en" {
-    source_build_payload() {
-        build_payload() {
-            local domain="$1" state="$2" project="$3"
-            jq -cn --arg domain "$domain" --arg state "$state" --arg project "$project" \
-                '{domain: $domain, state: $state, project: $project}'
-        }
-        build_payload "ime" "en" ""
-    }
-    run source_build_payload
+    run build_payload "ime" "en" ""
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.domain == "ime"'
     echo "$output" | jq -e '.state == "en"'
@@ -217,4 +170,29 @@ teardown() {
     body=$(sed -n '/^ime_loop()/,/^}/p' "$script")
     # 確認不含 mosquitto_pub
     ! echo "$body" | grep -q 'mosquitto_pub'
+}
+
+# ── 共用 lib 守衛（防止 payload 格式漂移）─────────────
+
+@test "SP-16: 兩個 publisher 都 source lib/mqtt.sh（共用 build_payload）" {
+    grep -q 'source.*lib/mqtt\.sh' "$SCRIPT_DIR/tmux-mqtt-colors.sh"
+    grep -q 'source.*lib/mqtt\.sh' "$SCRIPT_DIR/ime-mqtt-publisher.sh"
+}
+
+@test "SP-17: publisher 不自行定義 build_payload（唯一定義在 lib）" {
+    # 確認兩個 publisher 都沒有自己定義 build_payload 函式
+    ! grep -q '^build_payload()' "$SCRIPT_DIR/tmux-mqtt-colors.sh"
+    ! grep -q '^build_payload()' "$SCRIPT_DIR/ime-mqtt-publisher.sh"
+}
+
+@test "SP-18: 兩個 publisher 都 source lib/pidfile.sh（共用進程組管理）" {
+    grep -q 'source.*lib/pidfile\.sh' "$SCRIPT_DIR/tmux-mqtt-colors.sh"
+    grep -q 'source.*lib/pidfile\.sh' "$SCRIPT_DIR/ime-mqtt-publisher.sh"
+}
+
+@test "SP-19: IME_STATE_FILE 定義在 lib/mqtt.sh（唯一定義點）" {
+    grep -q '^IME_STATE_FILE=' "$SCRIPT_DIR/lib/mqtt.sh"
+    # publisher 不自行定義
+    ! grep -q '^IME_STATE_FILE=' "$SCRIPT_DIR/tmux-mqtt-colors.sh"
+    ! grep -q '^IME_STATE_FILE=' "$SCRIPT_DIR/ime-mqtt-publisher.sh"
 }
