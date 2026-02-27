@@ -27,6 +27,7 @@
 | [deploy-guard](.claude/skills/deploy-guard.md) | RPi5B 部署安全防護（Stop hook 自動檢測未部署改動） |
 | [ansible-conventions](.claude/skills/ansible-conventions.md) | Ansible 撰寫規範（venv、變數、權限） |
 | [mqtt-wiring](.claude/skills/mqtt-wiring.md) | MQTT topic 接線契約與登記表 |
+| [shared-contract](.claude/skills/shared-contract.md) | 跨腳本共用契約（lib 抽取、guard test、禁止複製） |
 | [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面、手機推播、API 約束 |
 
 ## 規則
