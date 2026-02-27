@@ -41,6 +41,12 @@
 7. **Ansible 撰寫規範** - 詳見 [ansible-conventions](.claude/skills/ansible-conventions.md)
 8. **MQTT 接線登記** - 新增/修改 MQTT topic 必須更新 [mqtt-wiring](.claude/skills/mqtt-wiring.md) 登記表
 9. **跨腳本共用契約** - 新建腳本若用到已存在的 payload 格式 / config / 常數，必須 source `scripts/lib/` 共用 lib，禁止複製貼上。詳見 [shared-contract](.claude/skills/shared-contract.md)
+10. **背景腳本進程組管理** - 新建常駐背景腳本必須用 `scripts/lib/pidfile.sh` 管理生命週期，禁止自行寫 PID boilerplate。詳見 [background-script](.claude/skills/background-script.md)
+11. **單向資料流** - 設計多端狀態同步（MQTT、Stream Deck、LED）時，必須遵循 Source → Publisher → Consumer 單向流，Consumer 不可寫回 Source。詳見 [unidirectional-state](.claude/skills/unidirectional-state.md)
+12. **架構健康** - 新增跨裝置元件時，必須確認硬體邏輯歸屬正確（顯示優先權由顯示端決定、語意介面不含硬體細節）。詳見 [architecture-health](.claude/skills/architecture-health.md)
+13. **寫完要測試** - 修改功能 code 後必須補/更新對應測試（Bats 或 pytest），測試全過才 commit。詳見 [testing](.claude/skills/testing.md)
+14. **Windows 路徑契約** - 碰到 Windows 部署路徑時禁止硬寫，必須用變數或 registry 查詢。詳見 [deploy-paths](.claude/skills/deploy-paths.md)
+15. **IME 介面契約** - 修改 IME 相關邏輯（IME_Indicator、ime-mqtt-publisher、tmux status bar）時，必須確認 writer/reader 格式一致（只允許 `zh`/`en`）。詳見 [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md)
 
 ## 目錄結構
 
@@ -103,6 +109,3 @@ curl http://192.168.88.10:8080
 
 **如果 WSL 突然連不到 RPi5B**，最常見原因是 Tailscale `accept-routes` 被意外開啟。排查步驟見 [wsl-lan-connectivity.md](.claude/skills/wsl-lan-connectivity.md)
 
-## 背景腳本撰寫規範
-
-常駐背景腳本**必須用進程組管理生命週期**（`kill -- -PID` + `trap 'kill 0' EXIT`），否則 tmux reload 後子進程變孤兒互打。詳見 [background-script](.claude/skills/background-script.md)。
