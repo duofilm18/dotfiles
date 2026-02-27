@@ -40,6 +40,7 @@
 6. **禁止直接 SSH 改 RPi** - 所有 RPi 變更必須透過 Ansible role，不准 SSH 進去手動裝套件或改設定（否則下次 playbook 會覆蓋或遺漏）
 7. **Ansible 撰寫規範** - 詳見 [ansible-conventions](.claude/skills/ansible-conventions.md)
 8. **MQTT 接線登記** - 新增/修改 MQTT topic 必須更新 [mqtt-wiring](.claude/skills/mqtt-wiring.md) 登記表
+9. **跨腳本共用契約** - 新建腳本若用到已存在的 payload 格式 / config / 常數，必須 source `scripts/lib/` 共用 lib，禁止複製貼上。詳見 [shared-contract](.claude/skills/shared-contract.md)
 
 ## 目錄結構
 
