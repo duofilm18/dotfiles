@@ -38,6 +38,7 @@ dotfiles/
 │   ├── claude-dispatch.sh
 │   ├── claude-hook.sh
 │   ├── deploy-ime-indicator.sh
+│   ├── ime-mqtt-publisher.sh
 │   ├── install-docker.sh
 │   ├── install-lighthouse.sh
 │   ├── install.sh

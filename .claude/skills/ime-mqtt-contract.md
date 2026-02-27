@@ -11,11 +11,14 @@ description: >
 ## 資料流
 
 ```
-Windows IME_Indicator → C:\Temp\ime_state → tmux-mqtt-colors.sh（輪詢 200ms）→ tmux @ime_state
+Windows IME_Indicator → C:\Temp\ime_state
+    ├─→ ime-mqtt-publisher.sh（輪詢 200ms）→ MQTT claude/led → RPi5B LED
+    └─→ tmux-mqtt-colors.sh / ime_loop()（輪詢 200ms）→ tmux @ime_state
 ```
 
-- IME 走**檔案介面**，不依賴 MQTT，install.ps1 更新 IME_Indicator 不影響 tmux
-- Claude LED/Stream Deck 走 RPi5B MQTT（`$MQTT_HOST`），與 IME 無關
+- IME→LED 由 `ime-mqtt-publisher.sh` 獨立發佈（systemd user service，不依賴 tmux）
+- IME→tmux 由 `tmux-mqtt-colors.sh` 的 `ime_loop()` 負責（tmux status bar 顯示用）
+- IME 2 秒中斷優先權由 RPi5B `mqtt_led.py` 在顯示端決定（非 publisher 端）
 
 ## 契約
 
@@ -25,7 +28,8 @@ Windows IME_Indicator → C:\Temp\ime_state → tmux-mqtt-colors.sh（輪詢 200
 | 內容（中文） | `zh` | tmux 判斷失敗，顏色不變 |
 | 內容（英文） | `en` | 同上 |
 | 寫入方 | IME_Indicator（唯一 writer） | — |
-| 讀取方 | tmux-mqtt-colors.sh（輪詢 200ms） | — |
+| 讀取方（tmux） | `scripts/tmux-mqtt-colors.sh` → `ime_loop()`（輪詢 200ms） | — |
+| 讀取方（MQTT） | `scripts/ime-mqtt-publisher.sh`（輪詢 200ms） | — |
 
 **檔案內容只允許 `zh` 或 `en`（純文字，無換行），不允許 `chinese`/`english` 或其他格式。**
 
@@ -35,7 +39,8 @@ Windows IME_Indicator → C:\Temp\ime_state → tmux-mqtt-colors.sh（輪詢 200
 |------|------|--------|
 | Writer | `IME_Indicator/python_indicator/main.py` | `open(config.IME_STATE_FILE, 'w').write("zh" or "en")` |
 | 路徑設定 | `IME_Indicator/python_indicator/config.py` | `IME_STATE_FILE = r"C:\Temp\ime_state"` |
-| Reader | `scripts/tmux-mqtt-colors.sh` → `ime_loop()` | `cat "$IME_STATE_FILE"` 輪詢 200ms |
+| Reader (tmux) | `scripts/tmux-mqtt-colors.sh` → `ime_loop()` | `cat "$IME_STATE_FILE"` 輪詢 200ms |
+| MQTT Publisher | `scripts/ime-mqtt-publisher.sh` | `cat "$IME_STATE_FILE"` 輪詢 200ms → MQTT non-retained |
 | 顯示判斷 | `shared/.tmux.conf` | `#{==:#{@ime_state},zh}` |
 
 ## 修改前必做

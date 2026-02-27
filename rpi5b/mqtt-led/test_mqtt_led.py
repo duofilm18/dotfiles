@@ -370,3 +370,84 @@ class TestLedAck:
             assert ack["project"] == "dotfiles"
             assert ack["r"] == 255
             assert ack["pattern"] == "blink"
+
+
+# ═══════════════════════════════════════════════════════════
+# Domain 優先權（IME 2s 中斷）
+# ═══════════════════════════════════════════════════════════
+
+
+class TestDomainPriority:
+
+    def setup_method(self):
+        """每個測試前清除 domain priority 狀態。"""
+        ml._ime_active = False
+        ml._last_domain_state = {}
+        ml._ime_timer = None
+        ml._last_led_payload = ""
+
+    def test_ime_message_displays_immediately(self):
+        """IME 訊息到達 → 立即顯示 + 啟動 timer。"""
+        msg = make_msg("claude/led", {"domain": "ime", "state": "zh", "project": ""})
+        with patch.object(ml, "_run_effect") as mock_eff, \
+             patch("mqtt_led.time") as mock_time, \
+             patch("mqtt_led.threading.Timer", return_value=MagicMock()) as MockTimer:
+            mock_time.sleep = MagicMock()
+            mock_time.time.return_value = 1234567890
+            ml.on_message(CLIENT, None, msg)
+            # 應執行 IME 燈效
+            mock_eff.assert_called_once()
+            # 應啟動 2s timer
+            MockTimer.assert_called_once()
+            assert MockTimer.call_args.args[0] == ml._IME_INTERRUPT_SECS
+            MockTimer.return_value.start.assert_called_once()
+            assert ml._ime_active is True
+
+    def test_claude_suppressed_during_ime_interrupt(self):
+        """IME 中斷期間 Claude 訊息被抑制（存但不顯示）。"""
+        ml._ime_active = True
+        msg = make_msg("claude/led", {"domain": "claude", "state": "running", "project": "test"})
+        with patch.object(ml, "_run_effect") as mock_eff, \
+             patch("mqtt_led.time") as mock_time:
+            mock_time.time.return_value = 1234567890
+            ml.on_message(CLIENT, None, msg)
+            # 不應執行燈效
+            mock_eff.assert_not_called()
+            # 應存到 _last_domain_state
+            assert ml._last_domain_state["claude"]["state"] == "running"
+            # 應發 suppressed ACK
+            CLIENT.publish.assert_called_once()
+            ack = json.loads(CLIENT.publish.call_args.args[1])
+            assert ack["suppressed"] is True
+
+    def test_ime_timeout_restores_claude(self):
+        """IME timer 到期 → 回復 Claude 顯示。"""
+        ml._ime_active = True
+        ml._last_domain_state["claude"] = {"state": "idle", "project": "dotfiles"}
+        with patch.object(ml, "_display_effect") as mock_disp:
+            ml._ime_timeout()
+            assert ml._ime_active is False
+            mock_disp.assert_called_once_with("claude", "idle", "dotfiles")
+
+    def test_claude_normal_without_ime(self):
+        """無 IME 中斷時 Claude 正常顯示。"""
+        ml._ime_active = False
+        msg = make_msg("claude/led", {"domain": "claude", "state": "idle", "project": "dotfiles"})
+        with patch.object(ml, "_run_effect") as mock_eff, \
+             patch("mqtt_led.time") as mock_time:
+            mock_time.sleep = MagicMock()
+            mock_time.time.return_value = 1234567890
+            ml.on_message(CLIENT, None, msg)
+            # 應正常執行燈效
+            mock_eff.assert_called_once()
+
+    def test_on_connect_clears_priority_state(self):
+        """on_connect 清除所有 priority 狀態。"""
+        ml._ime_active = True
+        ml._last_domain_state = {"claude": {"state": "idle", "project": "x"}}
+        ml._ime_timer = MagicMock()
+        client = MagicMock()
+        ml.on_connect(client, None, None, 0)
+        assert ml._ime_active is False
+        assert ml._last_domain_state == {}
+        assert ml._ime_timer is None

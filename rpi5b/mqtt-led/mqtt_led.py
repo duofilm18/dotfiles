@@ -66,6 +66,12 @@ _off_timer = None
 _melody_cancel = threading.Event()  # 旋律中斷機制
 _last_led_payload = ""  # LED 去重：相同 payload 不重複執行
 
+# ── domain 優先權（IME 2 秒中斷）──
+_IME_INTERRUPT_SECS = 2.0
+_last_domain_state = {}   # {domain: {state, project}}
+_ime_timer = None
+_ime_active = False
+
 _RAINBOW_COLORS = [
     (1, 0, 0),  # 紅
     (1, 1, 0),  # 黃
@@ -207,11 +213,50 @@ def _lookup_effect(domain, state):
     return None
 
 
+# ─── domain priority helpers ──────────────────────────
+
+def _display_effect(domain, state, project):
+    """查映射表 + 執行燈效。回傳 effect dict 或 None。"""
+    effect = _lookup_effect(domain, state)
+    if not effect:
+        return None
+    r = effect.get("r", 0) / 255.0
+    g = effect.get("g", 0) / 255.0
+    b = effect.get("b", 0) / 255.0
+    pattern = effect.get("pattern", "solid")
+    times = effect.get("times", 1)
+    duration = effect.get("duration", 5)
+    interval = effect.get("interval", 0.3)
+    _run_effect(r, g, b, pattern, times, duration, interval)
+    return effect
+
+
+def _cancel_ime_timer():
+    """取消 IME 計時器。"""
+    global _ime_timer
+    if _ime_timer:
+        _ime_timer.cancel()
+        _ime_timer = None
+
+
+def _ime_timeout():
+    """IME timer 到期，回復 Claude 顯示。"""
+    global _ime_active
+    _ime_active = False
+    _ime_timer_ref = None  # timer 已到期，不需 cancel
+    claude = _last_domain_state.get("claude")
+    if claude:
+        _display_effect("claude", claude["state"], claude["project"])
+
+
 # ─── MQTT callbacks ───────────────────────────────────
 
 def on_connect(client, userdata, flags, rc):
-    global _last_led_payload
+    global _last_led_payload, _ime_active, _last_domain_state
     _last_led_payload = ""  # 重連後清除，讓 retained 訊息正常執行
+    _ime_active = False
+    _last_domain_state = {}
+    _cancel_ime_timer()
     print(f"Connected to MQTT broker (rc={rc})")
     client.subscribe("claude/led")
     client.subscribe("claude/buzzer")
@@ -225,7 +270,7 @@ def on_message(client, userdata, msg):
         return
 
     if msg.topic == "claude/led":
-        global _last_led_payload
+        global _last_led_payload, _ime_active, _ime_timer
         raw = msg.payload.decode()
         if raw == _last_led_payload:
             return  # 同樣的指令不重複執行（retained 重送等）
@@ -236,21 +281,52 @@ def on_message(client, userdata, msg):
         domain = data.get("domain", "")
         state = data.get("state", "")
         project = data.get("project", "")
+
         if domain == "raw":
             effect = data
-        else:
+            r = effect.get("r", 0) / 255.0
+            g = effect.get("g", 0) / 255.0
+            b = effect.get("b", 0) / 255.0
+            pattern = effect.get("pattern", "solid")
+            times = effect.get("times", 1)
+            duration = effect.get("duration", 5)
+            interval = effect.get("interval", 0.3)
+            _run_effect(r, g, b, pattern, times, duration, interval)
+        elif domain == "ime":
+            # IME 訊息：立即顯示 + 啟動 2s timer
+            _last_domain_state["ime"] = {"state": state, "project": project}
+            effect = _display_effect(domain, state, project)
+            if not effect:
+                return
+            _cancel_ime_timer()
+            _ime_active = True
+            _ime_timer = threading.Timer(_IME_INTERRUPT_SECS, _ime_timeout)
+            _ime_timer.daemon = True
+            _ime_timer.start()
+        elif _ime_active:
+            # Claude 訊息在 IME 中斷期間：存但不顯示
+            _last_domain_state["claude"] = {"state": state, "project": project}
             effect = _lookup_effect(domain, state)
             if not effect:
                 return
+            # suppressed ACK
+            client.publish("claude/led/ack", json.dumps({
+                "domain": domain, "state": state, "project": project,
+                "r": effect.get("r", 0), "g": effect.get("g", 0), "b": effect.get("b", 0),
+                "pattern": effect.get("pattern", "solid"),
+                "is_lit": led.is_lit,
+                "gpio": [0, 0, 0],
+                "ts": int(time.time()),
+                "suppressed": True,
+            }))
+            return
+        else:
+            # Claude 訊息正常：直接顯示
+            _last_domain_state["claude"] = {"state": state, "project": project}
+            effect = _display_effect(domain, state, project)
+            if not effect:
+                return
 
-        r = effect.get("r", 0) / 255.0
-        g = effect.get("g", 0) / 255.0
-        b = effect.get("b", 0) / 255.0
-        pattern = effect.get("pattern", "solid")
-        times = effect.get("times", 1)
-        duration = effect.get("duration", 5)
-        interval = effect.get("interval", 0.3)
-        _run_effect(r, g, b, pattern, times, duration, interval)
         # ACK：回報已接收並執行的燈效 + GPIO 實際輸出（供自動化測試端到端驗證）
         time.sleep(0.05)  # 等 gpiozero blink/pulse 啟動
         gpio_rgb = led.color  # gpiozero 回報的實際 GPIO 輸出 (0.0~1.0)
@@ -261,7 +337,7 @@ def on_message(client, userdata, msg):
             "r": effect.get("r", 0),
             "g": effect.get("g", 0),
             "b": effect.get("b", 0),
-            "pattern": pattern,
+            "pattern": effect.get("pattern", "solid"),
             "is_lit": led.is_lit,
             "gpio": [round(gpio_rgb[0], 3), round(gpio_rgb[1], 3), round(gpio_rgb[2], 3)],
             "ts": int(time.time()),

@@ -9,9 +9,11 @@
 #
 # 功能:
 #   1. 啟動清理：清除所有 MQTT retained 訊息，從 tmux 重建
-#   2. 主迴圈：每秒輪詢 tmux，偵測變化 → 發 MQTT retained
+#   2. 主迴圈：每秒輪詢 tmux，偵測變化 → 發 MQTT retained（Claude domain only）
 #   3. 閃爍 timer：idle/waiting 時每秒切換 @claude_blink
-#   4. IME 讀檔：輪詢 /mnt/c/Temp/ime_state → tmux @ime_state（不依賴 MQTT）
+#   4. IME 讀檔：輪詢 /mnt/c/Temp/ime_state → tmux @ime_state（tmux status bar 用）
+#
+# IME→MQTT 由獨立的 ime-mqtt-publisher.sh 負責（不依賴 tmux）
 #
 # 用法: 由 .tmux.conf run-shell -b 自動啟動
 
@@ -32,11 +34,9 @@ cleanup() {
     kill 0 2>/dev/null   # 殺整個進程組
 }
 trap cleanup EXIT
-trap 'true' USR1    # ime_loop 用 USR1 喚醒主迴圈的 sleep
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$SCRIPT_DIR/../wsl/claude-hooks.json"
-IME_INTERRUPT_SECS=2
 
 if [ -f "$CONFIG" ]; then
     MQTT_HOST=$(jq -r '.MQTT_HOST // "192.168.88.10"' "$CONFIG")
@@ -97,7 +97,6 @@ ime_loop() {
         if [ -n "$cur" ] && [ "$cur" != "$prev" ]; then
             tmux set -g @ime_state "$cur" 2>/dev/null
             tmux refresh-client -S 2>/dev/null
-            kill -USR1 $$ 2>/dev/null   # 喚醒主迴圈，立即處理 IME 變化
             prev="$cur"
         fi
         sleep 0.2
@@ -127,35 +126,12 @@ state_priority() {
     esac
 }
 
-# ── 主迴圈：輪詢 tmux → 發 MQTT（唯一 publisher）──
-# @ime_state 變化由主迴圈偵測（同 thread），epoch-based 無 race
+# ── 主迴圈：輪詢 tmux → 發 MQTT（Claude domain only）──
+# IME→MQTT 由獨立的 ime-mqtt-publisher.sh 負責
 declare -A prev_states
 declare -A prev_projects
-prev_ime=""
-ime_interrupt_epoch=0
-ime_was_active=false
 
 while true; do
-    now=$(date +%s)
-
-    # ── 偵測 @ime_state 變化（主迴圈內，無 race）──
-    cur_ime=$(tmux show -gv @ime_state 2>/dev/null || true)
-    if [ -n "$cur_ime" ] && [ "$cur_ime" != "$prev_ime" ]; then
-        # 首次讀取（startup guard）不觸發 LED
-        if [ -n "$prev_ime" ]; then
-            ime_interrupt_epoch=$now
-            led_payload=$(build_payload "ime" "$cur_ime" "")
-            if [ -n "$led_payload" ]; then
-                mosquitto_pub -h "$MQTT_HOST" -p "$MQTT_PORT" \
-                    -t "claude/led" -m "$led_payload" 2>/dev/null &
-            fi
-        fi
-        prev_ime="$cur_ime"
-    fi
-
-    # IME 中斷活躍？
-    ime_active=$(( now - ime_interrupt_epoch < IME_INTERRUPT_SECS ))
-
     # 收集當前所有 window 的狀態
     declare -A current_states
     declare -A current_projects
@@ -170,55 +146,44 @@ while true; do
         fi
     done < <(tmux list-windows -F '#{window_index} #{@project} #{@claude_state}' 2>/dev/null)
 
-    if [ "$ime_active" -eq 1 ]; then
-        # IME 中斷活躍：跳過 Claude publish，保留 prev_states 不更新
-        ime_was_active=true
-    else
-        # IME 中斷剛過期：清 prev_states 強制重發 Claude 狀態
-        if [ "$ime_was_active" = true ]; then
-            unset prev_states
-            declare -A prev_states
-            ime_was_active=false
-        fi
-        # 偵測狀態變化 → 發 MQTT
-        for project in "${!current_states[@]}"; do
-            state="${current_states[$project]}"
-            if [ "${prev_states[$project]:-}" != "$state" ]; then
-                payload=$(build_payload "claude" "$state" "$project")
-                if [ -n "$payload" ]; then
-                    # 發到專案 topic（Stream Deck）+ 全域 topic（RPi5B LED）
-                    mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
-                        -t "claude/led/$project" -m "$payload" 2>/dev/null &
-                    mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
-                        -t "claude/led" -m "$payload" 2>/dev/null &
-                fi
-            fi
-        done
-
-        # 偵測 window 消失 → 清除 MQTT retained
-        for project in "${!prev_states[@]}"; do
-            if [ -z "${current_states[$project]:-}" ]; then
+    # 偵測狀態變化 → 發 MQTT
+    for project in "${!current_states[@]}"; do
+        state="${current_states[$project]}"
+        if [ "${prev_states[$project]:-}" != "$state" ]; then
+            payload=$(build_payload "claude" "$state" "$project")
+            if [ -n "$payload" ]; then
+                # 發到專案 topic（Stream Deck）+ 全域 topic（RPi5B LED）
                 mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
-                    -t "claude/led/$project" -n 2>/dev/null &
+                    -t "claude/led/$project" -m "$payload" 2>/dev/null &
+                mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
+                    -t "claude/led" -m "$payload" 2>/dev/null &
             fi
-        done
+        fi
+    done
 
-        # 更新前一次狀態
-        unset prev_states
-        declare -A prev_states
-        for project in "${!current_states[@]}"; do
-            prev_states["$project"]="${current_states[$project]}"
-        done
+    # 偵測 window 消失 → 清除 MQTT retained
+    for project in "${!prev_states[@]}"; do
+        if [ -z "${current_states[$project]:-}" ]; then
+            mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \
+                -t "claude/led/$project" -n 2>/dev/null &
+        fi
+    done
 
-        unset prev_projects
-        declare -A prev_projects
-        for project in "${!current_projects[@]}"; do
-            prev_projects["$project"]="${current_projects[$project]}"
-        done
-    fi
+    # 更新前一次狀態
+    unset prev_states
+    declare -A prev_states
+    for project in "${!current_states[@]}"; do
+        prev_states["$project"]="${current_states[$project]}"
+    done
+
+    unset prev_projects
+    declare -A prev_projects
+    for project in "${!current_projects[@]}"; do
+        prev_projects["$project"]="${current_projects[$project]}"
+    done
 
     unset current_states
     unset current_projects
 
-    sleep 1 & wait $! 2>/dev/null || true   # USR1 可中斷，IME 即時喚醒
+    sleep 1
 done

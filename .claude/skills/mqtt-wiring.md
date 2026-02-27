@@ -15,16 +15,17 @@ description: >
 
 ## Topic 登記表
 
-| Topic | Publisher | Consumer | Payload |
-|-------|----------|----------|---------|
-| `claude/led/+` | `tmux-mqtt-colors.sh` | mqtt-led, Stream Deck | `{domain, state, project}` |
-| `claude/led/ack` | mqtt-led | `led_e2e.bats` (test) | `{domain, state, project, r, g, b, pattern, is_lit, gpio, ts}` |
-| `claude/buzzer` | `test-mqtt.sh` (手動) | mqtt-led | `{frequency, duration}` |
-| `claude/melody` | （無生產 publisher） | mqtt-led | `{name: "star_wars"\|...}` |
-| `system/stats` | `push-temp.sh` (cron) | Stream Deck | `{temp, ram}` |
-| `system/stats/win` | `push-win-stats.ps1` | Stream Deck | `{temp, freq, ram}` |
+| Topic | Publisher | Consumer | Payload | Retained |
+|-------|----------|----------|---------|----------|
+| `claude/led/+` | `tmux-mqtt-colors.sh` | mqtt-led, Stream Deck | `{domain:"claude", state, project}` | Yes |
+| `claude/led` | `ime-mqtt-publisher.sh` | mqtt-led | `{domain:"ime", state:"zh"\|"en", project:""}` | No |
+| `claude/led/ack` | mqtt-led | `led_e2e.bats` (test) | `{domain, state, project, r, g, b, pattern, is_lit, gpio, ts}` | No |
+| `claude/buzzer` | `test-mqtt.sh` (手動) | mqtt-led | `{frequency, duration}` | No |
+| `claude/melody` | （無生產 publisher） | mqtt-led | `{name: "star_wars"\|...}` | No |
+| `system/stats` | `push-temp.sh` (cron) | Stream Deck | `{temp, ram}` | Yes |
+| `system/stats/win` | `push-win-stats.ps1` | Stream Deck | `{temp, freq, ram}` | Yes |
 
-> **注意**：IME 狀態走**檔案介面**（`/mnt/c/Temp/ime_state`），不走 MQTT。詳見 [ime-mqtt-contract](ime-mqtt-contract.md)。
+> **注意**：IME→MQTT 由獨立的 `ime-mqtt-publisher.sh`（systemd user service）發佈到 `claude/led`（non-retained）。IME→tmux status bar 仍由 `tmux-mqtt-colors.sh` 的 `ime_loop()` 讀取檔案。詳見 [ime-mqtt-contract](ime-mqtt-contract.md)。
 
 ## Broker 拓撲
 

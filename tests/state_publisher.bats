@@ -198,51 +198,19 @@ teardown() {
     echo "$output" | jq -e '.state == "en"'
 }
 
-@test "SP-13: epoch-based IME interrupt 判斷（無 file I/O）" {
-    # 模擬主迴圈的 epoch-based 中斷判斷（同 thread 變數，無 race）
-    local IME_INTERRUPT_SECS=2
-
-    # epoch=0（未觸發）→ 不活躍
-    local now ime_interrupt_epoch=0
-    now=$(date +%s)
-    [ $(( now - ime_interrupt_epoch < IME_INTERRUPT_SECS )) -eq 0 ]
-
-    # 剛觸發 → 活躍
-    ime_interrupt_epoch=$now
-    [ $(( now - ime_interrupt_epoch < IME_INTERRUPT_SECS )) -eq 1 ]
-
-    # 過期 → 不活躍
-    ime_interrupt_epoch=$(( now - 5 ))
-    [ $(( now - ime_interrupt_epoch < IME_INTERRUPT_SECS )) -eq 0 ]
+@test "SP-13: ime-mqtt-publisher.sh 無 tmux 依賴（靜態檢查）" {
+    local script="$SCRIPT_DIR/ime-mqtt-publisher.sh"
+    # 確認不含 tmux 命令
+    ! grep -q 'tmux ' "$script"
 }
 
-@test "SP-14: IME interrupt 過期 → prev_states 清空觸發重發" {
-    # 模擬主迴圈：IME 中斷過期後清 prev_states，使 diff 全部為新
-    simulate_ime_expire() {
-        local -A prev_states=([dotfiles]="running")
-        local ime_was_active=true
-
-        # IME 過期後清空 prev_states
-        if [ "$ime_was_active" = true ]; then
-            unset prev_states
-            declare -A prev_states
-            ime_was_active=false
-        fi
-
-        # 現在 diff：dotfiles/running 不在 prev_states → 應重發
-        local current_state="running"
-        if [ "${prev_states[dotfiles]:-}" != "$current_state" ]; then
-            echo "should_publish"
-        else
-            echo "skip"
-        fi
-    }
-    local result
-    result=$(simulate_ime_expire)
-    [ "$result" = "should_publish" ]
+@test "SP-14: ime-mqtt-publisher.sh publishes non-retained（無 -r flag）" {
+    local script="$SCRIPT_DIR/ime-mqtt-publisher.sh"
+    # 確認 mosquitto_pub 不含 -r（non-retained）
+    ! grep 'mosquitto_pub' "$script" | grep -q ' -r '
 }
 
-@test "SP-15: ime_loop 無 mosquitto_pub（靜態檢查 — 唯一 publisher 守衛）" {
+@test "SP-15: ime_loop 無 mosquitto_pub（靜態檢查 — IME→MQTT 由獨立腳本負責）" {
     local script="$SCRIPT_DIR/tmux-mqtt-colors.sh"
     # 擷取 ime_loop 函式本體
     local body

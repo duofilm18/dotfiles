@@ -134,6 +134,7 @@ Consumer 內部邏輯屬於裝置邊界內的事（見 architecture-health）。
 | 檔案 | 角色 |
 |------|------|
 | `scripts/claude-hook.sh` | Source：寫 tmux `@claude_state` |
-| `scripts/tmux-mqtt-colors.sh` | Publisher：輪詢 tmux → 發 MQTT |
+| `scripts/tmux-mqtt-colors.sh` | Publisher：輪詢 tmux → 發 MQTT（Claude domain only） |
+| `scripts/ime-mqtt-publisher.sh` | Publisher：輪詢 IME 檔案 → 發 MQTT（IME domain，不依賴 tmux） |
 | `streamdeck-plugin/` | Consumer：Stream Deck SDK plugin（Node.js） |
-| `rpi5b/mqtt-led/mqtt_led.py` | Consumer：LED 燈效 |
+| `rpi5b/mqtt-led/mqtt_led.py` | Consumer：LED 燈效 + domain 優先權（IME 2s 中斷） |

@@ -4,3 +4,9 @@
   ansible.builtin.systemd:
     name: mosquitto
     state: restarted
+
+- name: Restart ime-mqtt-publisher
+  ansible.builtin.systemd:
+    name: ime-mqtt-publisher
+    state: restarted
+    scope: user
