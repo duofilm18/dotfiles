@@ -1,9 +1,10 @@
 ---
 name: unidirectional-state
 description: >
-  單向資料流與被動顯示器的架構規範。當設計涉及「狀態源 → 發佈者 → 消費者」
-  的系統時使用，例如 MQTT、Stream Deck、LED 等多端同步顯示。
+  元件層級的單向資料流架構規範。當設計涉及「狀態源 → 發佈者 → 消費者」
+  的元件互動時使用，例如 MQTT、Stream Deck、LED 等多端同步顯示。
   適用場景：出現幽靈狀態、殘留顯示、多端狀態不一致、重啟後顯示過期資料等問題。
+  系統層級的裝置邊界與語意介面見 architecture-health。
 ---
 
 # 單向資料流：消除幽靈狀態
@@ -27,7 +28,7 @@ Source of Truth → [State Publisher] → Message Bus → Consumer(s)
 |------|------|------|
 | Single Source of Truth | 狀態只寫入一處（如 tmux window option） | 避免多端各自寫入導致不一致 |
 | 單向流出 | Source → Publisher → Consumer，不反向寫回 | 消除循環依賴與競爭 |
-| 被動顯示器 | Consumer 啟動時清空，不保留舊狀態，只渲染收到的 | 杜絕硬體/記憶體殘留 |
+| 被動顯示器 | Consumer 不反向寫回 Source of Truth，啟動時清空舊狀態 | 杜絕循環依賴與硬體殘留 |
 | 啟動清理 | Publisher 啟動時清除 bus 上所有殘留，從 source 重建 | 重啟後不會有幽靈 |
 
 ## 各角色職責
@@ -112,13 +113,23 @@ def finish_rebuild():
 | Consumer 用 TTL 清除 | idle 專案被誤刪、timing = truth | 不猜測，只信 retained |
 | Publisher 背景清理 | 與主迴圈 publish 競爭 | 同步清理完再進主迴圈 |
 
+## 「被動」的精確含義
+
+- **被動 = 不反向寫回 Source of Truth**（單向流不變）
+- **被動 ≠ 沒有智慧** — Consumer 可以有內部邏輯（效果映射、優先權判斷）
+- **WHAT to display** = 來自上游語意，Consumer 不可自行決定
+- **HOW to display** = Consumer 裝置邊界內的事務，自行決定
+
+Consumer 內部邏輯屬於裝置邊界內的事（見 architecture-health）。
+
 ## 例外：不同 Domain 的反向流
 
-IME 狀態（`ime/state` → tmux `@ime_state`）是 MQTT→tmux 的反向流，
-但這是**不同 domain**（輸入法 vs Claude 狀態），不違反單向原則。
-判斷標準：同一份資料不能有兩個寫入端。
+同一份資料不能有兩個寫入端。
+不同 domain 的反向流（如 IME 狀態 MQTT→tmux）不違反單向原則，因為寫入的是不同資料。
 
 ## 參考實作
+
+→ 裝置邊界與語意介面見 architecture-health
 
 | 檔案 | 角色 |
 |------|------|

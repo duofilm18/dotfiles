@@ -1,15 +1,15 @@
 {
   "_doc": "LED 效果映射表。Consumer 端用 domain+state 查找硬體指令。",
   "claude": {
-    "idle":      {"r": 255, "g": 13,  "b": 0,   "pattern": "blink",   "times": 999, "interval": 1.0},
+    "idle":      {"r": 35,  "g": 0,   "b": 0,   "pattern": "blink",   "times": 999, "interval": 1.0},
     "running":   {"r": 0,   "g": 0,   "b": 255, "pattern": "pulse",   "times": 999, "interval": 2.0},
-    "waiting":   {"r": 255, "g": 255, "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.3},
+    "waiting":   {"r": 26,  "g": 26,  "b": 0,   "pattern": "blink",   "times": 999, "interval": 0.3},
     "completed": {"r": 0,   "g": 0,   "b": 0,   "pattern": "rainbow", "times": 3,   "interval": 1.0},
     "error":     {"r": 255, "g": 0,   "b": 0,   "pattern": "solid",   "duration": 5},
     "off":       {"r": 0,   "g": 0,   "b": 0,   "pattern": "solid",   "duration": 1}
   },
   "ime": {
-    "zh": {"r": 255, "g": 34, "b": 0, "pattern": "solid", "duration": 0},
-    "en": {"r": 0,   "g": 19, "b": 74, "pattern": "solid", "duration": 0}
+    "zh": {"r": 38,  "g": 4,  "b": 0,  "pattern": "solid", "duration": 0},
+    "en": {"r": 0,   "g": 7,  "b": 28, "pattern": "solid", "duration": 0}
   }
 }

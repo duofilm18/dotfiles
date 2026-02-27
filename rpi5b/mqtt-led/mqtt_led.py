@@ -232,12 +232,16 @@ def on_message(client, userdata, msg):
         _last_led_payload = raw
 
         # 語意 payload：用 domain+state 查映射表翻譯成硬體指令
+        # domain="raw" 為 debug 直通模式，直接用 payload 的 r/g/b
         domain = data.get("domain", "")
         state = data.get("state", "")
         project = data.get("project", "")
-        effect = _lookup_effect(domain, state)
-        if not effect:
-            return
+        if domain == "raw":
+            effect = data
+        else:
+            effect = _lookup_effect(domain, state)
+            if not effect:
+                return
 
         r = effect.get("r", 0) / 255.0
         g = effect.get("g", 0) / 255.0

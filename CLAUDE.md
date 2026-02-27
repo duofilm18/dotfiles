@@ -14,6 +14,7 @@
 | [tailscale-route-conflict](.claude/skills/tailscale-route-conflict.md) | Tailscale 路由衝突診斷與修復 |
 | [wsl-lan-connectivity](.claude/skills/wsl-lan-connectivity.md) | WSL2 無法連線本地區網的排查 |
 | [pihole-tplink](.claude/skills/pihole-tplink.md) | Pi-hole + TP-Link 路由器廣告攔截設定與排查 |
+| [architecture-health](.claude/skills/architecture-health.md) | 系統層級架構健康原則（裝置邊界、語意介面、硬體歸屬） |
 | [background-script](.claude/skills/background-script.md) | 背景常駐腳本的進程組管理規範 |
 | [unidirectional-state](.claude/skills/unidirectional-state.md) | 單向資料流與被動顯示器架構規範 |
 | [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md) | IME 檔案介面契約（格式、路徑） |
