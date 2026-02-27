@@ -124,7 +124,7 @@ test_notify() {
     fi
 
     # 2-2: led-effects.json 存在且有效
-    local effects_file="$SCRIPT_DIR/../wsl/led-effects.json"
+    local effects_file="$SCRIPT_DIR/../rpi5b/mqtt-led/led-effects.json"
     if [ -f "$effects_file" ]; then
         pass "led-effects.json 存在"
     else
@@ -139,36 +139,28 @@ test_notify() {
         return
     fi
 
-    # 2-3: 每個狀態的旋律設定
-    local states="idle running waiting completed error"
-    for state in $states; do
-        local melody
-        melody=$(jq -r --arg s "$state" '.[$s].melody // "NONE"' "$effects_file")
-        if [ "$melody" != "NONE" ] && [ -n "$melody" ]; then
-            # 確認旋律名在 play-melody.sh 中存在
-            if grep -q "^    ${melody})" "$SCRIPT_DIR/play-melody.sh"; then
-                pass "狀態 $state → 旋律 '$melody' ✓"
-            else
-                fail "狀態 $state → 旋律 '$melody' 但 play-melody.sh 沒有此 case"
-            fi
-        else
-            warn "狀態 $state 沒有設定旋律"
-        fi
-    done
+    # 2-3: domain-keyed 結構驗證
+    local claude_count
+    claude_count=$(jq '.claude | length' "$effects_file")
+    if [ "$claude_count" -ge 6 ]; then
+        pass "led-effects.json claude 有 $claude_count 個狀態"
+    else
+        fail "led-effects.json claude 只有 $claude_count 個狀態（預期 >= 6）"
+    fi
 
     # 2-4: jq 解析測試
     local test_effect
-    test_effect=$(jq -c --arg state "running" '.[$state] // empty' "$effects_file")
+    test_effect=$(jq -c '.claude.running // empty' "$effects_file")
     if [ -n "$test_effect" ]; then
-        local test_melody
-        test_melody=$(echo "$test_effect" | jq -r '.melody // empty')
-        if [ "$test_melody" = "short_running" ]; then
-            pass "jq 正確解析 running → melody=short_running"
+        local test_pattern
+        test_pattern=$(echo "$test_effect" | jq -r '.pattern // empty')
+        if [ "$test_pattern" = "pulse" ]; then
+            pass "jq 正確解析 .claude.running → pattern=pulse"
         else
-            fail "jq 解析結果不符預期：running melody='$test_melody'（預期 short_running）"
+            fail "jq 解析結果不符預期：.claude.running pattern='$test_pattern'（預期 pulse）"
         fi
     else
-        fail "jq 無法從 led-effects.json 讀取 running 狀態"
+        fail "jq 無法從 led-effects.json 讀取 .claude.running"
     fi
 
     # 2-5: mosquitto_pub 連線測試

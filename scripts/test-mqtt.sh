@@ -10,7 +10,7 @@ case "${1:-all}" in
     led)
         echo "🟢 測試 LED（綠燈持續閃爍，Ctrl+C 停止）..."
         mosquitto_pub -h "$MQTT_HOST" -p "$MQTT_PORT" -t claude/led \
-            -m '{"r":0,"g":255,"b":0,"pattern":"blink","times":999}'
+            -m '{"domain":"claude","state":"running","project":"test"}'
         ;;
     ntfy)
         echo "📱 測試手機通知（直接 curl ntfy.sh 雲端）..."
@@ -26,7 +26,7 @@ case "${1:-all}" in
     off)
         echo "⬛ 關燈..."
         mosquitto_pub -h "$MQTT_HOST" -p "$MQTT_PORT" -t claude/led \
-            -m '{"r":0,"g":0,"b":0,"pattern":"solid","duration":1}'
+            -m '{"domain":"claude","state":"off","project":""}'
         ;;
     all)
         echo "=== MQTT 通知系統測試 ==="

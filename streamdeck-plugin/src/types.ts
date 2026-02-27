@@ -5,7 +5,7 @@ export interface StateDisplay {
 }
 
 /**
- * 狀態顯示對照表（對齊 wsl/led-effects.json）
+ * 狀態顯示對照表（對齊 rpi5b/mqtt-led/led-effects.json）
  * bg: 按鍵背景色, fg: 文字色
  */
 export const STATE_DISPLAY: Record<string, StateDisplay> = {

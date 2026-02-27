@@ -17,7 +17,7 @@ description: >
 
 | Topic | Publisher | Consumer | Payload |
 |-------|----------|----------|---------|
-| `claude/led/+` | `tmux-mqtt-colors.sh` | mqtt-led, Stream Deck | `{state, project, r, g, b, ...}` |
+| `claude/led/+` | `tmux-mqtt-colors.sh` | mqtt-led, Stream Deck | `{domain, state, project}` |
 | `claude/buzzer` | `tmux-mqtt-colors.sh` | mqtt-led | `{frequency, duration}` |
 | `claude/melody` | `tmux-mqtt-colors.sh` | mqtt-led | `{melody: "star_wars"\|...}` |
 | `system/stats` | `push-temp.sh` (cron) | Stream Deck | `{temp, ram}` |

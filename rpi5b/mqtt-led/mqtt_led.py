@@ -5,7 +5,8 @@
 手刻 PWM 迴圈全部移除，改用 gpiozero 內建 blink/pulse。
 
 Topics:
-    claude/led     - RGB LED 控制 {r, g, b, pattern, times, duration, interval}
+    claude/led     - RGB LED 控制 {domain, state, project}
+                     Consumer 查本地 led-effects.json 映射表翻譯成硬體指令
                      pattern: blink, solid, pulse, rainbow
     claude/buzzer  - 蜂鳴器控制 {frequency, duration}
     claude/melody  - 旋律播放 {name: "zelda_secret"}
@@ -32,6 +33,11 @@ from melodies import MELODIES
 config_path = Path(__file__).parent / "config.json"
 with open(config_path) as f:
     config = json.load(f)
+
+# 載入 LED 效果映射表（domain-keyed）
+_effects_path = Path(__file__).parent / "led-effects.json"
+with open(_effects_path) as f:
+    _effects = json.load(f)
 
 gpio = config["gpio"]
 COMMON_ANODE = config.get("common_anode", True)
@@ -191,6 +197,16 @@ def _play_melody(notes):
         lgpio.gpio_claim_input(_h, _buzzer_pin)
 
 
+# ─── effect lookup ────────────────────────────────────
+
+def _lookup_effect(domain, state):
+    """查映射表，回傳硬體指令 dict 或 None。"""
+    domain_map = _effects.get(domain)
+    if domain_map and isinstance(domain_map, dict):
+        return domain_map.get(state)
+    return None
+
+
 # ─── MQTT callbacks ───────────────────────────────────
 
 def on_connect(client, userdata, flags, rc):
@@ -215,21 +231,32 @@ def on_message(client, userdata, msg):
             return  # 同樣的指令不重複執行（retained 重送等）
         _last_led_payload = raw
 
-        r = data.get("r", 0) / 255.0
-        g = data.get("g", 0) / 255.0
-        b = data.get("b", 0) / 255.0
-        pattern = data.get("pattern", "solid")
-        times = data.get("times", 1)
-        duration = data.get("duration", 5)
-        interval = data.get("interval", 0.3)
+        # 語意 payload：用 domain+state 查映射表翻譯成硬體指令
+        domain = data.get("domain", "")
+        state = data.get("state", "")
+        project = data.get("project", "")
+        effect = _lookup_effect(domain, state)
+        if not effect:
+            return
+
+        r = effect.get("r", 0) / 255.0
+        g = effect.get("g", 0) / 255.0
+        b = effect.get("b", 0) / 255.0
+        pattern = effect.get("pattern", "solid")
+        times = effect.get("times", 1)
+        duration = effect.get("duration", 5)
+        interval = effect.get("interval", 0.3)
         _run_effect(r, g, b, pattern, times, duration, interval)
         # ACK：回報已接收並執行的燈效 + GPIO 實際輸出（供自動化測試端到端驗證）
         time.sleep(0.05)  # 等 gpiozero blink/pulse 啟動
         gpio_rgb = led.color  # gpiozero 回報的實際 GPIO 輸出 (0.0~1.0)
         client.publish("claude/led/ack", json.dumps({
-            "r": data.get("r", 0),
-            "g": data.get("g", 0),
-            "b": data.get("b", 0),
+            "domain": domain,
+            "state": state,
+            "project": project,
+            "r": effect.get("r", 0),
+            "g": effect.get("g", 0),
+            "b": effect.get("b", 0),
             "pattern": pattern,
             "is_lit": led.is_lit,
             "gpio": [round(gpio_rgb[0], 3), round(gpio_rgb[1], 3), round(gpio_rgb[2], 3)],

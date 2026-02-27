@@ -33,7 +33,7 @@ for _mod in [
 ]:
     sys.modules[_mod] = MagicMock()
 
-# Mock config.json（避免讀取不存在的檔案）
+# Mock config.json + led-effects.json（避免讀取不存在的檔案）
 _mock_config = {
     "gpio": {"red": 22, "green": 17, "blue": 27, "buzzer": 18},
     "common_anode": True,
@@ -42,8 +42,19 @@ _mock_config = {
     "mqtt_port": 1883,
 }
 
+_mock_effects = {
+    "claude": {
+        "idle":    {"r": 255, "g": 13,  "b": 0,   "pattern": "blink",   "times": 999, "interval": 1.0},
+        "running": {"r": 0,   "g": 0,   "b": 255, "pattern": "pulse",   "times": 999, "interval": 2.0},
+        "off":     {"r": 0,   "g": 0,   "b": 0,   "pattern": "solid",   "duration": 1},
+    },
+    "ime": {
+        "zh": {"r": 255, "g": 34, "b": 0, "pattern": "solid", "duration": 0},
+    },
+}
+
 with patch("builtins.open", MagicMock()):
-    with patch("json.load", return_value=_mock_config):
+    with patch("json.load", side_effect=[_mock_config, _mock_effects]):
         import mqtt_led as ml
 
 CLIENT = MagicMock()
@@ -92,26 +103,23 @@ class TestPayloadParsing:
             ml.on_message(CLIENT, None, msg)
             mock_eff.assert_not_called()
 
-    def test_led_defaults(self):
-        """缺少欄位用預設值：r=0, g=0, b=0, pattern=solid, times=1。"""
-        msg = make_msg("claude/led", {})
+    def test_semantic_payload_lookup(self):
+        """語意 payload {domain, state} → 查映射表取得硬體指令。"""
+        msg = make_msg("claude/led", {"domain": "claude", "state": "running", "project": "test"})
         with patch.object(ml, "_run_effect") as mock_eff:
             ml.on_message(CLIENT, None, msg)
-            mock_eff.assert_called_once_with(0, 0, 0, "solid", 1, 5, 0.3)
+            mock_eff.assert_called_once_with(0, 0, 1.0, "pulse", 999, 5, 2.0)
 
-    def test_rgb_normalized_to_float(self):
-        """RGB 值除以 255 傳給 _run_effect。"""
-        msg = make_msg("claude/led", {"r": 255, "g": 128, "b": 0})
+    def test_unknown_domain_state_ignored(self):
+        """映射表找不到 → 不執行。"""
+        msg = make_msg("claude/led", {"domain": "claude", "state": "foobar", "project": ""})
         with patch.object(ml, "_run_effect") as mock_eff:
             ml.on_message(CLIENT, None, msg)
-            args = mock_eff.call_args.args
-            assert abs(args[0] - 1.0) < 0.001
-            assert abs(args[1] - 128/255) < 0.001
-            assert args[2] == 0
+            mock_eff.assert_not_called()
 
     def test_unknown_topic_ignored(self):
         """非已知 topic → 不執行。"""
-        msg = make_msg("claude/unknown", {"r": 255})
+        msg = make_msg("claude/unknown", {"domain": "claude", "state": "idle"})
         with patch.object(ml, "_run_effect") as mock_eff, \
              patch.object(ml, "_beep") as mock_beep:
             ml.on_message(CLIENT, None, msg)
@@ -346,8 +354,8 @@ class TestOnConnect:
 class TestLedAck:
 
     def test_led_message_publishes_ack(self):
-        """claude/led 訊息處理後回報 ACK 到 claude/led/ack。"""
-        msg = make_msg("claude/led", {"r": 255, "g": 0, "b": 0, "pattern": "solid"})
+        """claude/led 訊息處理後回報 ACK 到 claude/led/ack（含 domain/state/project）。"""
+        msg = make_msg("claude/led", {"domain": "claude", "state": "idle", "project": "dotfiles"})
         with patch.object(ml, "_run_effect"), \
              patch("mqtt_led.time") as mock_time:
             mock_time.sleep = MagicMock()
@@ -357,5 +365,8 @@ class TestLedAck:
             topic = CLIENT.publish.call_args.args[0]
             assert topic == "claude/led/ack"
             ack = json.loads(CLIENT.publish.call_args.args[1])
+            assert ack["domain"] == "claude"
+            assert ack["state"] == "idle"
+            assert ack["project"] == "dotfiles"
             assert ack["r"] == 255
-            assert ack["pattern"] == "solid"
+            assert ack["pattern"] == "blink"

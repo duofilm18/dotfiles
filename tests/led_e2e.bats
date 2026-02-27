@@ -36,7 +36,7 @@ assert_led_ack() {
     [ -n "$ack" ]
 
     local expected
-    expected=$(jq -c --arg s "$state" '.[$s]' "$EFFECTS_FILE")
+    expected=$(jq -c --arg s "$state" '.claude[$s]' "$EFFECTS_FILE")
 
     [ "$(echo "$ack" | jq '.r')" = "$(echo "$expected" | jq '.r')" ]
     [ "$(echo "$ack" | jq '.g')" = "$(echo "$expected" | jq '.g')" ]

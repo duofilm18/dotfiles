@@ -4,7 +4,7 @@
 # fire() 同時觸發狀態機（claude-hook.sh）和音效 dispatch（play-melody.sh）。
 
 SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/../scripts" && pwd)"
-EFFECTS_FILE="$SCRIPT_DIR/../wsl/led-effects.json"
+EFFECTS_FILE="$SCRIPT_DIR/../rpi5b/mqtt-led/led-effects.json"
 MQTT_HOST="${MQTT_HOST:-192.168.88.10}"
 MQTT_PORT="${MQTT_PORT:-1883}"
 TEST_PROJECT="bats-$$"

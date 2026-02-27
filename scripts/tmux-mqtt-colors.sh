@@ -36,7 +36,6 @@ trap 'true' USR1    # ime_loop 用 USR1 喚醒主迴圈的 sleep
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$SCRIPT_DIR/../wsl/claude-hooks.json"
-EFFECTS_FILE="$SCRIPT_DIR/../wsl/led-effects.json"
 IME_INTERRUPT_SECS=2
 
 if [ -f "$CONFIG" ]; then
@@ -106,14 +105,13 @@ ime_loop() {
 }
 ime_loop &
 
-# ── 建構 MQTT payload ──
+# ── 建構 MQTT payload（語意：domain + state + project）──
 build_payload() {
-    local state="$1"
-    local project="$2"
-    if [ -f "$EFFECTS_FILE" ]; then
-        jq -c --arg state "$state" --arg project "$project" \
-            '.[$state] // empty | . + {state: $state, project: $project}' "$EFFECTS_FILE" 2>/dev/null
-    fi
+    local domain="$1"
+    local state="$2"
+    local project="$3"
+    jq -cn --arg domain "$domain" --arg state "$state" --arg project "$project" \
+        '{domain: $domain, state: $state, project: $project}'
 }
 
 # ── 狀態優先序（同名專案取最需關注的） ──
@@ -146,7 +144,7 @@ while true; do
         # 首次讀取（startup guard）不觸發 LED
         if [ -n "$prev_ime" ]; then
             ime_interrupt_epoch=$now
-            led_payload=$(build_payload "ime_$cur_ime" "")
+            led_payload=$(build_payload "ime" "$cur_ime" "")
             if [ -n "$led_payload" ]; then
                 mosquitto_pub -h "$MQTT_HOST" -p "$MQTT_PORT" \
                     -t "claude/led" -m "$led_payload" 2>/dev/null &
@@ -186,7 +184,7 @@ while true; do
         for project in "${!current_states[@]}"; do
             state="${current_states[$project]}"
             if [ "${prev_states[$project]:-}" != "$state" ]; then
-                payload=$(build_payload "$state" "$project")
+                payload=$(build_payload "claude" "$state" "$project")
                 if [ -n "$payload" ]; then
                     # 發到專案 topic（Stream Deck）+ 全域 topic（RPi5B LED）
                     mosquitto_pub -r -h "$MQTT_HOST" -p "$MQTT_PORT" \

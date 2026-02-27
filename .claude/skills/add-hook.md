@@ -42,11 +42,13 @@ fi
 
 ### 2. 新增燈效（如需要）
 
-編輯 `wsl/led-effects.json`，加入新事件的燈效：
+編輯 `rpi5b/mqtt-led/led-effects.json`（Consumer 端映射表），在對應 domain 下加入新狀態：
 
 ```json
 {
-  "your_event": {"r": 255, "g": 128, "b": 0, "pattern": "blink", "times": 999}
+  "claude": {
+    "your_state": {"r": 255, "g": 128, "b": 0, "pattern": "blink", "times": 999}
+  }
 }
 ```
 
@@ -93,7 +95,7 @@ git push    # 不要忘記 push！
 
 | Topic | 用途 | Payload |
 |-------|------|---------|
-| `claude/led` | RGB LED 控制 | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "blink\|solid\|pulse", "times": N, "duration": N}` |
+| `claude/led` | RGB LED 控制 | `{"domain": "claude\|ime", "state": "idle\|running\|...", "project": "..."}` |
 | `claude/buzzer` | 蜂鳴器控制 | `{"frequency": Hz, "duration": ms}` |
 
 ## Hook 類型參考
@@ -110,7 +112,7 @@ git push    # 不要忘記 push！
 
 - `wsl/claude-hooks.json.example` - MQTT 設定模板
 - `wsl/claude-hooks.json` - 實際設定（被 gitignore）
-- `wsl/led-effects.json` - 事件→燈效對應表
+- `rpi5b/mqtt-led/led-effects.json` - domain+state→硬體指令映射表（Consumer 端）
 - `scripts/claude-dispatch.sh` - 事件分發器（統一入口）
 - `scripts/claude-hook.sh` - LED 狀態機
 - `scripts/notify.sh` - 手動 MQTT LED 測試工具（不被 hook 呼叫）

@@ -39,6 +39,7 @@
   loop:
     - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-led/mqtt_led.py", dest: mqtt_led.py }
     - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-led/melodies.py", dest: melodies.py }
+    - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-led/led-effects.json", dest: led-effects.json }
     - { src: "{{ remote_dotfiles }}/rpi5b/mqtt-led/requirements.txt", dest: requirements.txt }
   notify: Reload and restart mqtt services
   tags: [mqtt, led]

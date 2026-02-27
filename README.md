@@ -12,18 +12,16 @@ Windows                     WSL (Master)                       rpi5b (Slave, 192
 │                  │       │                      │           │ mqtt-led (GPIO 控制)     │
 │ Stream Deck XL   │       │ tmux-mqtt-colors.sh  │  MQTT     │   └ claude/led topic     │
 │  → SD Plugin ────┼───────┼─→ ime_loop ← 本機    │──────→   │   └ claude/buzzer topic  │
-│  (Node.js SDK)   │       │   claude/led → RPi5B │           │                          │
-│                  │       │                      │           │ ntfy (port 8080, Docker) │
-└──────────────────┘       │ Claude Code Hooks    │           │   └→ 手機推播             │
-                           │   → dispatch.sh ─────┼─ curl ──→│                          │
+│  (Node.js SDK)   │       │   claude/led → RPi5B │           │   └ led-effects.json     │
+│                  │       │                      │           │                          │
+└──────────────────┘       │ Claude Code Hooks    │           │ ntfy (port 8080, Docker) │
+                           │   → dispatch.sh ─────┼─ curl ──→│   └→ 手機推播             │
                            │                      │           └──────────────────────────┘
-                           │ wsl/led-effects.json │
-                           │                      │
                            └──────────────────────┘
 ```
 
 **設計原則**：
-- WSL 是大腦（決定燈效、通知內容），rpi5b 是四肢（只執行 GPIO 指令）
+- WSL 是大腦（送語意指令 `{domain, state, project}`），rpi5b 是四肢（查本地映射表翻譯成硬體動作）
 - IME 狀態走**本機 MQTT HUB**（`localhost:1883`），出門不依賴 RPi5B
 - Claude LED / Stream Deck 走 **RPi5B MQTT**，不在家時靜默失敗
 - 手機推播走 **ntfy.sh 雲端**（dispatch.sh 直接 curl），不依賴 RPi5B
@@ -118,14 +116,14 @@ vim ~/dotfiles/wsl/claude-hooks.json  # 修改 MQTT_HOST
 
 | Topic | 用途 | Payload |
 |-------|------|---------|
-| `claude/led` | RGB LED + Stream Deck | `{"r": 0-255, "g": 0-255, "b": 0-255, "pattern": "...", "state": "idle\|running\|waiting\|completed\|error"}` |
+| `claude/led` | RGB LED + Stream Deck | `{"domain": "claude\|ime", "state": "idle\|running\|...", "project": "..."}` |
 | `claude/buzzer` | 蜂鳴器 | `{"frequency": Hz, "duration": ms}` |
 | `system/stats` | RPi5B 系統狀態（Stream Deck） | `{"temp": °C, "ram": %}` |
 | `system/stats/win` | Windows PC 系統狀態（Stream Deck） | `{"temp": °C, "freq": MHz, "ram": %}` |
 
 ### LED 燈效對應
 
-可修改 `wsl/led-effects.json`（修改後不需重啟任何服務）：
+可修改 `rpi5b/mqtt-led/led-effects.json`（修改後需 Ansible 部署到 RPi5B）：
 
 | 事件 | 顏色 | 效果 | 含義 |
 |------|------|------|------|

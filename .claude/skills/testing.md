@@ -55,7 +55,7 @@ bats tests/ --filter "T1"  # 過濾
 - `setup()` 偵測 MQTT broker，不通 → `skip "MQTT unreachable"`
 - 用 `mosquitto_sub -C 1 -W 5` 等待 RPi5 ACK（5 秒 timeout）
 - ACK JSON 含 `r/g/b/pattern/is_lit/gpio`
-- 比對 `wsl/led-effects.json` 預期值
+- 比對 `rpi5b/mqtt-led/led-effects.json` 預期值
 - GPIO `is_lit=true` 表示 LED 實際有亮
 
 # Testing（pytest / Stream Deck）
