@@ -56,7 +56,7 @@ echo "📡 使用設定："
 echo "   MQTT Host: $MQTT_HOST"
 echo "   MQTT Port: $MQTT_PORT"
 
-# 生成 hooks JSON（所有 hook 都呼叫腳本，腳本內部用 notify.sh → mosquitto_pub）
+# 生成 hooks JSON（所有 hook 都呼叫 claude-dispatch.sh 統一分發）
 NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
 {
   "hooks": {
@@ -66,7 +66,7 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
         "hooks": [
           {
             "type": "command",
-            "command": "~/dotfiles/scripts/notify.sh running",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh UserPromptSubmit",
             "async": true
           }
         ]
@@ -100,7 +100,7 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
         "hooks": [
           {
             "type": "command",
-            "command": "~/dotfiles/scripts/notify.sh idle 'Claude 需要你的注意' 'Claude 已閒置，等待你的輸入'"
+            "command": "~/dotfiles/scripts/claude-dispatch.sh Notification idle_prompt"
           }
         ]
       },

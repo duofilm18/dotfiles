@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """LED 即時調色盤 - 拖動顏色即時預覽到 RPi5B LED
 
+⚠️ 已失效：mqtt_led.py 改為語意介面後，不再接受 raw RGB payload。
+   如需調色，暫時在 RPi5B 上直接跑 python3 測試腳本操作 gpiozero。
+
 啟動後開瀏覽器 http://localhost:8888
 選色會即時透過 MQTT 送到 LED。
 
