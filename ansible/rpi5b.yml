@@ -5,6 +5,14 @@
   gather_facts: true
 
   pre_tasks:
+    - name: Sync dotfiles to RPi5B
+      ansible.posix.synchronize:
+        src: "{{ dotfiles_local }}/rpi5b/"
+        dest: "{{ remote_dotfiles }}/rpi5b/"
+        delete: true
+      become: false
+      tags: [always]
+
     - name: Gather service facts
       ansible.builtin.service_facts:
 
@@ -18,6 +26,15 @@
     - rpi_cleanup
 
   post_tasks:
+    - name: Write deploy marker (for Stop hook deploy check)
+      delegate_to: localhost
+      ansible.builtin.shell: |
+        mkdir -p ~/.cache
+        git -C {{ dotfiles_local }} rev-parse HEAD > ~/.cache/rpi5b-last-deploy
+      become: false
+      changed_when: false
+      tags: [always]
+
     - name: Show service status
       ansible.builtin.shell: |
         echo '--- systemd ---'

@@ -90,6 +90,10 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
           {
             "type": "command",
             "command": "~/dotfiles/scripts/qwen-stop-summary.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/check-rpi5b-deploy.sh"
           }
         ]
       }

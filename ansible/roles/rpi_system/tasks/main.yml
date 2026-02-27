@@ -1,14 +1,6 @@
 ---
 # roles/rpi_system - 系統設定（boot, fstab, log2ram, sysctl, journald, MOTD）
-# 用 synchronize 同步 rpi5b/ 到遠端，再用 remote_src 引用
-
-- name: Sync rpi5b directory to remote
-  ansible.posix.synchronize:
-    src: "{{ dotfiles_local }}/rpi5b/"
-    dest: "{{ remote_dotfiles }}/rpi5b/"
-    delete: true
-  become: false
-  tags: [system, sync]
+# synchronize 已移至 rpi5b.yml pre_tasks（always tag），所有 role 共用
 
 - name: Apply boot/config.txt
   ansible.builtin.copy:

@@ -24,6 +24,7 @@
 | [deploy-paths](.claude/skills/deploy-paths.md) | Windows 部署路徑契約（禁止硬寫路徑） |
 | [font-subset](.claude/skills/font-subset.md) | Noto Sans TC 字型 subset 流程 |
 | [lighthouse](.claude/skills/lighthouse.md) | Lighthouse 效能測試（WSL 限制與替代方案） |
+| [deploy-guard](.claude/skills/deploy-guard.md) | RPi5B 部署安全防護（Stop hook 自動檢測未部署改動） |
 | [ansible-conventions](.claude/skills/ansible-conventions.md) | Ansible 撰寫規範（venv、變數、權限） |
 | [mqtt-wiring](.claude/skills/mqtt-wiring.md) | MQTT topic 接線契約與登記表 |
 | [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面、手機推播、API 約束 |
