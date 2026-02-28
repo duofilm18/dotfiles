@@ -72,10 +72,27 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh PreToolUse AskUserQuestion",
+            "async": true
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Bash|Edit|Write|Read",
         "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh PostToolUse",
+            "async": true
+          },
           {
             "type": "command",
             "command": "~/dotfiles/scripts/qwen-advisor.sh"
@@ -87,6 +104,11 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
       {
         "matcher": "",
         "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh Stop",
+            "async": true
+          },
           {
             "type": "command",
             "command": "~/dotfiles/scripts/qwen-stop-summary.sh"
@@ -104,13 +126,19 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
         "hooks": [
           {
             "type": "command",
-            "command": "~/dotfiles/scripts/claude-dispatch.sh Notification idle_prompt"
+            "command": "~/dotfiles/scripts/claude-dispatch.sh Notification idle_prompt",
+            "async": true
           }
         ]
       },
       {
         "matcher": "permission_prompt",
         "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh Notification permission_prompt",
+            "async": true
+          },
           {
             "type": "command",
             "command": "~/dotfiles/scripts/qwen-permission.sh"
