@@ -93,7 +93,7 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
           },
           {
             "type": "command",
-            "command": "~/dotfiles/scripts/check-rpi5b-deploy.sh"
+            "command": "~/dotfiles/scripts/check-deploy.sh"
           }
         ]
       }

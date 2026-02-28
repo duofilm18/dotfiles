@@ -8,3 +8,11 @@
   roles:
     - common
     - wsl
+
+  post_tasks:
+    - name: Write deploy marker (for Stop hook deploy check)
+      ansible.builtin.shell: |
+        mkdir -p ~/.cache
+        git -C {{ dotfiles_local }} rev-parse HEAD > ~/.cache/wsl-last-deploy
+      changed_when: false
+      tags: [always]

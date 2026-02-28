@@ -29,6 +29,7 @@
 | [mqtt-wiring](.claude/skills/mqtt-wiring.md) | MQTT topic 接線契約與登記表 |
 | [shared-contract](.claude/skills/shared-contract.md) | 跨腳本共用契約（lib 抽取、guard test、禁止複製） |
 | [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面、手機推播、API 約束 |
+| [deploy-integrity](.claude/skills/deploy-integrity.md) | 部署完整性免疫系統（pre-commit + Stop hook + marker 三層防護） |
 
 ## 規則
 
@@ -47,6 +48,7 @@
 13. **寫完要測試** - 修改功能 code 後必須補/更新對應測試（Bats 或 pytest），測試全過才 commit。詳見 [testing](.claude/skills/testing.md)
 14. **Windows 路徑契約** - 碰到 Windows 部署路徑時禁止硬寫，必須用變數或 registry 查詢。詳見 [deploy-paths](.claude/skills/deploy-paths.md)
 15. **IME 介面契約** - 修改 IME 相關邏輯（IME_Indicator、ime-mqtt-publisher、tmux status bar）時，必須確認 writer/reader 格式一致（只允許 `zh`/`en`）。詳見 [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md)
+16. **部署完整性抗體** - 新增 Ansible 管理的 systemd service 時，必須在 `tests/deploy_integrity.bats` 加對應的 DI-* 測試（腳本存在、template 存在、task 引用、handler 存在）。詳見 [deploy-integrity](.claude/skills/deploy-integrity.md)
 
 ## 目錄結構
 

@@ -34,6 +34,7 @@ dotfiles/
 │   └── skills/
 │       └── add-hook.md
 ├── scripts/
+│   ├── check-deploy.sh
 │   ├── check-rpi5b-deploy.sh
 │   ├── claude-dispatch.sh
 │   ├── claude-hook.sh

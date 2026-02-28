@@ -63,9 +63,14 @@
     mode: "0755"
     content: |
       #!/bin/bash
-      # pre-commit hook - 自動更新 README.md 目錄結構
+      # pre-commit hook - 自動更新 README.md 目錄結構 + 部署完整性檢查
       ~/dotfiles/scripts/update-readme.sh
       git add README.md
+
+      # 部署完整性靜態檢查（bats 不在時不擋 commit）
+      if command -v bats &>/dev/null; then
+          bats ~/dotfiles/tests/deploy_integrity.bats
+      fi
 
 - name: Configure mosquitto local broker
   become: true
