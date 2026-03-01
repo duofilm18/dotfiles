@@ -1,8 +1,8 @@
 ---
 name: add-hook
 description: >
-  Claude Code Hook 與 dispatch.sh 事件分發器的標準流程。當需要新增 Notification、
-  PreToolUse、PostToolUse 等 hook，或修改 claude-dispatch.sh 的通知行為時使用。
+  Claude Code Hook 與 dispatch.sh 事件分發器的標準流程。當需要新增 hook
+  或修改 claude-dispatch.sh 的通知行為時使用。
 ---
 
 # 新增 Claude Code Hook
@@ -61,10 +61,12 @@ git push    # 不要忘記 push！
 | Hook 類型 | Matcher | 觸發時機 |
 |-----------|---------|----------|
 | Stop | — | 回應完成，等待輸入 |
-| Notification | idle_prompt | 閒置超過 60 秒 |
-| Notification | permission_prompt | 需要權限確認 |
+| UserPromptSubmit | — | 用戶送出 prompt |
 | PreToolUse | 工具名稱 | 執行工具前 |
 | PostToolUse | 工具名稱 | 執行工具後 |
+| Notification | idle_prompt / permission_prompt | 閒置或需要權限確認 |
+
+> 目前只啟用 Stop（ntfy 推播 + deploy guard）。其他類型可按需新增。
 
 ## 相關檔案
 

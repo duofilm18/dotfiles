@@ -1,62 +1,23 @@
 #!/bin/bash
-# setup-claude-hooks.sh - 設定 Claude Code Hooks (MQTT 通知)
+# setup-claude-hooks.sh - 設定 Claude Code Hooks（ntfy 推播 + deploy guard）
 # 用法: ~/dotfiles/scripts/setup-claude-hooks.sh
 
 set -e
 
-DOTFILES="$HOME/dotfiles"
-EXAMPLE_FILE="$DOTFILES/wsl/claude-hooks.json.example"
-CONFIG_FILE="$DOTFILES/wsl/claude-hooks.json"
 CLAUDE_DIR="$HOME/.claude"
 CLAUDE_SETTINGS="$CLAUDE_DIR/settings.json"
 
 echo "=========================================="
-echo "  設定 Claude Code Hooks (MQTT)"
+echo "  設定 Claude Code Hooks"
 echo "=========================================="
 
 # 檢查必要工具
-for cmd in jq mosquitto_pub; do
-    if ! command -v "$cmd" &>/dev/null; then
-        echo "❌ 需要 $cmd，正在安裝..."
-        sudo apt install -y jq mosquitto-clients
-        break
-    fi
-done
-
-# 檢查模板是否存在
-if [ ! -f "$EXAMPLE_FILE" ]; then
-    echo "❌ 找不到模板: $EXAMPLE_FILE"
-    exit 1
+if ! command -v jq &>/dev/null; then
+    echo "❌ 需要 jq，正在安裝..."
+    sudo apt install -y jq
 fi
 
-# 如果設定檔不存在，複製模板
-if [ ! -f "$CONFIG_FILE" ]; then
-    cp "$EXAMPLE_FILE" "$CONFIG_FILE"
-    echo "📋 已複製模板到: $CONFIG_FILE"
-    echo ""
-    echo "⚠️  請編輯 $CONFIG_FILE 修改你的設定："
-    echo "    - MQTT_HOST: rpi5b 的 IP"
-    echo "    - MQTT_PORT: MQTT 連接埠 (預設 1883)"
-    echo ""
-    read -p "編輯完成後按 Enter 繼續..."
-fi
-
-# 讀取設定
-MQTT_HOST=$(jq -r '.MQTT_HOST' "$CONFIG_FILE")
-MQTT_PORT=$(jq -r '.MQTT_PORT' "$CONFIG_FILE")
-
-# 驗證
-if [ "$MQTT_HOST" = "null" ] || [ -z "$MQTT_HOST" ]; then
-    echo "❌ 請在 $CONFIG_FILE 中設定 MQTT_HOST"
-    exit 1
-fi
-
-echo ""
-echo "📡 使用設定："
-echo "   MQTT Host: $MQTT_HOST"
-echo "   MQTT Port: $MQTT_PORT"
-
-# 生成 hooks JSON（所有 hook 都呼叫 claude-dispatch.sh 統一分發）
+# 生成 hooks JSON
 NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
 {
   "hooks": {
