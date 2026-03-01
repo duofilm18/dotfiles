@@ -60,42 +60,6 @@ echo "   MQTT Port: $MQTT_PORT"
 NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
 {
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/claude-dispatch.sh UserPromptSubmit",
-            "async": true
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "AskUserQuestion",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/claude-dispatch.sh PreToolUse AskUserQuestion",
-            "async": true
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash|Edit|Write|Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/claude-dispatch.sh PostToolUse",
-            "async": true
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "matcher": "",
@@ -108,28 +72,6 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
           {
             "type": "command",
             "command": "~/dotfiles/scripts/check-deploy.sh"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "idle_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/claude-dispatch.sh Notification idle_prompt",
-            "async": true
-          }
-        ]
-      },
-      {
-        "matcher": "permission_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/claude-dispatch.sh Notification permission_prompt",
-            "async": true
           }
         ]
       }
@@ -163,10 +105,7 @@ echo "  ✅ Claude Code Hooks 設定完成！"
 echo "=========================================="
 echo ""
 echo "📋 已設定的 Hooks："
-echo "   • UserPromptSubmit → 綠色呼吸燈（running）"
-echo "   • Stop             → 七色彩虹閃（完成）"
-echo "   • idle_prompt      → 橘色閃爍（提醒回來）"
-echo "   • permission       → 紅色閃爍 + 嗶（等你授權）"
+echo "   • Stop → ntfy 手機推播 + deploy guard 檢查"
 echo ""
 echo "測試："
 echo "  curl -s -X POST 'https://ntfy.sh/claude-notify-rpi5b' \\"
