@@ -10,10 +10,4 @@ WIN_USER="duofilm"
 WIN_HOME="/mnt/c/Users/${WIN_USER}"
 WIN_LOCALAPPDATA="${WIN_HOME}/AppData/Local"
 
-DEPLOY_IME_DIR="${WIN_LOCALAPPDATA}/IME_Indicator"
-DEPLOY_IME_PYTHON="${DEPLOY_IME_DIR}/python_indicator"
-DEPLOY_IME_MAIN="${DEPLOY_IME_PYTHON}/main.py"
-
 DEPLOY_LHM_DIR="${WIN_LOCALAPPDATA}/LibreHardwareMonitor"
-
-DEPLOY_SD_PLUGIN="${WIN_HOME}/com.duofilm.claude-monitor.sdPlugin"

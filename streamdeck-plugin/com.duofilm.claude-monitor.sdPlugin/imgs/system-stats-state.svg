@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144">
-  <rect width="144" height="144" fill="#1e1e1e"/>
-  <text x="72" y="28" text-anchor="middle" dominant-baseline="middle"
-        font-family="Arial, sans-serif" font-size="16" fill="#a0a0a0">RPi5B</text>
-  <text x="72" y="72" text-anchor="middle" dominant-baseline="middle"
-        font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#808080">--&#xB0;C</text>
-  <text x="72" y="116" text-anchor="middle" dominant-baseline="middle"
-        font-family="Arial, sans-serif" font-size="20" fill="#808080">RAM --%</text>
-</svg>

@@ -1,30 +1,18 @@
 ---
 name: architecture-health
 description: >
-  系統層級架構健康原則。設計跨裝置互動、審查系統架構、新增硬體整合、
-  出現「改 A 壞 B」的耦合問題時使用。涵蓋裝置邊界、語意介面、硬體歸屬。
-  元件層級的單向資料流見 unidirectional-state。
+  系統層級架構健康原則。設計跨裝置互動、審查系統架構時使用。
+  涵蓋裝置邊界、語意介面。
 ---
 
 # 系統架構健康原則
 
-本文件是規範性文件。程式碼不符合本文件時，以本文件為準。
-
 ## 裝置邊界（Device Boundary）
 
-每台裝置是一個自治單元，有內部虛擬層負責狀態協調。
+每台裝置是一個自治單元。
 
-- **內部事不出邊界** — IME 偵測、tmux 變數、Claude hooks 都是主機內部事務
+- **內部事不出邊界** — tmux 變數、Claude hooks 都是主機內部事務
 - **跨裝置只經由語意介面通訊** — 不直接存取對方的內部狀態
-
-```
-┌─ 主機 ──────────────────┐      語意介面       ┌─ 周邊端 ─────────────┐
-│ IME_Indicator            │                     │ LED 控制             │
-│ tmux (@claude_state)     │ ──── MQTT ────────→ │ buzzer               │
-│ Claude hooks             │  domain + state     │ 效果映射表           │
-│ dispatch.sh              │                     │ 優先權邏輯           │
-└──────────────────────────┘                     └──────────────────────┘
-```
 
 ## 語意介面（Semantic Interface）
 
@@ -32,19 +20,8 @@ description: >
 
 | | payload 範例 | 性質 |
 |---|---|---|
-| **正確** | `{domain:"ime", state:"zh"}` | 語意：描述狀態 |
-| **反模式** | `{r:255, g:34, b:0}` | 指令：替對方決定硬體行為 |
-
-接收端用自己的映射表翻譯語意為硬體動作。
-發送端不需要知道（也不應該知道）接收端有什麼硬體。
-
-## 硬體歸屬（Hardware Ownership）
-
-擁有硬體的裝置決定硬體行為。
-
-- **效果映射表放硬體端** — 效果映射放周邊端，不放主機
-- **顯示優先權由顯示端決定** — 周邊端自行決定多 domain 同時活躍時誰優先
-- **硬體初始化由硬體端負責** — 啟動清空、預設色等是本地邏輯
+| **正確** | `{domain:"system", state:"temp_high"}` | 語意：描述狀態 |
+| **反模式** | `{action:"send_alert", target:"phone"}` | 指令：替對方決定行為 |
 
 ## 審查 Checklist
 
@@ -53,11 +30,10 @@ description: >
 - [ ] 改 A 會不會壞 B？（如果會 → 耦合過緊，需拆解）
 - [ ] 這個資訊該內部消化還是跨裝置？（內部 → 不出邊界）
 - [ ] 跨裝置的 payload 是語意還是指令？（指令 → 改為語意）
-- [ ] 效果定義跟硬體放在同一端嗎？（不是 → 搬回硬體端）
 
 ## 現有裝置邊界（參考）
 
-| 角色 | 實體 | 內部元件 | 對外語意介面 |
+| 角色 | 實體 | 內部元件 | 對外介面 |
 |------|------|----------|-------------|
-| 主機 | HP (Win+WSL) | IME_Indicator, tmux, Claude hooks, dispatch.sh | MQTT: `{domain, state}` |
-| 周邊端 | RPi5B | mqtt_led, buzzer, led-effects.json, 優先權邏輯 | 被動接收語意狀態 |
+| 主機 | HP (Win+WSL) | tmux, Claude hooks, dispatch.sh | curl ntfy.sh |
+| 伺服器 | RPi5B | Docker (Pi-hole, ntfy, Uptime Kuma), mosquitto | HTTP API, MQTT |

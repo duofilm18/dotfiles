@@ -1,23 +1,11 @@
 ---
-# roles/rpi_mosquitto - Mosquitto MQTT broker + lgpio 編譯
+# roles/rpi_mosquitto - Mosquitto MQTT broker
 
-- name: Install mosquitto and build dependencies
+- name: Install mosquitto
   ansible.builtin.apt:
     name:
       - mosquitto
       - mosquitto-clients
-      - python3-pip
-      - python3-venv
-      - python3-dev
-      - python3-setuptools
-      - python3-paho-mqtt
-      - python3-requests
-      - python3-gpiozero
-      - gpiod
-      - swig
-      - cmake
-      - build-essential
-      - git
     state: present
     update_cache: true
     cache_valid_time: 3600
@@ -39,21 +27,4 @@
     enabled: true
     state: started
   tags: [mosquitto]
-
-- name: Compile lgpio (RPi5 GPIO support)
-  ansible.builtin.shell: |
-    cd /tmp && rm -rf lg
-    git clone --depth 1 https://github.com/joan2937/lg.git
-    cd lg && make && make install
-  args:
-    creates: /usr/local/lib/liblgpio.so
-  tags: [mosquitto, lgpio]
-
-- name: Upgrade gpiozero to 2.0.1+
-  ansible.builtin.pip:
-    name: gpiozero
-    state: latest
-    virtualenv: "{{ mqtt_led_dir }}/venv"
-    virtualenv_command: python3 -m venv --system-site-packages
-  tags: [mosquitto, lgpio]
 

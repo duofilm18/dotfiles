@@ -95,30 +95,3 @@
     virtualenv: "{{ dotfiles_local }}/.venv"
     virtualenv_command: python3 -m venv
 
-# ── IME MQTT Publisher（systemd user service）──
-
-- name: Enable lingering for user (systemd user services without login)
-  become: true
-  ansible.builtin.command:
-    cmd: loginctl enable-linger {{ ansible_user }}
-  changed_when: false
-
-- name: Create systemd user directory
-  ansible.builtin.file:
-    path: "{{ ansible_user_dir }}/.config/systemd/user"
-    state: directory
-    mode: "0755"
-
-- name: Deploy ime-mqtt-publisher service
-  ansible.builtin.template:
-    src: ime-mqtt-publisher.service.j2
-    dest: "{{ ansible_user_dir }}/.config/systemd/user/ime-mqtt-publisher.service"
-    mode: "0644"
-  notify: Restart ime-mqtt-publisher
-
-- name: Enable and start ime-mqtt-publisher
-  ansible.builtin.systemd:
-    name: ime-mqtt-publisher
-    enabled: true
-    state: started
-    scope: user

@@ -37,20 +37,11 @@ dotfiles/
 │   ├── check-deploy.sh
 │   ├── check-rpi5b-deploy.sh
 │   ├── claude-dispatch.sh
-│   ├── claude-hook.sh
-│   ├── deploy-ime-indicator.sh
-│   ├── ime-mqtt-publisher.sh
 │   ├── install-docker.sh
 │   ├── install-lighthouse.sh
 │   ├── install.sh
-│   ├── notify.sh
-│   ├── play-melody.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b.sh
-│   ├── test-hooks.sh
-│   ├── test-ime-local-hub.sh
-│   ├── test-mqtt.sh
-│   ├── tmux-mqtt-colors.sh
 │   ├── tmux-switch-project.sh
 │   └── update-readme.sh
 ├── shared/
@@ -161,6 +152,22 @@ cd C:\Users\<user>\dotfiles\windows
 ~/dotfiles/scripts/deploy-ime-indicator.sh          # 部署 + 自動重啟
 ~/dotfiles/scripts/deploy-ime-indicator.sh --diff    # 只看差異
 ```
+
+### Claude Status Overlay（Windows 桌面懸浮視窗）
+
+Windows 桌面置頂半透明小視窗，直接讀取 WSL `/tmp/claude-led-state-*` 狀態檔，顯示各 Claude 專案的即時狀態。零硬體 / MQTT / 網路依賴。
+
+**狀態顏色：** RUNNING=藍、WAITING=黃、COMPLETED=綠、IDLE=橘、ERROR=紅、STALE=灰
+
+**部署：**
+```bash
+~/dotfiles/scripts/deploy-claude-overlay.sh          # 部署 + 自動重啟
+~/dotfiles/scripts/deploy-claude-overlay.sh --diff    # 只看差異
+```
+
+**啟動方式：** tmux 啟動時自動透過 `.tmux.conf` run-shell 啟動（singleton，不會重複開）。
+
+**操作：** 左鍵拖動、右鍵關閉。位置會記住。
 
 ### Stream Deck XL 監控（Windows）
 

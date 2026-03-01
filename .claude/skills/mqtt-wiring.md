@@ -17,22 +17,13 @@ description: >
 
 | Topic | Publisher | Consumer | Payload | Retained |
 |-------|----------|----------|---------|----------|
-| `claude/led/+` | `tmux-mqtt-colors.sh` | mqtt-led, Stream Deck | `{domain:"claude", state, project}` | Yes |
-| `claude/led` | `ime-mqtt-publisher.sh` | mqtt-led | `{domain:"ime", state:"zh"\|"en", project:""}` | No |
-| `claude/led/ack` | mqtt-led | `led_e2e.bats` (test) | `{domain, state, project, r, g, b, pattern, is_lit, gpio, ts}` | No |
-| `claude/buzzer` | `test-mqtt.sh` (手動) | mqtt-led | `{frequency, duration}` | No |
-| `claude/melody` | （無生產 publisher） | mqtt-led | `{name: "star_wars"\|...}` | No |
-| `system/stats` | `push-temp.sh` (cron) | Stream Deck | `{temp, ram}` | Yes |
-| `system/stats/win` | `push-win-stats.ps1` | Stream Deck | `{temp, freq, ram}` | Yes |
-
-> **注意**：IME→MQTT 由獨立的 `ime-mqtt-publisher.sh`（systemd user service）發佈到 `claude/led`（non-retained）。IME→tmux status bar 仍由 `tmux-mqtt-colors.sh` 的 `ime_loop()` 讀取檔案。詳見 [ime-mqtt-contract](ime-mqtt-contract.md)。
+| `system/stats` | `push-temp.sh` (cron) | Uptime Kuma | `{temp, ram}` | Yes |
 
 ## Broker 拓撲
 
 | Broker | Host | 用途 |
 |--------|------|------|
-| WSL 本機 | `localhost:1883` | IME 狀態（不出網路） |
-| RPi5B | `192.168.88.10:1883` | Claude LED / Stream Deck / 系統監控 |
+| RPi5B | `192.168.88.10:1883` | 系統監控 |
 
 ## 歷史教訓
 
