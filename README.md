@@ -37,9 +37,11 @@ dotfiles/
 │   ├── check-deploy.sh
 │   ├── check-rpi5b-deploy.sh
 │   ├── claude-dispatch.sh
+│   ├── deploy-claude-overlay.sh
 │   ├── install-docker.sh
 │   ├── install-lighthouse.sh
 │   ├── install.sh
+│   ├── launch-claude-overlay.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b.sh
 │   ├── tmux-switch-project.sh
