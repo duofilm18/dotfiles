@@ -98,6 +98,45 @@ sudo systemctl restart pihole-FTL
 
 安全性由主機防火牆控制。
 
+## 避坑：Ansible 設定 Pi-hole 的正確方式
+
+### 坑：安裝器覆寫 pihole.toml
+
+Pi-hole v6 `--unattended` 安裝器會**覆寫整個 `/etc/pihole/pihole.toml`**，把所有自訂設定清掉：
+- `dns.upstreams` → `[]`（空，DNS 完全不能解析）
+- `dns.listeningMode` → `"LOCAL"`（外部設備查詢被拒）
+
+**所以不能用 Ansible template 部署 pihole.toml**——安裝器會把它蓋掉。
+
+### 正確做法：用 `pihole-FTL --config` CLI
+
+在安裝**之後**用 CLI 逐項設定，冪等且不受安裝器影響：
+
+```yaml
+# ✅ 正確 — 安裝後用 CLI 設定
+- name: Install Pi-hole (unattended)
+  ansible.builtin.shell: curl -sSL https://install.pi-hole.net | bash /dev/stdin --unattended
+
+- name: Configure upstream DNS
+  ansible.builtin.command: pihole-FTL --config dns.upstreams '["1.1.1.1","8.8.8.8"]'
+
+# ❌ 錯誤 — 安裝前部署模板會被覆寫
+- name: Deploy pihole.toml
+  ansible.builtin.template:
+    src: pihole.toml.j2
+    dest: /etc/pihole/pihole.toml
+```
+
+### 症狀
+
+- `dig @127.0.0.1 google.com` 回 `REFUSED` + `EDE: 14 (Not Ready)`
+- Pi-hole Web UI 顯示 0 queries
+- `pihole-FTL --config dns.upstreams` 回 `[]`
+
+### 歷史事件
+
+2026-03：首次原生安裝，Ansible template 部署 pihole.toml 後被安裝器覆寫，DNS 全斷。改用 `pihole-FTL --config` CLI 修復。
+
 ## 故障排查
 
 ### 廣告沒有被攔截
