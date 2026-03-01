@@ -28,6 +28,7 @@
 | [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面、手機推播、API 約束 |
 | [rpi-ssh-setup](.claude/skills/rpi-ssh-setup.md) | RPi SSH 設定（Windows/WSL 雙 key、host key 清理） |
 | [deploy-integrity](.claude/skills/deploy-integrity.md) | 部署完整性免疫系統（pre-commit + Stop hook + marker 三層防護） |
+| [removal-checklist](.claude/skills/removal-checklist.md) | 移除元件時的殘留引用掃描清單 |
 
 ## 規則
 
@@ -44,6 +45,7 @@
 11. **寫完要測試** - 修改功能 code 後必須補/更新對應測試（Bats 或 pytest），測試全過才 commit。詳見 [testing](.claude/skills/testing.md)
 12. **Windows 路徑契約** - 碰到 Windows 部署路徑時禁止硬寫，必須用變數或 registry 查詢。詳見 [deploy-paths](.claude/skills/deploy-paths.md)
 13. **部署完整性抗體** - 新增 Ansible 管理的 systemd service 時，必須在 `tests/deploy_integrity.bats` 加對應的 DI-* 測試（腳本存在、template 存在、task 引用、handler 存在）。詳見 [deploy-integrity](.claude/skills/deploy-integrity.md)
+14. **移除元件必掃殘留** - 砍掉腳本、服務、hook 或任何跨檔案元件時，必須跑 [removal-checklist](.claude/skills/removal-checklist.md) 掃描清單，同一個 commit 清乾淨
 
 ## 目錄結構
 
