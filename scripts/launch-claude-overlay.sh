@@ -16,14 +16,7 @@ fi
 
 # Singleton：檢查是否已在執行
 ALREADY_RUNNING=$(powershell.exe -Command "
-    \$found = \$false
-    Get-Process pythonw -ErrorAction SilentlyContinue | ForEach-Object {
-        try {
-            \$cmd = (Get-WmiObject Win32_Process -Filter \"ProcessId=\$(\$_.Id)\").CommandLine
-            if (\$cmd -like '*claude-overlay*') { \$found = \$true }
-        } catch {}
-    }
-    \$found
+    (Get-Process 'claude-overlay' -ErrorAction SilentlyContinue) -ne \$null
 " 2>/dev/null | tr -d '\r')
 
 if [ "$ALREADY_RUNNING" = "True" ]; then
@@ -31,6 +24,5 @@ if [ "$ALREADY_RUNNING" = "True" ]; then
 fi
 
 # 啟動
-WIN_MAIN=$(echo "$DEPLOY_OVERLAY_MAIN" | sed 's|/mnt/c|C:|;s|/|\\|g')
-WIN_DIR=$(echo "$DEPLOY_OVERLAY_DIR" | sed 's|/mnt/c|C:|;s|/|\\|g')
-powershell.exe -Command "Start-Process pythonw -ArgumentList '$WIN_MAIN' -WorkingDirectory '$WIN_DIR'" 2>/dev/null || true
+WIN_EXE=$(echo "$DEPLOY_OVERLAY_MAIN" | sed 's|/mnt/c|C:|;s|/|\\|g')
+powershell.exe -Command "Start-Process '$WIN_EXE'" 2>/dev/null || true

@@ -155,21 +155,20 @@ cd C:\Users\<user>\dotfiles\windows
 ~/dotfiles/scripts/deploy-ime-indicator.sh --diff    # 只看差異
 ```
 
-### Claude Status Overlay（Windows 桌面懸浮視窗）
+### Claude Status Overlay（Windows 桌面視窗）
 
-Windows 桌面置頂半透明小視窗，直接讀取 WSL `/tmp/claude-led-state-*` 狀態檔，顯示各 Claude 專案的即時狀態。零硬體 / MQTT / 網路依賴。
+Tauri 桌面應用，直接讀取 WSL `/tmp/claude-led-state-*` 狀態檔，顯示各 Claude 專案的即時狀態。有標準 `- □ X` 控制鈕、深色主題、卡片式 layout。零硬體 / MQTT / 網路依賴。
 
-**狀態顏色：** RUNNING=藍、WAITING=黃、COMPLETED=綠、IDLE=橘、ERROR=紅、STALE=灰
+**狀態顏色：** RUNNING=藍、WAITING=黃、COMPLETED=綠、IDLE=橘、STALE=灰
+
+**前置需求：** Windows 安裝 Rust 工具鏈（`rustup`）+ Node.js
 
 **部署：**
 ```bash
-~/dotfiles/scripts/deploy-claude-overlay.sh          # 部署 + 自動重啟
-~/dotfiles/scripts/deploy-claude-overlay.sh --diff    # 只看差異
+~/dotfiles/scripts/deploy-claude-overlay.sh    # build + 部署 .exe + 重啟
 ```
 
 **啟動方式：** tmux 啟動時自動透過 `.tmux.conf` run-shell 啟動（singleton，不會重複開）。
-
-**操作：** 左鍵拖動、右鍵關閉。位置會記住。
 
 ### Stream Deck XL 監控（Windows）
 

@@ -42,6 +42,11 @@ env/
 *.egg-info/
 *.egg
 
+# Claude Overlay (Tauri build artifacts)
+claude-overlay/node_modules/
+claude-overlay/src-tauri/target/
+claude-overlay/dist/
+
 # Stream Deck SDK Plugin
 streamdeck-plugin/node_modules/
 streamdeck-plugin/com.duofilm.claude-monitor.sdPlugin/bin/

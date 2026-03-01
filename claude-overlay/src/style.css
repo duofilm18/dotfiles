@@ -1,0 +1,96 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #1a1a2e;
+  color: #e5e5e5;
+  overflow: hidden;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+
+/* ── Empty state ── */
+.empty {
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ── Project card ── */
+.card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #16213e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  border-left: 4px solid transparent;
+}
+
+.card .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.card .info {
+  flex: 1;
+  min-width: 0;
+}
+
+.card .name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card .state {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* ── State colors ── */
+.state-running  { color: #3b82f6; }
+.state-waiting  { color: #eab308; }
+.state-completed { color: #22c55e; }
+.state-idle     { color: #f97316; }
+.state-stale    { color: #9ca3af; }
+
+.border-running  { border-left-color: #3b82f6; }
+.border-waiting  { border-left-color: #eab308; }
+.border-completed { border-left-color: #22c55e; }
+.border-idle     { border-left-color: #f97316; }
+.border-stale    { border-left-color: #9ca3af; }
+
+.dot-running  { background: #3b82f6; }
+.dot-waiting  { background: #eab308; }
+.dot-completed { background: #22c55e; }
+.dot-idle     { background: #f97316; }
+.dot-stale    { background: #9ca3af; }
+
+/* ── Blink animation for WAITING / IDLE ── */
+.blink .dot,
+.blink .state {
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}

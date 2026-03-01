@@ -15,4 +15,4 @@ $DEPLOY_LHM_EXE = "$DEPLOY_LHM_DIR\LibreHardwareMonitor.exe"
 $DEPLOY_SD_PLUGIN = "$env:USERPROFILE\com.duofilm.claude-monitor.sdPlugin"
 
 $DEPLOY_OVERLAY_DIR = "$env:LOCALAPPDATA\claude-overlay"
-$DEPLOY_OVERLAY_MAIN = "$DEPLOY_OVERLAY_DIR\main.py"
+$DEPLOY_OVERLAY_MAIN = "$DEPLOY_OVERLAY_DIR\claude-overlay.exe"
