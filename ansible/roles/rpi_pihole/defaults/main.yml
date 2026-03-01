@@ -1,0 +1,7 @@
+---
+pihole_password: "ks91309"
+pihole_upstream_dns:
+  - "1.1.1.1"
+  - "8.8.8.8"
+pihole_interface: "eth0"
+pihole_listening_mode: "all"

@@ -65,6 +65,36 @@ ssh-keygen -R 192.168.88.10 -f C:\Users\duofilm\.ssh\known_hosts
 2. **SD 卡手動** — boot 分區根目錄建空檔案 `ssh`（無副檔名）
 3. **接螢幕鍵盤** — `sudo systemctl enable --now ssh`
 
+## 坑：Tailscale 搞死 RPi 網路（看起來像開不了機）
+
+### 症狀
+
+- RPi 綠燈亮（有開機）但 ping 不到、SSH 不到
+- 重灌多次都一樣
+- **實際上 RPi 有開機，只是網路斷了**
+
+### 根因
+
+Ansible 部署 Tailscale 後，如果 RPi 同時 advertise-routes 又 accept-routes，
+Tailscale 會建立 policy route 把 `192.168.88.0/24` 流量導向 `tailscale0` 介面，
+RPi 自己的區網連線就斷了。
+
+### 規則
+
+```bash
+# RPi 只 advertise，絕不 accept
+sudo tailscale up --advertise-routes=192.168.88.0/24 --accept-routes=false
+
+# 確認沒有 accept-routes
+tailscale status --json | grep -i acceptroutes
+# 必須是 false
+```
+
+### 歷史事件
+
+2026-03：RPi5B 重灌後疑似「開不了機」，實際是 Tailscale 路由黑洞導致網路全斷。
+重灌多次無效（因為 Ansible 每次都重裝 Tailscale），改用 WiFi 才發現 RPi 其實有開機。
+
 ## Ansible 連線需求
 
 Ansible 從 WSL 執行，需要：

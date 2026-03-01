@@ -1,0 +1,94 @@
+---
+# roles/rpi_pihole - Pi-hole 原生安裝（非 Docker）
+
+- name: Disable systemd-resolved (free port 53 for Pi-hole)
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    enabled: false
+    state: stopped
+  failed_when: false
+  tags: [pihole]
+
+- name: Set static resolv.conf
+  ansible.builtin.copy:
+    content: "nameserver 1.1.1.1\n"
+    dest: /etc/resolv.conf
+  tags: [pihole]
+
+- name: Stop old Docker pihole container (migration)
+  ansible.builtin.command: docker stop pihole
+  failed_when: false
+  changed_when: false
+  tags: [pihole]
+
+- name: Remove old Docker pihole container (migration)
+  ansible.builtin.command: docker rm pihole
+  failed_when: false
+  changed_when: false
+  tags: [pihole]
+
+- name: Create pihole group
+  ansible.builtin.group:
+    name: pihole
+    system: true
+  tags: [pihole]
+
+- name: Create pihole user
+  ansible.builtin.user:
+    name: pihole
+    group: pihole
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+  tags: [pihole]
+
+- name: Create /etc/pihole directory
+  ansible.builtin.file:
+    path: /etc/pihole
+    state: directory
+    owner: pihole
+    group: pihole
+    mode: "0755"
+  tags: [pihole]
+
+- name: Deploy pihole.toml
+  ansible.builtin.template:
+    src: pihole.toml.j2
+    dest: /etc/pihole/pihole.toml
+    owner: pihole
+    group: pihole
+    mode: "0644"
+  notify: Restart pihole-FTL
+  tags: [pihole]
+
+- name: Check if Pi-hole is installed
+  ansible.builtin.command: pihole version
+  register: pihole_check
+  changed_when: false
+  failed_when: false
+  tags: [pihole]
+
+- name: Install Pi-hole (unattended)
+  ansible.builtin.shell: curl -sSL https://install.pi-hole.net | bash /dev/stdin --unattended
+  args:
+    creates: /usr/local/bin/pihole
+  when: pihole_check.rc != 0
+  tags: [pihole]
+
+- name: Set Pi-hole web password
+  ansible.builtin.command: pihole setpassword {{ pihole_password }}
+  changed_when: false
+  no_log: true
+  tags: [pihole]
+
+- name: Enable and start pihole-FTL
+  ansible.builtin.systemd:
+    name: pihole-FTL
+    enabled: true
+    state: started
+  tags: [pihole]
+
+- name: Update gravity
+  ansible.builtin.command: pihole -g
+  changed_when: false
+  tags: [pihole]

@@ -25,6 +25,28 @@ DOTFILES="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
 # ── 每個 .service.j2 都有對應 restart handler ──
 
+# ── rpi_pihole role 完整性 ──
+
+@test "DI-5: rpi_pihole role 的 tasks/main.yml 存在" {
+    [ -f "$DOTFILES/ansible/roles/rpi_pihole/tasks/main.yml" ]
+}
+
+@test "DI-6: rpi_pihole role 的 pihole.toml template 存在" {
+    [ -f "$DOTFILES/ansible/roles/rpi_pihole/templates/pihole.toml.j2" ]
+}
+
+@test "DI-7: rpi_pihole tasks 有引用 pihole.toml template" {
+    grep -q 'pihole\.toml' \
+        "$DOTFILES/ansible/roles/rpi_pihole/tasks/main.yml"
+}
+
+@test "DI-8: rpi_pihole 有 Restart pihole-FTL handler" {
+    grep -q 'Restart pihole-FTL' \
+        "$DOTFILES/ansible/roles/rpi_pihole/handlers/main.yml"
+}
+
+# ── 每個 .service.j2 都有對應 restart handler ──
+
 @test "DI-4: 每個 .service.j2 都有對應 restart handler" {
     local missing=""
     while IFS= read -r tmpl; do

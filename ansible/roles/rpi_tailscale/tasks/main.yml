@@ -30,8 +30,25 @@
   ansible.builtin.pause:
     prompt: >
       如果 Tailscale 尚未登入，請在另一個終端執行：
-      ssh {{ ansible_user }}@{{ ansible_host }} tailscale up --advertise-routes=192.168.88.0/24
+      ssh {{ ansible_user }}@{{ ansible_host }} tailscale up --advertise-routes=192.168.88.0/24 --accept-routes=false
 
+      ⚠️ 務必加 --accept-routes=false，否則 WSL 端會產生路由黑洞。
       完成後按 Enter 繼續...
   when: tailscale_check.rc != 0
+  tags: [tailscale]
+
+- name: Verify accept-routes is disabled
+  ansible.builtin.shell: tailscale status --json | python3 -c "import sys,json; p=json.load(sys.stdin)['Prefs']; sys.exit(1 if p.get('RouteAll',False) else 0)"
+  changed_when: false
+  failed_when: false
+  register: accept_routes_check
+  when: tailscale_check.rc == 0
+  tags: [tailscale]
+
+- name: Fail if accept-routes is enabled
+  ansible.builtin.fail:
+    msg: >
+      ⚠️ Tailscale accept-routes 為 true！這會導致 WSL 路由黑洞。
+      請執行：tailscale set --accept-routes=false
+  when: tailscale_check.rc == 0 and accept_routes_check.rc != 0
   tags: [tailscale]

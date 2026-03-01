@@ -83,8 +83,8 @@ ansible-playbook rpi5b.yml --tags mqtt
 
 ## 環境備註
 
-- **Pi-hole 跑在 RPi5B Docker 上**（`192.168.88.10:53`），TP-Link 路由器 DHCP 的主要 DNS 指向它，次要 DNS **必須留空**。設定與排查詳見 [pihole-tplink.md](.claude/skills/pihole-tplink.md)
-- **Docker 只跑在 RPi5B 上**，WSL 不跑 Docker，所以 WSL2 mirrored networking mode 不會有衝突
+- **Pi-hole 原生安裝在 RPi5B 上**（`192.168.88.10:53`，systemd pihole-FTL），TP-Link 路由器 DHCP 的主要 DNS 指向它，次要 DNS **必須留空**。設定與排查詳見 [pihole-tplink.md](.claude/skills/pihole-tplink.md)
+- **Docker 只跑在 RPi5B 上**（uptime-kuma + ntfy），WSL 不跑 Docker，所以 WSL2 mirrored networking mode 不會有衝突
 - WSL2 已設定 `networkingMode=mirrored`，可直連區網 `192.168.88.x`
 - **⚠️ WSL 的 Tailscale 絕不要 `--accept-routes=true`**——會建立 fwmark policy route 黑洞，導致區網連線全斷。詳見 [wsl-lan-connectivity.md](.claude/skills/wsl-lan-connectivity.md)
 

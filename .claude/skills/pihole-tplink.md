@@ -1,7 +1,7 @@
 ---
 name: pihole-tplink
 description: >
-  RPi5B Docker 上的 Pi-hole 搭配 TP-Link 路由器的廣告攔截設定與維護。當需要
+  RPi5B 原生安裝的 Pi-hole 搭配 TP-Link 路由器的廣告攔截設定與維護。當需要
   新增擋廣告名單、排查廣告未被攔截、設定 TP-Link DHCP DNS、或處理 Pi-hole v6
   API 操作時使用。
 ---
@@ -23,8 +23,8 @@ description: >
 |------|-----|
 | 位址 | `192.168.88.10` |
 | Web UI | `http://192.168.88.10/admin` |
-| 版本 | v6.x（Docker） |
-| 容器名稱 | `pihole` |
+| 版本 | v6.x（原生安裝） |
+| 服務 | `pihole-FTL`（systemd） |
 | DNS Port | 53 (TCP/UDP) |
 | Web Port | 80 |
 
@@ -66,37 +66,35 @@ Pi-hole v6 不再支援 `pihole -a adlist add`，需透過 REST API：
 
 ```bash
 # 1. 取得 session ID
-SID=$(docker exec pihole curl -s -X POST "http://localhost/api/auth" \
+SID=$(curl -s -X POST "http://localhost/api/auth" \
   -H "Content-Type: application/json" \
   -d '{"password":"YOUR_PASSWORD"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['session']['sid'])")
 
 # 2. 新增名單
-docker exec pihole curl -s -X POST "http://localhost/api/lists" \
+curl -s -X POST "http://localhost/api/lists" \
   -H "Content-Type: application/json" \
   -H "sid: $SID" \
   -d '{"address":"https://example.com/blocklist.txt","comment":"說明"}' \
   --url-query "type=block"
 
 # 3. 更新 gravity
-docker exec pihole pihole -g
+pihole -g
 ```
 
-## ⚠️ Docker 關鍵設定：listeningMode
+## 關鍵設定：listeningMode
 
-Pi-hole 跑在 Docker bridge 網路（`172.18.0.0/16`），外部設備的 DNS 查詢來源 IP 是 `192.168.88.x`。
-
-**`listeningMode` 必須設為 `"all"`**，否則 Pi-hole 會認為 `192.168.88.x` 不是本地子網而丟棄查詢。
+**`listeningMode` 必須設為 `"all"`**，讓 Pi-hole 接受所有介面的 DNS 查詢。
 
 ```toml
-# /etc/pihole/pihole.toml
+# /etc/pihole/pihole.toml（由 Ansible 模板管理）
 listeningMode = "all"    # ✅ 正確 — 接受所有來源
-# listeningMode = "LOCAL" # ❌ 錯誤 — 只接受 172.18.0.0/16，外部查詢全部被丟棄
+# listeningMode = "LOCAL" # ❌ 錯誤 — 可能拒絕非本地子網查詢
 ```
 
-安全性由 Docker port mapping 和主機防火牆控制，Pi-hole 不需要自己限制來源。
+安全性由主機防火牆控制。
 
-如果修改了此設定，需重啟容器：`docker restart pihole`
+如果修改了此設定，需重啟服務：`sudo systemctl restart pihole-FTL`
 
 ## 故障排查
 
@@ -104,18 +102,18 @@ listeningMode = "all"    # ✅ 正確 — 接受所有來源
 
 ```bash
 # 1. 確認 Pi-hole 運行中
-docker exec pihole pihole status
+pihole status
 
 # 2. 確認有設備在使用 Pi-hole DNS（最重要！）
 #    若只有 localhost，代表路由器 DNS 設定未生效
-SID=$(docker exec pihole curl -s -X POST \
+SID=$(curl -s -X POST \
   "http://localhost/api/auth" -H "Content-Type: application/json" \
   -d '{"password":"YOUR_PASSWORD"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)[\"session\"][\"sid\"])") && \
-docker exec pihole curl -s "http://localhost/api/stats/top_clients" -H "sid: $SID"
+curl -s "http://localhost/api/stats/top_clients" -H "sid: $SID"
 
 # 3. 測試 Pi-hole 本身是否正常攔截
-docker exec pihole dig ad.doubleclick.net @127.0.0.1 +short
+dig ad.doubleclick.net @127.0.0.1 +short
 # 預期回傳 0.0.0.0 = 攔截正常
 ```
 
@@ -125,7 +123,7 @@ docker exec pihole dig ad.doubleclick.net @127.0.0.1 +short
 |------|------|----------|
 | 只有 localhost 查詢，沒有其他設備 | `listeningMode` 不是 `"all"` 或路由器 DNS 未生效 | 確認 pihole.toml `listeningMode = "all"` + 重啟路由器 |
 | 部分廣告仍然出現 | 次要 DNS 填了路由器 IP | 次要 DNS 留空 |
-| 設備無法上網 | Pi-hole 容器掛了 | `docker restart pihole` |
+| 設備無法上網 | pihole-FTL 服務掛了 | `sudo systemctl restart pihole-FTL` |
 | Gravity 更新失敗 | 上游 DNS 或網路問題 | 檢查 RPi5B 網路連線 |
 
 ### 確認設備 DNS 是否指向 Pi-hole
@@ -138,29 +136,29 @@ docker exec pihole dig ad.doubleclick.net @127.0.0.1 +short
 ## 常用維護指令
 
 ```bash
-# 以下指令皆在 RPi5B 上執行（ssh root@192.168.88.10）
+# 以下指令皆在 RPi5B 上執行（ssh duofilm@192.168.88.10）
 
 # Pi-hole 狀態
-docker exec pihole pihole status
+pihole status
 
 # 更新擋廣告名單
-docker exec pihole pihole -g
+pihole -g
 
 # 查看即時 DNS 查詢紀錄
-docker exec pihole pihole -t
+pihole -t
 
 # 查詢特定網域是否被攔截
-docker exec pihole pihole -q example.com
+pihole -q example.com
 
 # 列出所有名單
-docker exec pihole pihole api lists
+pihole api lists
 
 # 重啟 Pi-hole
-docker restart pihole
+sudo systemctl restart pihole-FTL
 ```
 
 ## 相關檔案
 
-- `rpi5b/docker/docker-compose.yml` — Pi-hole Docker Compose 設定
-- `ansible/roles/rpi_docker/tasks/main.yml` — Ansible 自動部署
-- `scripts/setup-rpi5b.sh` — Shell 備援安裝腳本
+- `ansible/roles/rpi_pihole/` — Pi-hole Ansible role（原生安裝）
+- `ansible/roles/rpi_pihole/templates/pihole.toml.j2` — Pi-hole 設定模板
+- `ansible/roles/rpi_pihole/defaults/main.yml` — 預設變數（密碼、DNS、介面）
