@@ -92,10 +92,6 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
             "type": "command",
             "command": "~/dotfiles/scripts/claude-dispatch.sh PostToolUse",
             "async": true
-          },
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/qwen-advisor.sh"
           }
         ]
       }
@@ -108,10 +104,6 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
             "type": "command",
             "command": "~/dotfiles/scripts/claude-dispatch.sh Stop",
             "async": true
-          },
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/qwen-stop-summary.sh"
           },
           {
             "type": "command",
@@ -138,10 +130,6 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
             "type": "command",
             "command": "~/dotfiles/scripts/claude-dispatch.sh Notification permission_prompt",
             "async": true
-          },
-          {
-            "type": "command",
-            "command": "~/dotfiles/scripts/qwen-permission.sh"
           }
         ]
       }
@@ -176,10 +164,9 @@ echo "=========================================="
 echo ""
 echo "📋 已設定的 Hooks："
 echo "   • UserPromptSubmit → 綠色呼吸燈（running）"
-echo "   • Stop             → 七色彩虹閃（完成）+ Qwen 總結"
+echo "   • Stop             → 七色彩虹閃（完成）"
 echo "   • idle_prompt      → 橘色閃爍（提醒回來）"
 echo "   • permission       → 紅色閃爍 + 嗶（等你授權）"
-echo "   • PostToolUse      → 藍色呼吸燈（Qwen 分析）"
 echo ""
 echo "測試："
 echo "  curl -s -X POST 'https://ntfy.sh/claude-notify-rpi5b' \\"

@@ -101,7 +101,7 @@ vim ~/dotfiles/wsl/claude-hooks.json  # 修改 MQTT_HOST
 
 ```bash
 # notify.sh <事件類型> <標題> <內容>
-~/dotfiles/scripts/notify.sh stop "✅ Claude 完成回應" "Qwen 總結內容..."
+~/dotfiles/scripts/notify.sh stop "✅ Claude 完成回應" "任務完成摘要..."
 ```
 
 通知流程：
@@ -126,7 +126,6 @@ vim ~/dotfiles/wsl/claude-hooks.json  # 修改 MQTT_HOST
 | Claude 執行中 (running) | 綠色 | 慢呼吸 | 在跑，不用管 |
 | Claude 完成 (stop) | 七色 | 彩虹閃 3 輪 → 關燈 | 做完了 |
 | 需要權限 (permission) | 紅色 | 快閃 + 嗶 | 卡住了，快來 |
-| Qwen 分析 (advisor) | 藍色 | 慢呼吸 | 背景處理，不用管 |
 | 閒置提醒 (idle) | 橘色 | 閃爍 | 60 秒沒操作，提醒回來 |
 | 關燈 (off) | — | 熄滅 | — |
 
