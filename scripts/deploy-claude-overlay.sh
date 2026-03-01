@@ -1,9 +1,8 @@
 #!/bin/bash
 # deploy-claude-overlay.sh - Build + 部署 Claude Status Overlay (Tauri) 到 Windows
 #
-# 1. npm run tauri build（Tauri 透過 Windows Rust 工具鏈編譯 .exe）
-# 2. 複製 .exe 到 %LOCALAPPDATA%\claude-overlay\
-# 3. 殺舊進程 + 啟動新的
+# WSL 的 UNC path (\\wsl$\...) 不被 Windows cmd.exe / npm scripts 支援，
+# 所以先 robocopy 到 C:\temp 再 build，build 完把 .exe 部署到 %LOCALAPPDATA%。
 #
 # 用法:
 #   ~/dotfiles/scripts/deploy-claude-overlay.sh
@@ -15,7 +14,9 @@ source "$SCRIPT_DIR/../windows/deploy-paths.sh"
 
 SRC_DIR="$(cd "$SCRIPT_DIR/../claude-overlay" && pwd)"
 EXE_NAME="claude-overlay.exe"
-BUILT_EXE="$SRC_DIR/src-tauri/target/release/$EXE_NAME"
+WIN_BUILD_DIR='C:\temp\claude-overlay-build'
+WSL_BUILD_DIR="/mnt/c/temp/claude-overlay-build"
+BUILT_EXE="$WSL_BUILD_DIR/src-tauri/target/release/$EXE_NAME"
 DEST="$DEPLOY_OVERLAY_DIR"
 
 GREEN='\033[0;32m'
@@ -23,11 +24,23 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# ── Build ──
+# ── 同步原始碼到 Windows 本機 ──
+echo -e "${CYAN}=== 同步原始碼到 $WIN_BUILD_DIR ===${NC}"
+WIN_SRC=$(echo "$SRC_DIR" | sed 's|^/mnt/c|C:|;s|/|\\|g')
+
+# robocopy 同步（排除 node_modules/target/dist，保留快取）
+powershell.exe -ExecutionPolicy Bypass -Command "
+    robocopy '$WIN_SRC' '$WIN_BUILD_DIR' /MIR /XD node_modules target dist /NFL /NDL /NJH /NJS /NP
+" 2>/dev/null || true  # robocopy exit 1 = copied ok
+
+# ── Build（在 Windows 本機目錄）──
 echo -e "${CYAN}=== Build Claude Status Overlay ===${NC}"
-cd "$SRC_DIR"
-npm install
-npm run tauri build
+powershell.exe -ExecutionPolicy Bypass -Command "
+    \$env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','User') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','Machine')
+    Set-Location '$WIN_BUILD_DIR'
+    npm install 2>&1
+    npx tauri build 2>&1
+" 2>&1
 
 if [ ! -f "$BUILT_EXE" ]; then
     echo -e "${RED}錯誤: 找不到編譯產物: $BUILT_EXE${NC}"
