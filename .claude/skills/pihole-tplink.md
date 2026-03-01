@@ -86,15 +86,17 @@ pihole -g
 
 **`listeningMode` 必須設為 `"all"`**，讓 Pi-hole 接受所有介面的 DNS 查詢。
 
-```toml
-# /etc/pihole/pihole.toml（由 Ansible 模板管理）
-listeningMode = "all"    # ✅ 正確 — 接受所有來源
-# listeningMode = "LOCAL" # ❌ 錯誤 — 可能拒絕非本地子網查詢
+```bash
+# 查看目前設定
+pihole-FTL --config dns.listeningMode
+# 必須是 ALL
+
+# 修改（Ansible 已設定，通常不需手動改）
+sudo pihole-FTL --config dns.listeningMode all
+sudo systemctl restart pihole-FTL
 ```
 
 安全性由主機防火牆控制。
-
-如果修改了此設定，需重啟服務：`sudo systemctl restart pihole-FTL`
 
 ## 故障排查
 
@@ -160,5 +162,4 @@ sudo systemctl restart pihole-FTL
 ## 相關檔案
 
 - `ansible/roles/rpi_pihole/` — Pi-hole Ansible role（原生安裝）
-- `ansible/roles/rpi_pihole/templates/pihole.toml.j2` — Pi-hole 設定模板
 - `ansible/roles/rpi_pihole/defaults/main.yml` — 預設變數（密碼、DNS、介面）

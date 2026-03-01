@@ -1,9 +1,0 @@
-# Pi-hole v6 設定（Ansible 管理，勿手動修改）
-# 只模板化必要欄位，其餘讓 FTL 填預設值
-
-[dns]
-upstreams = [{{ pihole_upstream_dns | map('regex_replace', '^(.*)$', '"\1"') | join(', ') }}]
-listeningMode = "{{ pihole_listening_mode }}"
-
-[webserver]
-port = "80o"
