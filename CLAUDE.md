@@ -26,6 +26,7 @@
 | [mqtt-wiring](.claude/skills/mqtt-wiring.md) | MQTT topic 接線契約與登記表 |
 | [shared-contract](.claude/skills/shared-contract.md) | 跨腳本共用契約（lib 抽取、guard test、禁止複製） |
 | [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面、手機推播、API 約束 |
+| [rpi-ssh-setup](.claude/skills/rpi-ssh-setup.md) | RPi SSH 設定（Windows/WSL 雙 key、host key 清理） |
 | [deploy-integrity](.claude/skills/deploy-integrity.md) | 部署完整性免疫系統（pre-commit + Stop hook + marker 三層防護） |
 
 ## 規則

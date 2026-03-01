@@ -44,7 +44,7 @@ services:
       - "80:80/tcp"
     environment:
       - TZ=Asia/Taipei
-      - FTLCONF_webserver_api_password=${PIHOLE_PASSWORD:-changeme}
+      - FTLCONF_webserver_api_password=${PIHOLE_PASSWORD:-ks91309}
     volumes:
       - pihole-data:/etc/pihole
       - pihole-dnsmasq:/etc/dnsmasq.d

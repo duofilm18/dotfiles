@@ -1,5 +1,5 @@
 # RPi 家族共用變數
-remote_dotfiles: "{{ ansible_facts.user_dir }}/dotfiles"
+remote_dotfiles: "/home/{{ ansible_user }}/dotfiles"
 mqtt_broker: localhost
 mqtt_port: 1883
 
