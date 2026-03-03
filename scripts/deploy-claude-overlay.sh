@@ -1,22 +1,20 @@
 #!/bin/bash
-# deploy-claude-overlay.sh - Build + 部署 Claude Status Overlay (Tauri) 到 Windows
+# deploy-claude-overlay.sh - 部署 Claude Status Overlay 到 Windows
 #
-# WSL 的 UNC path (\\wsl$\...) 不被 Windows cmd.exe / npm scripts 支援，
-# 所以先 robocopy 到 C:\temp 再 build，build 完把 .exe 部署到 %LOCALAPPDATA%。
+# dotfiles 的 claude-overlay/ 是 source of truth，
+# Windows 端路徑由 windows/deploy-paths.sh 定義。
+# 本腳本同步兩邊並重啟 Windows 進程。
 #
 # 用法:
-#   ~/dotfiles/scripts/deploy-claude-overlay.sh
+#   ~/dotfiles/scripts/deploy-claude-overlay.sh          # 部署 + 重啟
+#   ~/dotfiles/scripts/deploy-claude-overlay.sh --diff    # 只顯示差異
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../windows/deploy-paths.sh"
 
-SRC_DIR="$(cd "$SCRIPT_DIR/../claude-overlay" && pwd)"
-EXE_NAME="claude-overlay.exe"
-WIN_BUILD_DIR='C:\temp\claude-overlay-build'
-WSL_BUILD_DIR="/mnt/c/temp/claude-overlay-build"
-BUILT_EXE="$WSL_BUILD_DIR/src-tauri/target/release/$EXE_NAME"
+SRC="$(cd "$SCRIPT_DIR/../claude-overlay" && pwd)"
 DEST="$DEPLOY_OVERLAY_DIR"
 
 GREEN='\033[0;32m'
@@ -24,58 +22,102 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# ── 同步原始碼到 Windows 本機 ──
-echo -e "${CYAN}=== 同步原始碼到 $WIN_BUILD_DIR ===${NC}"
-WIN_SRC=$(echo "$SRC_DIR" | sed 's|^/mnt/c|C:|;s|/|\\|g')
-
-# robocopy 同步（排除 node_modules/target/dist，保留快取）
-powershell.exe -ExecutionPolicy Bypass -Command "
-    robocopy '$WIN_SRC' '$WIN_BUILD_DIR' /MIR /XD node_modules target dist /NFL /NDL /NJH /NJS /NP
-" 2>/dev/null || true  # robocopy exit 1 = copied ok
-
-# ── Build（在 Windows 本機目錄）──
-echo -e "${CYAN}=== Build Claude Status Overlay ===${NC}"
-powershell.exe -ExecutionPolicy Bypass -Command "
-    \$env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','User') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','Machine')
-    Set-Location '$WIN_BUILD_DIR'
-    npm install 2>&1
-    npx tauri build 2>&1
-" 2>&1
-
-if [ ! -f "$BUILT_EXE" ]; then
-    echo -e "${RED}錯誤: 找不到編譯產物: $BUILT_EXE${NC}"
+# ── 前置檢查 ──
+if [ ! -d "$SRC" ]; then
+    echo -e "${RED}錯誤: 來源目錄不存在: $SRC${NC}"
     exit 1
 fi
 
-# ── Deploy ──
-echo ""
-echo -e "${CYAN}=== 部署到 $DEST ===${NC}"
-mkdir -p "$DEST"
+# 自動建立目標目錄
+if [ ! -d "$DEST" ]; then
+    echo -e "${CYAN}建立目標目錄: $DEST${NC}"
+    mkdir -p "$DEST"
+fi
 
-# 終止舊進程
+# ── --diff 模式：只顯示差異 ──
+if [ "${1:-}" = "--diff" ]; then
+    echo -e "${CYAN}=== dotfiles vs Windows 差異 ===${NC}"
+    has_diff=false
+    for f in "$SRC"/*.py; do
+        [ -f "$f" ] || continue
+        name="$(basename "$f")"
+        if [ -f "$DEST/$name" ]; then
+            if ! diff -q "$f" "$DEST/$name" >/dev/null 2>&1; then
+                echo -e "${RED}不同: $name${NC}"
+                diff --color=auto "$f" "$DEST/$name" || true
+                echo ""
+                has_diff=true
+            fi
+        else
+            echo -e "${RED}缺少: $name（Windows 端不存在）${NC}"
+            has_diff=true
+        fi
+    done
+    if [ "$has_diff" = false ]; then
+        echo -e "${GREEN}兩邊完全一致${NC}"
+    fi
+    exit 0
+fi
+
+# ── 部署 ──
+echo -e "${CYAN}=== 部署 Claude Status Overlay ===${NC}"
+echo "  來源: $SRC"
+echo "  目標: $DEST"
+echo ""
+
+copied=0
+for f in "$SRC"/*.py; do
+    [ -f "$f" ] || continue
+    name="$(basename "$f")"
+    if ! diff -q "$f" "$DEST/$name" >/dev/null 2>&1; then
+        cp "$f" "$DEST/$name"
+        echo -e "  ${GREEN}更新${NC}: $name"
+        copied=$((copied + 1))
+    fi
+done
+
+if [ "$copied" -eq 0 ]; then
+    echo -e "  ${GREEN}所有檔案已是最新${NC}"
+    exit 0
+fi
+echo ""
+echo -e "  已更新 ${GREEN}$copied${NC} 個檔案"
+
+# ── 重啟 Windows 進程 ──
+echo ""
+echo -e "${CYAN}=== 重啟 Claude Status Overlay ===${NC}"
+
+# 終止舊進程（殺所有 command line 含 claude-overlay 的 python/pythonw）
 powershell.exe -Command "
-    Get-Process 'claude-overlay' -ErrorAction SilentlyContinue |
-        Stop-Process -Force
+    Get-Process python*, pythonw* -ErrorAction SilentlyContinue | ForEach-Object {
+        try {
+            \$cmd = (Get-WmiObject Win32_Process -Filter \"ProcessId=\$(\$_.Id)\").CommandLine
+            if (\$cmd -like '*claude-overlay*') { Stop-Process -Id \$_.Id -Force }
+        } catch {}
+    }
 " 2>/dev/null || true
 sleep 1
 
-cp "$BUILT_EXE" "$DEST/$EXE_NAME"
-echo -e "  ${GREEN}已複製${NC}: $EXE_NAME"
-
-# ── 啟動 ──
-echo ""
-echo -e "${CYAN}=== 啟動 Claude Status Overlay ===${NC}"
-WIN_EXE=$(echo "$DEPLOY_OVERLAY_MAIN" | sed 's|/mnt/c|C:|;s|/|\\|g')
-powershell.exe -Command "Start-Process '$WIN_EXE'" 2>/dev/null
+# 啟動新進程
+WIN_MAIN=$(echo "$DEPLOY_OVERLAY_MAIN" | sed 's|/mnt/c|C:|;s|/|\\|g')
+WIN_DIR=$(echo "$DEPLOY_OVERLAY_DIR" | sed 's|/mnt/c|C:|;s|/|\\|g')
+powershell.exe -Command "Start-Process pythonw -ArgumentList '$WIN_MAIN' -WorkingDirectory '$WIN_DIR'" 2>/dev/null
 
 sleep 2
 RUNNING=$(powershell.exe -Command "
-    (Get-Process 'claude-overlay' -ErrorAction SilentlyContinue) -ne \$null
+    \$found = \$false
+    Get-Process pythonw -ErrorAction SilentlyContinue | ForEach-Object {
+        try {
+            \$cmd = (Get-WmiObject Win32_Process -Filter \"ProcessId=\$(\$_.Id)\").CommandLine
+            if (\$cmd -like '*claude-overlay*') { \$found = \$true }
+        } catch {}
+    }
+    \$found
 " 2>/dev/null | tr -d '\r')
 
 if [ "$RUNNING" = "True" ]; then
-    echo -e "  ${GREEN}Claude Status Overlay 已啟動${NC}"
+    echo -e "  ${GREEN}Claude Status Overlay 已重啟${NC}"
 else
-    echo -e "  ${RED}啟動失敗，請手動檢查${NC}"
+    echo -e "  ${RED}Claude Status Overlay 啟動失敗，請手動檢查${NC}"
     exit 1
 fi

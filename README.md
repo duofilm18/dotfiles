@@ -37,13 +37,21 @@ dotfiles/
 │   ├── check-deploy.sh
 │   ├── check-rpi5b-deploy.sh
 │   ├── claude-dispatch.sh
+│   ├── claude-hook.sh
 │   ├── deploy-claude-overlay.sh
+│   ├── deploy-ime-indicator.sh
+│   ├── ime-mqtt-publisher.sh
 │   ├── install-docker.sh
 │   ├── install-lighthouse.sh
 │   ├── install.sh
 │   ├── launch-claude-overlay.sh
+│   ├── notify.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b.sh
+│   ├── test-hooks.sh
+│   ├── test-ime-local-hub.sh
+│   ├── test-mqtt.sh
+│   ├── tmux-mqtt-colors.sh
 │   ├── tmux-switch-project.sh
 │   └── update-readme.sh
 ├── shared/
@@ -101,7 +109,7 @@ vim ~/dotfiles/wsl/claude-hooks.json  # 修改 MQTT_HOST
 
 ```bash
 # notify.sh <事件類型> <標題> <內容>
-~/dotfiles/scripts/notify.sh stop "✅ Claude 完成回應" "任務完成摘要..."
+~/dotfiles/scripts/notify.sh stop "✅ Claude 完成回應" "Qwen 總結內容..."
 ```
 
 通知流程：
@@ -126,6 +134,7 @@ vim ~/dotfiles/wsl/claude-hooks.json  # 修改 MQTT_HOST
 | Claude 執行中 (running) | 綠色 | 慢呼吸 | 在跑，不用管 |
 | Claude 完成 (stop) | 七色 | 彩虹閃 3 輪 → 關燈 | 做完了 |
 | 需要權限 (permission) | 紅色 | 快閃 + 嗶 | 卡住了，快來 |
+| Qwen 分析 (advisor) | 藍色 | 慢呼吸 | 背景處理，不用管 |
 | 閒置提醒 (idle) | 橘色 | 閃爍 | 60 秒沒操作，提醒回來 |
 | 關燈 (off) | — | 熄滅 | — |
 
@@ -153,21 +162,6 @@ cd C:\Users\<user>\dotfiles\windows
 ~/dotfiles/scripts/deploy-ime-indicator.sh          # 部署 + 自動重啟
 ~/dotfiles/scripts/deploy-ime-indicator.sh --diff    # 只看差異
 ```
-
-### Claude Status Overlay（Windows 桌面視窗）
-
-Tauri 桌面應用，直接讀取 WSL `/tmp/claude-led-state-*` 狀態檔，顯示各 Claude 專案的即時狀態。有標準 `- □ X` 控制鈕、深色主題、卡片式 layout。零硬體 / MQTT / 網路依賴。
-
-**狀態顏色：** RUNNING=藍、WAITING=黃、COMPLETED=綠、IDLE=橘、STALE=灰
-
-**前置需求：** Windows 安裝 Rust 工具鏈（`rustup`）+ Node.js
-
-**部署：**
-```bash
-~/dotfiles/scripts/deploy-claude-overlay.sh    # build + 部署 .exe + 重啟
-```
-
-**啟動方式：** tmux 啟動時自動透過 `.tmux.conf` run-shell 啟動（singleton，不會重複開）。
 
 ### Stream Deck XL 監控（Windows）
 

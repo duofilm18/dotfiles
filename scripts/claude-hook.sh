@@ -1,0 +1,156 @@
+#!/bin/bash
+# claude-hook.sh - 單一入口狀態機（對齊 ESP32 5 狀態）
+#
+# 用法: claude-hook.sh <event> [matcher] [project] [window_index]
+#   由 settings.json hooks 統一呼叫，stdin 接收 Claude hook JSON
+#
+# 5 狀態: IDLE / RUNNING / WAITING / COMPLETED / ERROR
+# 功能: 事件→狀態映射 · 2 秒去重 · 智慧抑制 · 寫入 tmux @claude_state
+#
+# 資料流: Hook → tmux @claude_state → [State Publisher] → MQTT → { Deck, LED }
+
+set -euo pipefail
+
+EVENT="$1"
+MATCHER="${2:-}"
+PROJECT="${3:-default}"
+WINDOW_IDX="${4:-}"
+
+ACTIVITY_FILE="/tmp/claude-activity-${PROJECT}"
+
+# 記錄活動時間戳（在鎖之前，確保 catch-all hook 搶到鎖也能更新）
+date +%s > "$ACTIVITY_FILE"
+
+# 從 stdin 讀取 JSON（非阻塞，可能為空）
+INPUT=$(cat)
+
+# 檔案鎖：防止多個 Hook 同時讀寫狀態檔造成競爭（per-project）
+exec 200>/tmp/claude-led-${PROJECT}.lock
+flock -n 200 || exit 0
+
+STATE_FILE="/tmp/claude-led-state-${PROJECT}"
+IDLE_PENDING="/tmp/claude-idle-pending-${PROJECT}"
+
+# ─── 事件→狀態映射 ───────────────────────────────────
+
+resolve_state() {
+    case "$EVENT" in
+        UserPromptSubmit)
+            echo "RUNNING"
+            ;;
+        PreToolUse)
+            case "$MATCHER" in
+                AskUserQuestion) echo "WAITING" ;;
+                *) echo "" ;;
+            esac
+            ;;
+        PostToolUse)
+            case "$MATCHER" in
+                AskUserQuestion) echo "RUNNING" ;;
+                *) echo "" ;;
+            esac
+            ;;
+        Notification)
+            case "$MATCHER" in
+                idle_prompt)       echo "IDLE" ;;
+                permission_prompt) echo "WAITING" ;;
+                *) echo "" ;;
+            esac
+            ;;
+        Stop)
+            echo "COMPLETED"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
+NEW_STATE=$(resolve_state)
+
+# 無需狀態切換則退出
+if [ -z "$NEW_STATE" ]; then
+    exit 0
+fi
+
+# ─── 智慧抑制 ─────────────────────────────────────────
+
+CURRENT_STATE=""
+if [ -f "$STATE_FILE" ]; then
+    CURRENT_STATE=$(cat "$STATE_FILE" 2>/dev/null | head -1)
+fi
+
+# WAITING 中收到 COMPLETED → 忽略（使用者還沒回應，不該切走）
+if [ "$CURRENT_STATE" = "WAITING" ] && [ "$NEW_STATE" = "COMPLETED" ]; then
+    exit 0
+fi
+
+# ─── 2 秒去重 ─────────────────────────────────────────
+
+DEDUP_FILE="/tmp/claude-led-dedup-${PROJECT}"
+NOW=$(date +%s)
+
+if [ "$CURRENT_STATE" = "$NEW_STATE" ] && [ -f "$DEDUP_FILE" ]; then
+    LAST_TIME=$(cat "$DEDUP_FILE" 2>/dev/null | head -1)
+    if [ -n "$LAST_TIME" ]; then
+        DIFF=$((NOW - LAST_TIME))
+        if [ "$DIFF" -lt 2 ]; then
+            exit 0
+        fi
+    fi
+fi
+
+# 更新去重時間戳
+echo "$NOW" > "$DEDUP_FILE"
+
+# ─── 狀態切換 ─────────────────────────────────────────
+
+echo "$NEW_STATE" > "$STATE_FILE"
+
+# RUNNING 時清除 idle-pending（新訊息進來，取消回 idle 計時）
+if [ "$NEW_STATE" = "RUNNING" ]; then
+    rm -f "$IDLE_PENDING"
+    # RUNNING timeout：超過 60 秒無活動自動切 IDLE
+    # 處理中斷回應等 Stop 事件未觸發的情況
+    (
+        exec 200>&-  # 釋放 flock，避免背景進程占住鎖
+        while true; do
+            sleep 30
+            [ "$(head -1 "$STATE_FILE" 2>/dev/null)" = "RUNNING" ] || exit 0
+            LAST=$(head -1 "$ACTIVITY_FILE" 2>/dev/null || echo 0)
+            NOW=$(date +%s)
+            if [ $((NOW - ${LAST:-0})) -ge 60 ]; then
+                echo "IDLE" > "$STATE_FILE"
+                [ -n "$WINDOW_IDX" ] && tmux set-window-option -t ":$WINDOW_IDX" @claude_state "idle" 2>/dev/null || true
+                exit 0
+            fi
+        done
+    ) &
+    disown
+fi
+
+# 寫入 tmux @claude_state（State Publisher 會輪詢並發 MQTT）
+LED_KEY=$(echo "$NEW_STATE" | tr '[:upper:]' '[:lower:]')
+if [ -n "$WINDOW_IDX" ]; then
+    tmux set-window-option -t ":$WINDOW_IDX" @claude_state "$LED_KEY" 2>/dev/null || true
+fi
+
+# ─── Stop 後自動回 IDLE ──────────────────────────────
+
+if [ "$EVENT" = "Stop" ]; then
+    (
+        exec 200>&-  # 釋放 flock，避免背景進程占住鎖
+        # Rainbow 3輪×7色×1秒=21秒，等 22 秒後自動切 IDLE
+        touch "$IDLE_PENDING"
+        sleep 22
+        if [ -f "$IDLE_PENDING" ]; then
+            echo "IDLE" > "$STATE_FILE"
+            if [ -n "$WINDOW_IDX" ]; then
+                tmux set-window-option -t ":$WINDOW_IDX" @claude_state "idle" 2>/dev/null || true
+            fi
+        fi
+    ) &
+    disown
+fi
+
+exit 0

@@ -1,5 +1,5 @@
 ---
-# roles/rpi_mosquitto - Mosquitto MQTT broker
+# roles/rpi_mosquitto - Mosquitto MQTT broker + lgpio 編譯
 
 - name: Install mosquitto
   ansible.builtin.apt:
@@ -27,4 +27,5 @@
     enabled: true
     state: started
   tags: [mosquitto]
+
 

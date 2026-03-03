@@ -5,10 +5,30 @@
 # 用法: claude-dispatch.sh <event> [matcher]
 
 EVENT="$1"
+MATCHER="${2:-}"
+SCRIPT_DIR="$(dirname "$0")"
 # git repo root 取名，不怕 cd 子目錄
 # 注意：basename "" 回傳空字串但 exit=0，所以不能用 || fallback
 PROJECT="$(git rev-parse --show-toplevel 2>/dev/null)"
 PROJECT="$(basename "${PROJECT:-$PWD}")"
+
+# 取得 tmux window index（供 claude-hook.sh 寫入 @claude_state）
+WINDOW_IDX=""
+if [ -n "$TMUX" ]; then
+    WINDOW_IDX=$(tmux display-message -p '#{window_index}' 2>/dev/null || true)
+fi
+
+# 自動標記 tmux window（供 State Publisher 匹配）
+if [ -n "$TMUX" ] && [ "$EVENT" = "UserPromptSubmit" ]; then
+    tmux rename-window "$PROJECT" 2>/dev/null || true
+    tmux set-window-option @project "$PROJECT" 2>/dev/null || true
+fi
+
+# 從 stdin 讀取 hook JSON（非阻塞，可能為空）
+INPUT=$(timeout 1 cat 2>/dev/null || true)
+
+# ── LED 狀態機（背景） ──
+echo "$INPUT" | (timeout 5 "$SCRIPT_DIR/claude-hook.sh" "$EVENT" "$MATCHER" "$PROJECT" "$WINDOW_IDX" || true) &>/dev/null &
 
 # ── 手機通知（Stop 事件） ──
 if [ "$EVENT" = "Stop" ]; then

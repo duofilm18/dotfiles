@@ -23,14 +23,19 @@ description: >
 
 | 變數 | Windows 路徑 | 用途 |
 |------|-------------|------|
+| `DEPLOY_IME_DIR` | `%LOCALAPPDATA%\IME_Indicator` | IME 中英指示器 |
 | `DEPLOY_LHM_DIR` | `%LOCALAPPDATA%\LibreHardwareMonitor` | 硬體監控 |
+| `DEPLOY_SD_PLUGIN` | `%USERPROFILE%\com.duofilm.claude-monitor.sdPlugin` | Stream Deck plugin |
 
 ## 新增路徑的流程
 
 1. 在 `deploy-paths.ps1` 和 `deploy-paths.sh` 同時加新變數
 2. 腳本中 `source` 或 `. ` 引用，使用變數
 3. 更新本 skill 的路徑表格
+4. `git commit` 時 pre-commit hook 會自動驗證無硬寫路徑
 
 ## 歷史教訓
 
-- 路徑散落在各腳本，沒有單一來源 → 部署不同步。現在統一到登記表。
+- `install.ps1` 裝到 `AppData\Local\`，`deploy-ime-indicator.sh` 部署到 `C:\Users\duofilm\` → 兩邊不同步，修了 A 沒修到 B
+- 此問題反覆發生 4-5 次，每次都是「以為部署了，實際執行的是另一份」
+- 根因：路徑散落在各腳本，沒有單一來源 → 現在統一到登記表

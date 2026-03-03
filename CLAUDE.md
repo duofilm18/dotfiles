@@ -16,8 +16,11 @@
 | [pihole-tplink](.claude/skills/pihole-tplink.md) | Pi-hole + TP-Link 路由器廣告攔截設定與排查 |
 | [architecture-health](.claude/skills/architecture-health.md) | 系統層級架構健康原則（裝置邊界、語意介面、硬體歸屬） |
 | [background-script](.claude/skills/background-script.md) | 背景常駐腳本的進程組管理規範 |
+| [unidirectional-state](.claude/skills/unidirectional-state.md) | 單向資料流與被動顯示器架構規範 |
+| [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md) | IME 檔案介面契約（格式、路徑） |
+| [streamdeck](.claude/skills/streamdeck.md) | Stream Deck 硬體規格、按鍵佈局與操作 |
 | [skill-creator](.claude/skills/skill-creator.md) | Skill 撰寫規範（基於 Anthropic 官方） |
-| [testing](.claude/skills/testing.md) | Bats 測試慣例 |
+| [testing](.claude/skills/testing.md) | Bats 測試慣例與 LED E2E 流程 |
 | [deploy-paths](.claude/skills/deploy-paths.md) | Windows 部署路徑契約（禁止硬寫路徑） |
 | [font-subset](.claude/skills/font-subset.md) | Noto Sans TC 字型 subset 流程 |
 | [lighthouse](.claude/skills/lighthouse.md) | Lighthouse 效能測試（WSL 限制與替代方案） |
@@ -26,8 +29,8 @@
 | [mqtt-wiring](.claude/skills/mqtt-wiring.md) | MQTT topic 接線契約與登記表 |
 | [shared-contract](.claude/skills/shared-contract.md) | 跨腳本共用契約（lib 抽取、guard test、禁止複製） |
 | [rpi5b-services](.claude/skills/rpi5b-services.md) | RPi5B 服務介面、手機推播、API 約束 |
-| [rpi-ssh-setup](.claude/skills/rpi-ssh-setup.md) | RPi SSH 設定（Windows/WSL 雙 key、host key 清理） |
 | [deploy-integrity](.claude/skills/deploy-integrity.md) | 部署完整性免疫系統（pre-commit + Stop hook + marker 三層防護） |
+| [rpi-ssh-setup](.claude/skills/rpi-ssh-setup.md) | RPi SSH 設定（Windows/WSL 雙 key、host key 清理） |
 | [removal-checklist](.claude/skills/removal-checklist.md) | 移除元件時的殘留引用掃描清單 |
 
 ## 規則
@@ -42,10 +45,13 @@
 8. **MQTT 接線登記** - 新增/修改 MQTT topic 必須更新 [mqtt-wiring](.claude/skills/mqtt-wiring.md) 登記表
 9. **跨腳本共用契約** - 新建腳本若用到已存在的 payload 格式 / config / 常數，必須 source `scripts/lib/` 共用 lib，禁止複製貼上。詳見 [shared-contract](.claude/skills/shared-contract.md)
 10. **背景腳本進程組管理** - 新建常駐背景腳本必須用 `scripts/lib/pidfile.sh` 管理生命週期，禁止自行寫 PID boilerplate。詳見 [background-script](.claude/skills/background-script.md)
-11. **寫完要測試** - 修改功能 code 後必須補/更新對應測試（Bats 或 pytest），測試全過才 commit。詳見 [testing](.claude/skills/testing.md)
-12. **Windows 路徑契約** - 碰到 Windows 部署路徑時禁止硬寫，必須用變數或 registry 查詢。詳見 [deploy-paths](.claude/skills/deploy-paths.md)
-13. **部署完整性抗體** - 新增 Ansible 管理的 systemd service 時，必須在 `tests/deploy_integrity.bats` 加對應的 DI-* 測試（腳本存在、template 存在、task 引用、handler 存在）。詳見 [deploy-integrity](.claude/skills/deploy-integrity.md)
-14. **移除元件必掃殘留** - 砍掉腳本、服務、hook 或任何跨檔案元件時，必須跑 [removal-checklist](.claude/skills/removal-checklist.md) 掃描清單，同一個 commit 清乾淨
+11. **單向資料流** - 設計多端狀態同步（MQTT、Stream Deck、LED）時，必須遵循 Source → Publisher → Consumer 單向流，Consumer 不可寫回 Source。詳見 [unidirectional-state](.claude/skills/unidirectional-state.md)
+12. **架構健康** - 新增跨裝置元件時，必須確認硬體邏輯歸屬正確（顯示優先權由顯示端決定、語意介面不含硬體細節）。詳見 [architecture-health](.claude/skills/architecture-health.md)
+13. **寫完要測試** - 修改功能 code 後必須補/更新對應測試（Bats 或 pytest），測試全過才 commit。詳見 [testing](.claude/skills/testing.md)
+14. **Windows 路徑契約** - 碰到 Windows 部署路徑時禁止硬寫，必須用變數或 registry 查詢。詳見 [deploy-paths](.claude/skills/deploy-paths.md)
+15. **IME 介面契約** - 修改 IME 相關邏輯（IME_Indicator、ime-mqtt-publisher、tmux status bar）時，必須確認 writer/reader 格式一致（只允許 `zh`/`en`）。詳見 [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md)
+16. **部署完整性抗體** - 新增 Ansible 管理的 systemd service 時，必須在 `tests/deploy_integrity.bats` 加對應的 DI-* 測試（腳本存在、template 存在、task 引用、handler 存在）。詳見 [deploy-integrity](.claude/skills/deploy-integrity.md)
+17. **移除元件必掃殘留** - 砍掉腳本、服務、hook 或任何跨檔案元件時，必須跑 [removal-checklist](.claude/skills/removal-checklist.md) 掃描清單，同一個 commit 清乾淨
 
 ## 目錄結構
 

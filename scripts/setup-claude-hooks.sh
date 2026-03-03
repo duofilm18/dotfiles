@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup-claude-hooks.sh - 設定 Claude Code Hooks（ntfy 推播 + deploy guard）
+# setup-claude-hooks.sh - 設定 Claude Code Hooks（狀態顯示 + ntfy 推播 + deploy guard）
 # 用法: ~/dotfiles/scripts/setup-claude-hooks.sh
 
 set -e
@@ -17,10 +17,46 @@ if ! command -v jq &>/dev/null; then
     sudo apt install -y jq
 fi
 
-# 生成 hooks JSON
+# 生成 hooks JSON（所有 hook 都呼叫 claude-dispatch.sh 統一分發）
 NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh UserPromptSubmit",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh PreToolUse AskUserQuestion",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh PostToolUse",
+            "async": true
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
@@ -33,6 +69,28 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
           {
             "type": "command",
             "command": "~/dotfiles/scripts/check-deploy.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh Notification idle_prompt",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh Notification permission_prompt",
+            "async": true
           }
         ]
       }
@@ -66,7 +124,11 @@ echo "  ✅ Claude Code Hooks 設定完成！"
 echo "=========================================="
 echo ""
 echo "📋 已設定的 Hooks："
-echo "   • Stop → ntfy 手機推播 + deploy guard 檢查"
+echo "   • UserPromptSubmit → 狀態更新（running）"
+echo "   • PostToolUse      → 狀態更新"
+echo "   • Stop             → 狀態更新 + ntfy 手機推播 + deploy guard"
+echo "   • idle_prompt      → 狀態更新（idle）"
+echo "   • permission       → 狀態更新（waiting）"
 echo ""
 echo "測試："
 echo "  curl -s -X POST 'https://ntfy.sh/claude-notify-rpi5b' \\"
