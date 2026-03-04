@@ -46,6 +46,7 @@ dotfiles/
 │   ├── install.sh
 │   ├── launch-claude-overlay.sh
 │   ├── notify.sh
+│   ├── play-melody.sh
 │   ├── setup-claude-hooks.sh
 │   ├── setup-rpi5b.sh
 │   ├── test-hooks.sh

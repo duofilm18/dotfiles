@@ -30,6 +30,30 @@ INPUT=$(timeout 1 cat 2>/dev/null || true)
 # ── LED 狀態機（背景） ──
 echo "$INPUT" | (timeout 5 "$SCRIPT_DIR/claude-hook.sh" "$EVENT" "$MATCHER" "$PROJECT" "$WINDOW_IDX" || true) &>/dev/null &
 
+# ── 音效決策（所有音效邏輯集中於此） ──
+MELODY=""
+case "$EVENT/$MATCHER" in
+    UserPromptSubmit/)              MELODY="short_running" ;;
+    PreToolUse/AskUserQuestion)     MELODY="nokia" ;;
+    Notification/permission_prompt) MELODY="nokia" ;;
+    Notification/idle_prompt)       MELODY="minimal_double" ;;
+    Stop/)                          MELODY="star_wars" ;;
+esac
+
+# Git 操作音效（PostToolUse Bash|Edit|Write|Read）
+if [ -z "$MELODY" ] && [ "$EVENT" = "PostToolUse" ] && [ -n "$INPUT" ]; then
+    GIT_CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+    case "${GIT_CMD:-}" in
+        *"git push"*)   MELODY="windows_xp" ;;
+        *"git commit"*) MELODY="short_success" ;;
+        *"git add"*)    MELODY="minimal_double" ;;
+    esac
+fi
+
+if [ -n "$MELODY" ]; then
+    nohup "$SCRIPT_DIR/play-melody.sh" "$MELODY" </dev/null &>/dev/null &
+fi
+
 # ── 手機通知（Stop 事件） ──
 if [ "$EVENT" = "Stop" ]; then
     curl -s -X POST "https://ntfy.sh/claude-notify-rpi5b" \

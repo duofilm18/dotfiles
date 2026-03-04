@@ -19,6 +19,7 @@ tests/
 ├── flock.bats             # T-B1, T-B2: activity before lock
 ├── timeout.bats           # T-TO1~TO8: 背景 timeout + flock 釋放
 ├── state_publisher.bats   # SP-1~SP-10: build_payload、blink、debounce
+├── deploy_integrity.bats  # DI-*: 靜態結構檢查（腳本、template、handler、接線）
 └── led_e2e.bats           # LED 端到端（需 RPi5B MQTT）
 ```
 
@@ -41,6 +42,19 @@ bats tests/ --filter "T1"  # 過濾
 | `assert_melody <pattern>` | 驗證 MELODY_LOG 最後一行含 pattern |
 | `assert_no_melody <before_count>` | 驗證 MELODY_LOG 行數未增加 |
 | `melody_line_count` | 回傳 MELODY_LOG 目前行數 |
+
+## 接線契約測試（deploy_integrity.bats）
+
+介面層引用底層元件時，必須有靜態檢查確認兩端都存在且接線完整。
+底層被移除時，測試要**立刻失敗**（而不是跟著消失）。
+
+| 模式 | 測試做法 |
+|------|----------|
+| 腳本存在 | `[ -f "$DOTFILES/scripts/xxx.sh" ]` |
+| 介面引用底層 | `grep -q 'xxx.sh' interface.sh` |
+| 映射表一致 | 從 test_helper 抽名稱，逐一確認 dispatch 有對應 |
+
+新增管線時，在 `deploy_integrity.bats` 加對應的 DI-* 測試。
 
 ## 新增測試步驟
 

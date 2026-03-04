@@ -26,6 +26,37 @@ DOTFILES="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
         "$DOTFILES/ansible/roles/wsl/handlers/main.yml"
 }
 
+# ── dispatch ↔ melody 接線完整性 ──
+
+@test "DI-10: play-melody.sh 腳本存在" {
+    [ -f "$DOTFILES/scripts/play-melody.sh" ]
+}
+
+@test "DI-11: claude-dispatch.sh 引用 play-melody.sh" {
+    grep -q 'play-melody\.sh' "$DOTFILES/scripts/claude-dispatch.sh"
+}
+
+@test "DI-12: claude-dispatch.sh 有音效決策區塊" {
+    grep -q 'MELODY=' "$DOTFILES/scripts/claude-dispatch.sh"
+}
+
+@test "DI-13: dispatch 音效映射與 test_helper 一致" {
+    # 從 test_helper.bash 抽出所有 melody 名稱
+    local helper_melodies
+    helper_melodies=$(grep -oP 'melody="\K[^"]+' "$DOTFILES/tests/test_helper.bash" | sort -u)
+
+    local missing=""
+    for m in $helper_melodies; do
+        if ! grep -q "$m" "$DOTFILES/scripts/claude-dispatch.sh"; then
+            missing="$missing $m"
+        fi
+    done
+    if [ -n "$missing" ]; then
+        echo "dispatch.sh 缺少 melody:$missing"
+        return 1
+    fi
+}
+
 # ── Pre-commit hook 由 Ansible 管理 ──
 
 @test "DI-5: pre-commit hook 有跑 deploy_integrity" {
