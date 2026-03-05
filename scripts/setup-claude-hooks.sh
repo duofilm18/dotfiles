@@ -21,6 +21,18 @@ fi
 NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh SessionStart",
+            "async": true
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "matcher": "",
@@ -45,6 +57,18 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
         ]
       }
     ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh PermissionRequest",
+            "async": true
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Bash|Edit|Write|Read",
@@ -52,6 +76,30 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
           {
             "type": "command",
             "command": "~/dotfiles/scripts/claude-dispatch.sh PostToolUse",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh PostToolUseFailure",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh SubagentStart",
             "async": true
           }
         ]
@@ -69,6 +117,42 @@ NEW_HOOKS_JSON=$(cat <<'HOOKSJSON'
           {
             "type": "command",
             "command": "~/dotfiles/scripts/check-deploy.sh"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh TaskCompleted",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh TeammateIdle",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/dotfiles/scripts/claude-dispatch.sh SessionEnd",
+            "async": true
           }
         ]
       }

@@ -33,20 +33,27 @@ echo "$INPUT" | (timeout 5 "$SCRIPT_DIR/claude-hook.sh" "$EVENT" "$MATCHER" "$PR
 # ── 音效決策（所有音效邏輯集中於此） ──
 MELODY=""
 case "$EVENT/$MATCHER" in
-    UserPromptSubmit/)              MELODY="short_running" ;;
+    SessionStart/)                  MELODY="windows_xp" ;;
+    UserPromptSubmit/)              MELODY="minimal_beep" ;;
     PreToolUse/AskUserQuestion)     MELODY="nokia" ;;
-    Notification/permission_prompt) MELODY="nokia" ;;
-    Notification/idle_prompt)       MELODY="minimal_double" ;;
-    Stop/)                          MELODY="star_wars" ;;
+    PermissionRequest/)             MELODY="question" ;;
+    PostToolUseFailure/)            MELODY="short_error" ;;
+    Notification/idle_prompt)       MELODY="soft_chime" ;;
+    Notification/permission_prompt) MELODY="alert_ping" ;;
+    SubagentStart/)                 MELODY="minimal_double" ;;
+    Stop/)                          MELODY="default_completed" ;;
+    TaskCompleted/)                 MELODY="short_success" ;;
+    SessionEnd/)                    MELODY="star_wars" ;;
+    TeammateIdle/)                  MELODY="minimal_triple" ;;
 esac
 
 # Git 操作音效（PostToolUse Bash|Edit|Write|Read）
 if [ -z "$MELODY" ] && [ "$EVENT" = "PostToolUse" ] && [ -n "$INPUT" ]; then
     GIT_CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
     case "${GIT_CMD:-}" in
-        *"git push"*)   MELODY="windows_xp" ;;
-        *"git commit"*) MELODY="short_success" ;;
-        *"git add"*)    MELODY="minimal_double" ;;
+        *"git push"*)   MELODY="super_mario" ;;
+        *"git commit"*) MELODY="tetris" ;;
+        *"git add"*)    MELODY="short_running" ;;
     esac
 fi
 

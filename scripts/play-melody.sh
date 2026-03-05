@@ -108,6 +108,20 @@ case "$MELODY" in
         play "600,60 0,30 600,60 0,30 600,60"
         ;;
 
+    # === Notification Chimes ===
+    doorbell)
+        play "880,150 0,80 659,200"
+        ;;
+    question)
+        play "523,100 0,50 784,180"
+        ;;
+    soft_chime)
+        play "784,100 0,60 659,100 0,60 523,150"
+        ;;
+    alert_ping)
+        play "1047,80 0,60 1047,80"
+        ;;
+
     *)
         play "800,200"
         ;;

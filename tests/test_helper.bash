@@ -40,19 +40,26 @@ fire() {
     # 音效決策（對齊 claude-dispatch.sh）
     local melody=""
     case "$event/$matcher" in
-        UserPromptSubmit/)              melody="short_running" ;;
+        SessionStart/)                  melody="windows_xp" ;;
+        UserPromptSubmit/)              melody="minimal_beep" ;;
         PreToolUse/AskUserQuestion)     melody="nokia" ;;
-        Notification/permission_prompt) melody="nokia" ;;
-        Notification/idle_prompt)       melody="minimal_double" ;;
-        Stop/)                          melody="star_wars" ;;
+        PermissionRequest/)             melody="question" ;;
+        PostToolUseFailure/)            melody="short_error" ;;
+        Notification/idle_prompt)       melody="soft_chime" ;;
+        Notification/permission_prompt) melody="alert_ping" ;;
+        SubagentStart/)                 melody="minimal_double" ;;
+        Stop/)                          melody="default_completed" ;;
+        TaskCompleted/)                 melody="short_success" ;;
+        SessionEnd/)                    melody="star_wars" ;;
+        TeammateIdle/)                  melody="minimal_triple" ;;
     esac
     if [ -z "$melody" ] && [ "$event" = "PostToolUse" ]; then
         local git_cmd
         git_cmd=$(echo "$json" | jq -r '.tool_input.command // empty' 2>/dev/null) || true
         case "${git_cmd:-}" in
-            *"git push"*)   melody="windows_xp" ;;
-            *"git commit"*) melody="short_success" ;;
-            *"git add"*)    melody="minimal_double" ;;
+            *"git push"*)   melody="super_mario" ;;
+            *"git commit"*) melody="tetris" ;;
+            *"git add"*)    melody="short_running" ;;
         esac
     fi
     if [ -n "$melody" ]; then
