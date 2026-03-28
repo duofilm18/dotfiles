@@ -38,3 +38,12 @@ alias dps='docker ps'
 
 # WSL 專用：複製到 Windows 剪貼板
 alias clip='clip.exe'
+
+# Codex wrapper：保留既有 tmux/MQTT/Stream Deck 架構
+codex() {
+    "$HOME/dotfiles/scripts/codex-wrap.sh" "$@"
+}
+
+codex-real() {
+    command codex "$@"
+}

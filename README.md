@@ -34,12 +34,17 @@ dotfiles/
 │   └── skills/
 │       └── add-hook.md
 ├── scripts/
+│   ├── check-codex-skill-boundary.sh
 │   ├── check-deploy.sh
 │   ├── check-rpi5b-deploy.sh
 │   ├── claude-dispatch.sh
 │   ├── claude-hook.sh
+│   ├── codex-notify.sh
+│   ├── codex-session-watch.sh
+│   ├── codex-wrap.sh
 │   ├── deploy-claude-overlay.sh
 │   ├── deploy-ime-indicator.sh
+│   ├── deploy-win-stats.sh
 │   ├── ime-mqtt-publisher.sh
 │   ├── install-docker.sh
 │   ├── install-lighthouse.sh
@@ -48,10 +53,12 @@ dotfiles/
 │   ├── notify.sh
 │   ├── play-melody.sh
 │   ├── setup-claude-hooks.sh
+│   ├── setup-codex-status.sh
 │   ├── setup-rpi5b.sh
 │   ├── test-hooks.sh
 │   ├── test-ime-local-hub.sh
 │   ├── test-mqtt.sh
+│   ├── test-wsl-interop.sh
 │   ├── tmux-mqtt-colors.sh
 │   ├── tmux-switch-project.sh
 │   └── update-readme.sh
@@ -197,10 +204,15 @@ npm install && npm run build
 2. mosquitto-clients — `choco install mosquitto` 或手動安裝
 
 **安裝：**
+```bash
+~/dotfiles/scripts/deploy-win-stats.sh
+```
+
+再到 Windows PowerShell 執行：
+
 ```powershell
-cd C:\Users\<user>\dotfiles\windows
-.\push-win-stats.ps1 -Install     # 註冊 Task Scheduler（每分鐘，需管理員）
-.\push-win-stats.ps1 -Uninstall   # 移除
+& "$env:LOCALAPPDATA\win-stats-mqtt\push-win-stats.ps1" -Install
+& "$env:LOCALAPPDATA\win-stats-mqtt\push-win-stats.ps1" -Uninstall
 ```
 
 ### rpi5b 服務列表（192.168.88.10）

@@ -57,6 +57,10 @@ DOTFILES="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
     fi
 }
 
+@test "DI-14: ~/.codex/skills 只能包含指向 .claude/skills 的 shim" {
+    "$DOTFILES/scripts/check-codex-skill-boundary.sh"
+}
+
 # ── Pre-commit hook 由 Ansible 管理 ──
 
 @test "DI-5: pre-commit hook 有跑 deploy_integrity" {
