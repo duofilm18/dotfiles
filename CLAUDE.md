@@ -13,6 +13,9 @@
 | [add-hook](.claude/skills/add-hook.md) | Claude Code Hook 與 dispatch.sh 事件分發 |
 | [tailscale-route-conflict](.claude/skills/tailscale-route-conflict.md) | Tailscale 路由衝突診斷與修復 |
 | [wsl-lan-connectivity](.claude/skills/wsl-lan-connectivity.md) | WSL2 無法連線本地區網的排查 |
+| [wsl-win11-files](.claude/skills/wsl-win11-files.md) | WSL 讀取 Windows / Win11 / OneDrive 檔案契約 |
+| [brother-printer](.claude/skills/brother-printer.md) | Brother 印表機固定修復流程（先查 Windows Spooler，不走即興 CUPS 排查） |
+| [internal-link-optimizer](.claude/skills/internal-link-optimizer.md) | SEO 內部連結調整、錨文字分配、目標頁對齊 |
 | [pihole-tplink](.claude/skills/pihole-tplink.md) | Pi-hole + TP-Link 路由器廣告攔截設定與排查 |
 | [architecture-health](.claude/skills/architecture-health.md) | 系統層級架構健康原則（裝置邊界、語意介面、硬體歸屬） |
 | [background-script](.claude/skills/background-script.md) | 背景常駐腳本的進程組管理規範 |
@@ -32,9 +35,14 @@
 | [deploy-integrity](.claude/skills/deploy-integrity.md) | 部署完整性免疫系統（pre-commit + Stop hook + marker 三層防護） |
 | [rpi-ssh-setup](.claude/skills/rpi-ssh-setup.md) | RPi SSH 設定（Windows/WSL 雙 key、host key 清理） |
 | [removal-checklist](.claude/skills/removal-checklist.md) | 移除元件時的殘留引用掃描清單 |
+| [topic-architecture-planner](.claude/skills/topic-architecture-planner.md) | SEO 主題架構、hub/supporting pages、collection page 規劃 |
 
 ## 規則
 
+1. **不維護平行規範** - `CLAUDE.md` 是唯一正式規範；若存在 `CODEX.md`，只允許作為 redirect stub 指向 `CLAUDE.md`，不得維護第二套內容
+2. **CLAUDE.md 是唯一入口** - Claude 與 Codex 一律以 `CLAUDE.md` 為唯一專案規範入口
+3. **先讀 CLAUDE.md 再動手** - 進入 repo 後，任何實作、排查、修改前，先讀 `CLAUDE.md`
+4. **已有流程就照跑** - 若 `CLAUDE.md` 或 `.claude/skills/` 已定義流程，必須先依該流程執行，不得另建排查樹
 1. **修改前確認** - 修改設定檔前先說明內容，等用戶確認
 2. **更新文件** - 新增檔案要更新 README.md
 3. **記得推送** - 改完要 `git push`，不要只 commit
@@ -52,6 +60,7 @@
 15. **IME 介面契約** - 修改 IME 相關邏輯（IME_Indicator、ime-mqtt-publisher、tmux status bar）時，必須確認 writer/reader 格式一致（只允許 `zh`/`en`）。詳見 [ime-mqtt-contract](.claude/skills/ime-mqtt-contract.md)
 16. **部署完整性抗體** - 新增 Ansible 管理的 systemd service 時，必須在 `tests/deploy_integrity.bats` 加對應的 DI-* 測試（腳本存在、template 存在、task 引用、handler 存在）。詳見 [deploy-integrity](.claude/skills/deploy-integrity.md)
 17. **移除元件必掃殘留** - 砍掉腳本、服務、hook 或任何跨檔案元件時，必須跑 [removal-checklist](.claude/skills/removal-checklist.md) 掃描清單，同一個 commit 清乾淨
+18. **Codex / Claude 邊界** - Codex 本體設定、登入、sessions、logs 仍留在 `~/.codex/`；只有正式 skill 內容移到 `.claude/skills/`。`~/.codex/skills/` 只允許存在 shim，必須標明 `Canonical source: <repo>/.claude/skills/<name>.md`，且明示 `Do not maintain content in ~/.codex/skills.`，不得在 `.codex/skills` 寫第二份正式內容
 
 ## 目錄結構
 
@@ -67,6 +76,15 @@ dotfiles/
 ├── tests/            # Bats 測試
 └── wsl/              # WSL 專用配置 + Claude hooks
 ```
+
+## Codex Skill 邊界
+
+- Codex 本體資料（config、auth、sessions、logs、state）留在 `~/.codex/`
+- 正式內容：[`/home/duofilm/dotfiles/.claude/skills`](/home/duofilm/dotfiles/.claude/skills)
+- 相容入口：[`/home/duofilm/.codex/skills`](/home/duofilm/.codex/skills)
+- `~/.codex/skills/*/SKILL.md` 只能是 shim，不得承載正式 workflow、長篇規範或第二份真相
+- guard script：`scripts/check-codex-skill-boundary.sh`
+- guard test：`bats tests/deploy_integrity.bats --filter "DI-14"`
 
 ## 常用指令
 
@@ -113,4 +131,3 @@ curl http://192.168.88.10:8080
 | Magic DNS | `rpi5b.tail77f91d.ts.net` | ❌ 不通 | 同上 |
 
 **如果 WSL 突然連不到 RPi5B**，最常見原因是 Tailscale `accept-routes` 被意外開啟。排查步驟見 [wsl-lan-connectivity.md](.claude/skills/wsl-lan-connectivity.md)
-

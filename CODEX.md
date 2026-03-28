@@ -7,6 +7,7 @@
 
 ## Skills
 
+- `~/.codex` 的 config、auth、sessions、logs、state 照常留在 Codex
 - 正式 skill 內容只維護在 [`/home/duofilm/dotfiles/.claude/skills`](/home/duofilm/dotfiles/.claude/skills)
 - [`/home/duofilm/.codex/skills`](/home/duofilm/.codex/skills) 只允許作為 Codex 相容 shim，不得維護正式內容
 - 若 `.codex/skills` 與 `.claude/skills` 不一致，以 `.claude/skills` 為準
