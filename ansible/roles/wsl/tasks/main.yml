@@ -69,17 +69,35 @@
     mode: "0755"
     content: |
       #!/bin/bash
-      export LANG=zh_TW.UTF-8
-      export LANGUAGE=zh_TW:zh
-      export LC_ALL=zh_TW.UTF-8
+      if locale -a 2>/dev/null | grep -qi '^zh_TW\.utf-?8$'; then
+          export LANG=zh_TW.UTF-8
+          export LANGUAGE=zh_TW:zh
+          export LC_ALL=zh_TW.UTF-8
+      else
+          export LANG=C.UTF-8
+          export LANGUAGE=
+          export LC_ALL=C.UTF-8
+      fi
       # WSLg flags：
       #   --ozone-platform=wayland   修正 Electron on X11 滑鼠座標位移
-      #   --disable-gpu              避開 WSLg GPU passthrough 不穩（會 FATAL: GPU process isn't usable）
+      #   --disable-gpu*             避開 WSLg / Electron GPU 初始化問題
+      #   --use-angle=swiftshader    強制使用軟體渲染，避免 GL implementation mismatch
       exec "{{ obsidian_install_root }}/opt/Obsidian/obsidian" \
           --ozone-platform=wayland \
           --enable-features=UseOzonePlatform,WaylandWindowDecorations \
           --disable-gpu \
+          --disable-gpu-compositing \
+          --use-angle=swiftshader \
           "$@"
+  tags: [obsidian]
+
+- name: Install xdg-settings shim for WSL Obsidian
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts.user_dir }}/.local/bin/xdg-settings"
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      exit 0
   tags: [obsidian]
 
 - name: Install Obsidian desktop entry

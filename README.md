@@ -85,7 +85,7 @@ WSL playbook 可安裝常用開發套件；若只想補裝 Obsidian，可執行 
 
 WSL 版 Obsidian 若出現中文方格，playbook 也會部署 fontconfig，讓 Linux app 直接使用 Windows 的中文字型（例如 `Microsoft JhengHei`、`MingLiU`），避免另裝一套 Linux CJK fonts。
 
-Launcher 預設帶 WSLg flags：`--ozone-platform=wayland`（修正滑鼠位移）+ `--disable-gpu`（避開 WSLg GPU passthrough 不穩，否則 Electron 跑一陣子後會 `FATAL: GPU process isn't usable` 崩潰）。
+Launcher 預設帶 WSLg flags：`--ozone-platform=wayland`（修正滑鼠位移）+ `--disable-gpu --disable-gpu-compositing --use-angle=swiftshader`（避開 Electron/WSLg 的 GPU 與 GL 初始化問題）。另外也會部署一個最小 `xdg-settings` shim，避免 WSL 環境缺少 `xdg-utils` 時噴錯。
 
 ### RPi5B 部署
 
