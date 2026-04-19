@@ -81,6 +81,12 @@ git clone https://github.com/duofilm18/dotfiles.git ~/dotfiles
 ~/dotfiles/scripts/install.sh
 ```
 
+WSL playbook 可安裝常用開發套件；若只想補裝 Obsidian，可執行 `cd ~/dotfiles/ansible && ANSIBLE_LOCAL_TEMP=/tmp/ansible-local ANSIBLE_REMOTE_TEMP=/tmp/ansible-remote ansible-playbook wsl.yml --tags obsidian`。安裝完成後可直接執行 `obsidian` 啟動（需 WSLg）。
+
+WSL 版 Obsidian 若出現中文方格，playbook 也會部署 fontconfig，讓 Linux app 直接使用 Windows 的中文字型（例如 `Microsoft JhengHei`、`MingLiU`），避免另裝一套 Linux CJK fonts。
+
+Launcher 預設帶 WSLg flags：`--ozone-platform=wayland`（修正滑鼠位移）+ `--disable-gpu`（避開 WSLg GPU passthrough 不穩，否則 Electron 跑一陣子後會 `FATAL: GPU process isn't usable` 崩潰）。
+
 ### RPi5B 部署
 
 SD 卡壞了？新的 Pi 要設定？用 Ansible 一次搞定：

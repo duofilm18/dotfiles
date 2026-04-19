@@ -1,0 +1,7 @@
+---
+obsidian_version: "1.12.7"
+obsidian_deb_url: "https://github.com/obsidianmd/obsidian-releases/releases/download/v{{ obsidian_version }}/obsidian_{{ obsidian_version }}_amd64.deb"
+obsidian_deb_path: "/tmp/obsidian_{{ obsidian_version }}_amd64.deb"
+obsidian_install_root: "{{ ansible_facts.user_dir }}/.local/opt/obsidian-{{ obsidian_version }}"
+obsidian_launcher_path: "{{ ansible_facts.user_dir }}/.local/bin/obsidian"
+obsidian_desktop_path: "{{ ansible_facts.user_dir }}/.local/share/applications/obsidian.desktop"

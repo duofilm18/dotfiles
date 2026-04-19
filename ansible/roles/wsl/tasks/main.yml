@@ -15,11 +15,101 @@
       - mosquitto
       - mosquitto-clients
       - bats
+      - default-jdk
       - python3-pip
       - python3-venv
     state: present
     update_cache: true
     cache_valid_time: 3600
+
+- name: Create fontconfig directory
+  ansible.builtin.file:
+    path: "{{ ansible_facts.user_dir }}/.config/fontconfig/conf.d"
+    state: directory
+    mode: "0755"
+  tags: [obsidian]
+
+- name: Deploy Windows fonts config for WSL apps
+  ansible.builtin.template:
+    src: windows-fonts.conf.j2
+    dest: "{{ ansible_facts.user_dir }}/.config/fontconfig/conf.d/50-windows-fonts.conf"
+    mode: "0644"
+  notify: Refresh font cache
+  tags: [obsidian]
+
+- name: Create Obsidian directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ ansible_facts.user_dir }}/.local/bin"
+    - "{{ ansible_facts.user_dir }}/.local/opt"
+    - "{{ ansible_facts.user_dir }}/.local/share/applications"
+  tags: [obsidian]
+
+- name: Download Obsidian package
+  ansible.builtin.get_url:
+    url: "{{ obsidian_deb_url }}"
+    dest: "{{ obsidian_deb_path }}"
+    mode: "0644"
+    force: false
+  tags: [obsidian]
+
+- name: Extract Obsidian package
+  ansible.builtin.command:
+    cmd: "dpkg-deb -x {{ obsidian_deb_path }} {{ obsidian_install_root }}"
+  args:
+    creates: "{{ obsidian_install_root }}/opt/Obsidian/obsidian"
+  tags: [obsidian]
+
+- name: Install Obsidian launcher
+  ansible.builtin.copy:
+    dest: "{{ obsidian_launcher_path }}"
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      export LANG=zh_TW.UTF-8
+      export LANGUAGE=zh_TW:zh
+      export LC_ALL=zh_TW.UTF-8
+      # WSLg flags：
+      #   --ozone-platform=wayland   修正 Electron on X11 滑鼠座標位移
+      #   --disable-gpu              避開 WSLg GPU passthrough 不穩（會 FATAL: GPU process isn't usable）
+      exec "{{ obsidian_install_root }}/opt/Obsidian/obsidian" \
+          --ozone-platform=wayland \
+          --enable-features=UseOzonePlatform,WaylandWindowDecorations \
+          --disable-gpu \
+          "$@"
+  tags: [obsidian]
+
+- name: Install Obsidian desktop entry
+  ansible.builtin.copy:
+    dest: "{{ obsidian_desktop_path }}"
+    mode: "0644"
+    content: |
+      [Desktop Entry]
+      Name=Obsidian
+      Exec={{ obsidian_launcher_path }} %u
+      Terminal=false
+      Type=Application
+      Icon={{ obsidian_install_root }}/opt/Obsidian/resources/icon.png
+      StartupWMClass=obsidian
+      Comment=Obsidian
+      MimeType=x-scheme-handler/obsidian;
+      Categories=Office;
+  tags: [obsidian]
+
+- name: Install npm global packages (via nvm)
+  ansible.builtin.shell: |
+    export NVM_DIR="{{ ansible_user_dir }}/.nvm"
+    . "$NVM_DIR/nvm.sh"
+    npm ls -g --depth=0 {{ item }} 2>/dev/null || npm i -g {{ item }}
+  args:
+    executable: /bin/bash
+  loop:
+    - codecharta-analysis
+    - codecharta-visualization
+  changed_when: false
 
 - name: Configure Git user.name
   community.general.git_config:
