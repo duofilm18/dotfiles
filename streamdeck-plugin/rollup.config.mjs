@@ -17,7 +17,13 @@ export default {
   ],
   plugins: [
     typescript(),
-    nodeResolve({ preferBuiltins: true }),
+    nodeResolve({
+      preferBuiltins: true,
+      // 強制走 Node 入口；mqtt v5 的 browser ESM 會把 worker-timers 整包打進來，
+      // 即便 SD plugin 在 Node 跑也會起 Web Worker 持續 IPC（~22% CPU）。
+      exportConditions: ["node"],
+      mainFields: ["main", "module"],
+    }),
     commonjs(),
     json(),
   ],

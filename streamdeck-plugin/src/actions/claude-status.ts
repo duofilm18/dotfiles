@@ -7,19 +7,20 @@ import {
 } from "@elgato/streamdeck";
 import streamDeck from "@elgato/streamdeck";
 import { execFile } from "node:child_process";
-import {
-  STATE_DISPLAY,
-  UNKNOWN_DISPLAY,
-} from "../types";
-import { renderStatusSvg, renderOffSvg, svgToDataUri } from "../renderer";
+import { STATE_DISPLAY, UNKNOWN_DISPLAY } from "../types";
+
+const OFF_ICON = "imgs/states/off";
 
 /**
- * Claude Status action：自動分配 MQTT 專案、閃爍、按鍵切 tmux
+ * Claude Status action：自動分配 MQTT 專案、按鍵切 tmux
  *
  * 用戶拖 N 個 "Claude Status" 到按鍵上，plugin 自動分配 MQTT 專案。
  * assignments: Map<contextId, projectName | null>
- * 新專案 → 找第一個 null 的 slot 分配
- * 空 payload → 釋放 slot，渲染 off
+ *
+ * 渲染策略（輕量）：
+ *   - setImage：靜態 SVG 路徑，只在 state 真的切換時呼叫
+ *   - setTitle：專案名 + 狀態 label（多行），便宜，每次更新都呼叫
+ *   - 每個 slot 記住 lastIcon / lastTitle，避免重送相同值
  */
 @action({ UUID: "com.duofilm.claude-monitor.claude-status" })
 export class ClaudeStatusAction extends SingletonAction {
@@ -27,38 +28,38 @@ export class ClaudeStatusAction extends SingletonAction {
   private assignments = new Map<string, string | null>();
   /** project → current state */
   private projectStates = new Map<string, string>();
+  /** contextId → last icon path sent（避免重送 setImage） */
+  private lastIcon = new Map<string, string>();
+  /** contextId → last title sent（避免重送 setTitle） */
+  private lastTitle = new Map<string, string>();
 
   override async onWillAppear(ev: WillAppearEvent): Promise<void> {
     if (!this.assignments.has(ev.action.id)) {
       this.assignments.set(ev.action.id, null);
     }
-    await ev.action.setImage(svgToDataUri(renderOffSvg()));
+    this.lastIcon.delete(ev.action.id);
+    this.lastTitle.delete(ev.action.id);
+    await this.renderOff(ev.action.id);
   }
 
   override async onWillDisappear(ev: WillDisappearEvent): Promise<void> {
     this.assignments.delete(ev.action.id);
+    this.lastIcon.delete(ev.action.id);
+    this.lastTitle.delete(ev.action.id);
   }
 
   override async onKeyDown(ev: KeyDownEvent): Promise<void> {
     const project = this.assignments.get(ev.action.id);
     if (!project) return;
 
-    // 1. 切換 tmux window
-    const tmuxCmd =
-      `idx=$(tmux list-windows -F '#{window_index} #{@project}'` +
-      ` | grep ' ${project}$' | head -1 | cut -d' ' -f1)` +
-      ` && [ -n "$idx" ] && tmux select-window -t :$idx`;
-
-    execFile("wsl.exe", ["bash", "-c", tmuxCmd], (err) => {
+    execFile("wsl.exe", ["bash", "-lc", `~/dotfiles/scripts/tmux-switch-project.sh '${project}'`], (err) => {
       if (err) streamDeck.logger.error(`tmux switch failed: ${err.message}`);
     });
 
-    // 2. 把 Windows Terminal 拉到前景
     execFile(
       "powershell.exe",
       [
-        "-WindowStyle",
-        "Hidden",
+        "-WindowStyle", "Hidden",
         "-Command",
         "(New-Object -ComObject WScript.Shell).AppActivate('Terminal')",
       ],
@@ -70,11 +71,9 @@ export class ClaudeStatusAction extends SingletonAction {
 
   // --- Public API（由 plugin.ts 呼叫） ---
 
-  /** 新專案或狀態更新 → 分配 slot + 渲染 */
   assignProject(project: string, state: string): void {
     this.projectStates.set(project, state);
 
-    // 已有分配？直接更新
     for (const [ctxId, p] of this.assignments) {
       if (p === project) {
         this.renderKey(ctxId, project, state);
@@ -82,7 +81,6 @@ export class ClaudeStatusAction extends SingletonAction {
       }
     }
 
-    // 找第一個 null slot 分配
     for (const [ctxId, p] of this.assignments) {
       if (p === null) {
         this.assignments.set(ctxId, project);
@@ -94,51 +92,66 @@ export class ClaudeStatusAction extends SingletonAction {
     streamDeck.logger.warn(`No available slot for project: ${project}`);
   }
 
-  /** 專案移除 → 釋放 slot、渲染 off */
   removeProject(project: string): void {
     this.projectStates.delete(project);
     for (const [ctxId, p] of this.assignments) {
       if (p === project) {
         this.assignments.set(ctxId, null);
-        this.renderKeyOff(ctxId);
+        this.renderOff(ctxId);
         return;
       }
     }
   }
 
-  /** Rebuild Phase：清除所有分配，從 cache 重新分配 */
   rebuild(cache: Map<string, string>): void {
-    // 清除
     for (const ctxId of this.assignments.keys()) {
       this.assignments.set(ctxId, null);
     }
     this.projectStates.clear();
 
-    // 重新分配
     for (const [project, state] of cache) {
       this.assignProject(project, state);
     }
 
-    // 剩餘空 slot 渲染 off
     for (const [ctxId, p] of this.assignments) {
       if (p === null) {
-        this.renderKeyOff(ctxId);
+        this.renderOff(ctxId);
       }
     }
   }
 
-  // --- Private ---
+  // --- Private rendering ---
 
   private renderKey(contextId: string, project: string, state: string): void {
     const display = STATE_DISPLAY[state] ?? UNKNOWN_DISPLAY;
-    const svg = renderStatusSvg(project, display);
     const act = this.findAction(contextId);
-    act?.setImage(svgToDataUri(svg));
+    if (!act) return;
+
+    const iconPath = display.iconPath;
+    if (this.lastIcon.get(contextId) !== iconPath) {
+      this.lastIcon.set(contextId, iconPath);
+      act.setImage(iconPath);
+    }
+
+    const title = `${project.slice(0, 10)}\n\n${display.label}`;
+    if (this.lastTitle.get(contextId) !== title) {
+      this.lastTitle.set(contextId, title);
+      act.setTitle(title);
+    }
   }
 
-  private renderKeyOff(contextId: string): void {
+  private renderOff(contextId: string): void {
     const act = this.findAction(contextId);
-    act?.setImage(svgToDataUri(renderOffSvg()));
+    if (!act) return;
+
+    if (this.lastIcon.get(contextId) !== OFF_ICON) {
+      this.lastIcon.set(contextId, OFF_ICON);
+      act.setImage(OFF_ICON);
+    }
+    if (this.lastTitle.get(contextId) !== "") {
+      this.lastTitle.set(contextId, "");
+      act.setTitle("");
+    }
   }
 
   private findAction(contextId: string) {
@@ -147,5 +160,4 @@ export class ClaudeStatusAction extends SingletonAction {
     }
     return undefined;
   }
-
 }

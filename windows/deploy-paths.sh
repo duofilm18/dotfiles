@@ -11,6 +11,10 @@ WIN_HOME="/mnt/c/Users/${WIN_USER}"
 WIN_LOCALAPPDATA="${WIN_HOME}/AppData/Local"
 
 DEPLOY_LHM_DIR="${WIN_LOCALAPPDATA}/LibreHardwareMonitor"
+DEPLOY_WIN_STATS_DIR="${WIN_LOCALAPPDATA}/win-stats-mqtt"
+DEPLOY_WIN_STATS_MAIN="${DEPLOY_WIN_STATS_DIR}/push-win-stats.ps1"
 
 DEPLOY_OVERLAY_DIR="${WIN_LOCALAPPDATA}/claude-overlay"
 DEPLOY_OVERLAY_MAIN="${DEPLOY_OVERLAY_DIR}/claude-overlay.exe"
+
+DEPLOY_SD_PLUGIN="${WIN_HOME}/com.duofilm.claude-monitor.sdPlugin"
