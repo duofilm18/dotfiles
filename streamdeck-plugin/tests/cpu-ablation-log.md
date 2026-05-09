@@ -275,6 +275,32 @@ Notes:                      Conclusive that the regression is sandbox-specific. 
 
 ---
 
+## T9 — PoC sidecar in production (file snapshot channel)
+
+```text
+Test:                       T9 (PoC, not an ablation axis)
+Plugin commit:              cd1ab50 + DATA_SOURCE="file" + StateReader (1000ms poll)
+Sidecar bundle:             %LOCALAPPDATA%\claude-monitor\sidecar.js (rollup of sidecar/sidecar.mjs)
+Sidecar Node binary:        SD bundled NodeJS\20.20.0\node.exe (manual start via PowerShell)
+SD app:                     7.4.1.22720
+SDK:                        @elgato/streamdeck 2.1.0
+Mode:                       PoC normal operation
+Hypothesis:                 If we move MQTT entirely to a peer Node process and have the plugin poll a file, CPU stays in the T6/T8 floor cluster (StreamDeck ~1%, plugin Node ~0%, sidecar ~0%).
+Expected if true:           StreamDeck ≤2%, plugin Node ≤2% one-core, sidecar Node ≤1%.
+Duration:                   sidecar start (0.59s rebuild ready) + SD restart (4.07s plugin ready) + 120s idle + 60.01s sampling
+StreamDeck.exe CPU avg:     1.28% of one core (0.08% total CPU on 16 logical processors)
+Plugin Node CPU avg:        0.13% of one core (pid 28032) — readFileSync once per 1000ms
+Sidecar Node CPU avg:       0.00% of one core (pid 11092)
+dwm.exe CPU avg:            not captured by Get-Process CPU delta in this run
+state.json freshness:       updatedAt within sample window, projects={"landtw":"idle"}, sysStats live
+Plugin log marker:          "[plugin] data source = file (sidecar)" + "[state-reader] polling ... every 1000ms"
+Sidecar log marker:         "[sidecar] rebuild 1 complete: 1 projects" + 11x "alive" heartbeats
+Match expected:             yes — all three processes inside target floor cluster
+Notes:                      PoC validates the file-snapshot channel. Plugin Node's 0.13% is the cost of 60 readFileSync per minute on a sub-1KB file — essentially noise. Sidecar carries the full MQTT load (codec + 3 subscriptions + 50s PING + atomic writes) and burns 0%. State propagation verified end-to-end: broker → sidecar cache → state.json → StateReader diff → ClaudeStatusAction.assignProject. The "No available slot for project: landtw" warning means the data flowed correctly to the action; assignProject just had no UI key to bind to (expected when no Claude Status keys are placed on the Stream Deck during measurement).
+```
+
+---
+
 ## Axis 1a + 2 + 6 + 7 + 8 combined finding (the actual answer)
 
 | Test | StreamDeck | Plugin Node | What's running in plugin process |
