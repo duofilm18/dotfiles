@@ -90,7 +90,7 @@ dotfiles/
 
 ```bash
 # SSH 連線 RPi5B
-ssh root@192.168.88.10
+ssh duofilm@192.168.88.10
 
 # Ansible 部署（推薦）
 cd ~/dotfiles/ansible && ansible-playbook site.yml
@@ -120,7 +120,7 @@ WSL 透過 **mirrored networking 直連 LAN**，不經過 Tailscale：
 
 ```bash
 # 正確：直接用 LAN IP
-ssh root@192.168.88.10
+ssh duofilm@192.168.88.10
 curl http://192.168.88.10:8080
 ```
 

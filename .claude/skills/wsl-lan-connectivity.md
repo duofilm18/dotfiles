@@ -111,7 +111,7 @@ wsl --shutdown
 
 ```bash
 # 從能連到 RPi5B 的設備檢查
-ssh root@192.168.88.10 'systemctl status sshd'
+ssh duofilm@192.168.88.10 'systemctl status sshd'
 ```
 
 ### 5c. SSH host key 變更
@@ -123,7 +123,7 @@ ssh root@192.168.88.10 'systemctl status sshd'
 ssh-keygen -R 192.168.88.10
 
 # 重新連線（會提示接受新 key）
-ssh root@192.168.88.10
+ssh duofilm@192.168.88.10
 ```
 
 ### 5d. Windows 防火牆阻擋
@@ -148,10 +148,10 @@ ls ~/.ssh/id_ed25519.pub
 ssh-keygen -t ed25519
 
 # 複製公鑰到 RPi5B（需輸入密碼一次）
-ssh-copy-id root@192.168.88.10
+ssh-copy-id duofilm@192.168.88.10
 
 # 驗證免密碼登入
-ssh root@192.168.88.10 'echo "SSH OK: $(hostname)"'
+ssh duofilm@192.168.88.10 'echo "SSH OK: $(hostname)"'
 ```
 
 ## 快速診斷清單
@@ -163,7 +163,7 @@ ssh root@192.168.88.10 'echo "SSH OK: $(hostname)"'
 | Tailscale routes | `tailscale status --json \| grep acceptRoutes` | false | true → **執行第四步修復** |
 | Policy route | `ip rule list` | 無 fwmark/table 52 | 有 → Tailscale 黑洞，執行第四步 |
 | 區網 ping | `ping -c 2 192.168.88.10` | 成功，~1ms | timeout → 見第五步 |
-| SSH | `ssh root@192.168.88.10` | 登入成功 | host key 錯誤 → 5c；密碼錯誤 → 第六步 |
+| SSH | `ssh duofilm@192.168.88.10` | 登入成功 | host key 錯誤 → 5c；密碼錯誤 → 第六步 |
 
 ## 重要原則
 
