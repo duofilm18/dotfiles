@@ -1,5 +1,6 @@
 import * as net from "node:net";
 import streamDeck from "@elgato/streamdeck";
+import { shouldSubscribeToMqtt } from "./ablation/mqtt-adapter";
 // mqtt-connection: 純 packet codec，比 mqtt.js 輕。背景：mqtt.js v4/v5 在
 // SD plugin Node runtime 對 idle 連線會持續燒 CPU（plugin 22% + SD app 65%）。
 // 改用 mqtt-connection + 自管 net socket 後，idle 連線 < 2% SD app。
@@ -104,6 +105,10 @@ export class MqttHandler {
         return;
       }
       streamDeck.logger.info("MQTT connected, rebuilding...");
+      if (!shouldSubscribeToMqtt()) {
+        streamDeck.logger.info("MQTT ablation axis 2: connected without SUBSCRIBE");
+        return;
+      }
       this.startRebuild();
       conn.subscribe({
         messageId: 1,
