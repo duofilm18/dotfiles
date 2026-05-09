@@ -12,6 +12,9 @@ $DEPLOY_IME_MAIN = "$DEPLOY_IME_PYTHON\main.py"
 $DEPLOY_LHM_DIR = "$env:LOCALAPPDATA\LibreHardwareMonitor"
 $DEPLOY_LHM_EXE = "$DEPLOY_LHM_DIR\LibreHardwareMonitor.exe"
 
+$DEPLOY_WIN_STATS_DIR = "$env:LOCALAPPDATA\win-stats-mqtt"
+$DEPLOY_WIN_STATS_MAIN = "$DEPLOY_WIN_STATS_DIR\push-win-stats.ps1"
+
 $DEPLOY_SD_PLUGIN = "$env:USERPROFILE\com.duofilm.claude-monitor.sdPlugin"
 
 $DEPLOY_OVERLAY_DIR = "$env:LOCALAPPDATA\claude-overlay"

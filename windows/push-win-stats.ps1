@@ -24,6 +24,11 @@ $TaskName = "Push Win Stats MQTT"
 $LhmDir = $DEPLOY_LHM_DIR
 $LhmExe = $DEPLOY_LHM_EXE
 $LhmPort = 8085
+$DeployDir = $DEPLOY_WIN_STATS_DIR
+$DeployedScript = $DEPLOY_WIN_STATS_MAIN
+$SourceScript = $MyInvocation.MyCommand.Path
+$SourceDeployPaths = Join-Path $PSScriptRoot "deploy-paths.ps1"
+$DeployedDeployPaths = Join-Path $DeployDir "deploy-paths.ps1"
 
 # --- MQTT PUBLISH (pure TCP, no external tools) ---
 function Send-MqttPublish {
@@ -76,9 +81,16 @@ if ($Install) {
     $ErrorActionPreference = "Stop"
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-    # 1. 下載 LHM（如果不存在）
+    # 1. 部署腳本到固定 Windows 路徑，避免 Task Scheduler 綁到暫時來源
+    Write-Host "[1/3] Deploying win-stats scripts..." -ForegroundColor Yellow
+    New-Item -ItemType Directory -Force -Path $DeployDir | Out-Null
+    Copy-Item -Force $SourceScript $DeployedScript
+    Copy-Item -Force $SourceDeployPaths $DeployedDeployPaths
+    Write-Host "  OK: deployed to $DeployDir" -ForegroundColor Green
+
+    # 2. 下載 LHM（如果不存在）
     if (-not (Test-Path $LhmExe)) {
-        Write-Host "[1/2] Downloading LibreHardwareMonitor..." -ForegroundColor Yellow
+        Write-Host "[2/3] Downloading LibreHardwareMonitor..." -ForegroundColor Yellow
         $zipUrl = "https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/download/v0.9.6/LibreHardwareMonitor.zip"
         $zipPath = "$env:TEMP\LibreHardwareMonitor.zip"
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
@@ -87,19 +99,18 @@ if ($Install) {
         Remove-Item $zipPath -ErrorAction SilentlyContinue
         Write-Host "  OK: installed to $LhmDir" -ForegroundColor Green
     } else {
-        Write-Host "[1/2] LHM already installed at $LhmDir" -ForegroundColor Green
+        Write-Host "[2/3] LHM already installed at $LhmDir" -ForegroundColor Green
     }
 
-    # 2. 註冊 Task Scheduler（push-win-stats 每分鐘）
-    Write-Host "[2/2] Registering Task Scheduler..." -ForegroundColor Yellow
-    $scriptPath = $MyInvocation.MyCommand.Path
+    # 3. 註冊 Task Scheduler（push-win-stats 每分鐘）
+    Write-Host "[3/3] Registering Task Scheduler..." -ForegroundColor Yellow
     $pwsh = (Get-Command powershell.exe).Source
 
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 
     $action = New-ScheduledTaskAction `
         -Execute $pwsh `
-        -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`""
+        -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$DeployedScript`""
 
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
         -RepetitionInterval (New-TimeSpan -Minutes 1) `
@@ -116,7 +127,7 @@ if ($Install) {
         -Action $action `
         -Trigger $trigger `
         -Settings $settings `
-        -Description "LibreHardwareMonitor stats -> MQTT (system/stats/win)" `
+        -Description "LibreHardwareMonitor stats -> MQTT (system/stats/win, stable deploy path)" `
         | Out-Null
 
     Write-Host "  OK: '$TaskName' registered (every 1 min)" -ForegroundColor Green
