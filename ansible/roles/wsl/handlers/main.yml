@@ -10,3 +10,7 @@
     name: ime-mqtt-publisher
     state: restarted
     scope: user
+- name: Refresh font cache
+  ansible.builtin.command:
+    cmd: fc-cache -fv
+  changed_when: false
