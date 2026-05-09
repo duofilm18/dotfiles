@@ -1,6 +1,19 @@
 import * as net from "node:net";
 import streamDeck from "@elgato/streamdeck";
-import { shouldSubscribeToMqtt } from "./ablation/mqtt-adapter";
+import { shouldSubscribeToMqtt, shouldUseMqttCodec } from "./ablation/mqtt-adapter";
+
+// MQTT 3.1.1 CONNECT packet, hand-built for axis 7 raw-TCP mode.
+// keepalive = 0 disables broker-side timeout, so we never need PINGREQ.
+// client id "sdablate" (8 bytes) avoids collisions with normal sd-claude-monitor-* IDs.
+const RAW_CONNECT_PACKET = Buffer.from([
+  0x10,                                            // CONNECT, flags=0
+  0x14,                                            // remaining length = 20
+  0x00, 0x04, 0x4d, 0x51, 0x54, 0x54,              // proto name "MQTT"
+  0x04,                                            // proto level 4 (3.1.1)
+  0x02,                                            // flags: clean session
+  0x00, 0x00,                                      // keepalive = 0
+  0x00, 0x08, 0x73, 0x64, 0x61, 0x62, 0x6c, 0x61, 0x74, 0x65,  // client id "sdablate"
+]);
 // mqtt-connection: 純 packet codec，比 mqtt.js 輕。背景：mqtt.js v4/v5 在
 // SD plugin Node runtime 對 idle 連線會持續燒 CPU（plugin 22% + SD app 65%）。
 // 改用 mqtt-connection + 自管 net socket 後，idle 連線 < 2% SD app。
@@ -85,6 +98,22 @@ export class MqttHandler {
 
     const sock = net.createConnection({ host: this.currentBroker, port: this.currentPort });
     this.socket = sock;
+
+    if (!shouldUseMqttCodec()) {
+      streamDeck.logger.info("MQTT ablation axis 7: raw TCP, no codec");
+      sock.on("connect", () => {
+        sock.write(RAW_CONNECT_PACKET);
+      });
+      sock.on("data", () => { /* drain and discard, no parsing */ });
+      sock.on("error", (err: Error) => {
+        streamDeck.logger.error(`MQTT raw socket error: ${err.message}`);
+      });
+      sock.on("close", () => {
+        this.scheduleReconnect();
+      });
+      return;
+    }
+
     const conn = mqttCon(sock);
     this.conn = conn;
 

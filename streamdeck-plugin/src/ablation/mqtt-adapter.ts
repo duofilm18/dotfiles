@@ -11,3 +11,7 @@ export function shouldSubscribeToMqtt(): boolean {
 export function shouldConnectToMqtt(): boolean {
   return CURRENT_AXIS !== "6";
 }
+
+export function shouldUseMqttCodec(): boolean {
+  return CURRENT_AXIS !== "7";
+}
