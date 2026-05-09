@@ -62,19 +62,19 @@ Notes:                    # 任何異常觀察
 
 ```text
 Test:                     T0
-Plugin commit:            (TBD after Commit 1)
+Plugin commit:            40c7c38
 SD app:                   7.4.1.22720
 SDK:                      @elgato/streamdeck 2.1.0
 Mode:                     baseline
 Ablation entry point:     CURRENT_AXIS = "off"
 Hypothesis:               (none — baseline 用)
 Expected if true:         (none)
-Duration:                 60s
-StreamDeck.exe CPU avg:   TBD
-Plugin Node CPU avg:      TBD
-dwm.exe CPU avg:          TBD
+Duration:                 120s idle + 60.12s sampling
+StreamDeck.exe CPU avg:   69.23% of one core (4.33% total CPU on 16 logical processors)
+Plugin Node CPU avg:      21.05% of one core (1.32% total CPU; pid 14956)
+dwm.exe CPU avg:          not captured by Get-Process CPU delta in this run
 Match expected:           n/a
-Notes:                    需驗證 import "./ablation" 在 "off" 時對 CPU 無觀察者效應
+Notes:                    Off-mode skeleton deployed. Shape matches regression report: StreamDeck ~1 hot core, plugin Node ~22% one-core. StreamDeck.ColorPicker was 0.52% one-core; other node processes were ~0.
 ```
 
 ---
@@ -83,19 +83,19 @@ Notes:                    需驗證 import "./ablation" 在 "off" 時對 CPU 無
 
 ```text
 Test:                     T1
-Plugin commit:            TBD
+Plugin commit:            40c7c38 + working tree CURRENT_AXIS="1a"
 SD app:                   7.4.1.22720
 SDK:                      @elgato/streamdeck 2.1.0
 Mode:                     1a hardware-only
 Ablation entry point:     CURRENT_AXIS = "1a"
 Hypothesis:               SD app 7.4.x 軟體 preview repaint 是 dwm/SD CPU 主因
 Expected if true:         dwm.exe CPU 下降 >5pp，StreamDeck.exe 可能下降，Node 不變
-Duration:                 60s
-StreamDeck.exe CPU avg:   TBD
-Plugin Node CPU avg:      TBD
-dwm.exe CPU avg:          TBD
-Match expected:           TBD
-Notes:                    
+Duration:                 app restart + 120s idle + 60.10s sampling
+StreamDeck.exe CPU avg:   65.15% of one core (4.07% total CPU on 16 logical processors)
+Plugin Node CPU avg:      20.59% of one core (1.29% total CPU; pid 5748)
+dwm.exe CPU avg:          not captured by Get-Process CPU delta in this run
+Match expected:           no / weak partial
+Notes:                    StreamDeck decreased only 4.08pp one-core vs T0 (69.23 → 65.15), Node effectively unchanged (21.05 → 20.59). Hardware-only target does not explain the main CPU burn.
 ```
 
 ---
@@ -104,17 +104,17 @@ Notes:
 
 ```text
 Test:                     T0-off (post-axis-1a)
-Plugin commit:            TBD (same as T1, only _config.ts diff)
+Plugin commit:            40c7c38 + working tree CURRENT_AXIS="off"
 SD app:                   7.4.1.22720
 SDK:                      @elgato/streamdeck 2.1.0
 Mode:                     baseline (disable check)
 Ablation entry point:     CURRENT_AXIS = "off"
 Hypothesis:               旁路設計可逆，CPU 應回 T0 ±2pp
 Expected if true:         三個 CPU 數字都在 T0 ±2pp 內
-Duration:                 60s
-StreamDeck.exe CPU avg:   TBD
-Plugin Node CPU avg:      TBD
-dwm.exe CPU avg:          TBD
-Match expected:           TBD
-Notes:                    若 CPU 沒回 T0，旁路有殘留副作用，T1 結果暫停採信
+Duration:                 app restart + 120s idle + 60.10s sampling
+StreamDeck.exe CPU avg:   62.97% of one core (3.94% total CPU on 16 logical processors)
+Plugin Node CPU avg:      19.84% of one core (1.24% total CPU; pid 7248)
+dwm.exe CPU avg:          not captured by Get-Process CPU delta in this run
+Match expected:           partial
+Notes:                    Returned to same high-CPU shape, but StreamDeck is 6.26pp below T0 (69.23 → 62.97), outside the strict ±2pp target. Node is close (21.05 → 19.84). Treat Axis 1a as no meaningful fix; rerun T0 may be needed if strict reversibility is required.
 ```
