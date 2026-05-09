@@ -247,7 +247,35 @@ Notes:                    Node 20.46 vs T0 21.05 (-0.59pp ✓). StreamDeck 66.26
 
 ---
 
-## Axis 1a + 2 + 6 + 7 combined finding (the actual answer)
+## T8 — Axis 8 (vanilla Node sidecar with full MQTT, plugin at axis 6)
+
+```text
+Test:                       T8
+Plugin commit:              31f9cb6 + working tree CURRENT_AXIS="6"
+Sidecar bundle:             /mnt/c/temp/axis8/sidecar.js (rollup bundle of scripts/sidecar-mqtt-test.mjs)
+Sidecar Node binary:        SD bundled NodeJS\20.20.0\node.exe (same as plugin uses)
+SD app:                     7.4.1.22720
+SDK:                        @elgato/streamdeck 2.1.0
+Mode:                       8 sidecar-out-of-process
+Ablation entry point:       Plugin CURRENT_AXIS = "6" (no MQTT in plugin)
+                            Sidecar = standalone Node process with full MQTT subscribe
+Hypothesis (per Codex R5):  Same mqtt-connection codec + subscribe pipeline running OUTSIDE
+                            SD plugin sandbox is cheap. SD app does not react to a peer
+                            process having an outgoing TCP socket.
+Expected if true:           sidecar Node ≈ 0%, plugin Node ≈ 0%, StreamDeck.exe ≈ T6
+Duration:                   app restart (4.6s plugin ready) + sidecar start (0.54s subscribed) + 120s idle + 60.01s sampling
+StreamDeck.exe CPU avg:     0.83% of one core (0.05% total CPU on 16 logical processors)
+Plugin Node CPU avg:        0.00% of one core (pid 7864)
+Sidecar Node CPU avg:       0.00% of one core (pid 7148)
+dwm.exe CPU avg:            not captured by Get-Process CPU delta in this run
+Match expected:             yes (all three at floor)
+Sidecar workload verified:  stdout shows "tcp connected" → "mqtt connack ok" → "subscribed" → "pub count: 5" by end of window. The sidecar actually subscribed to all three topics, received 5 MQTT publishes from the broker (system/stats and friends), and ran the 50s PING timer once. It was alive and doing the same work as the plugin does in T0 — and burned essentially zero CPU.
+Notes:                      Conclusive that the regression is sandbox-specific. Same Node version, same Windows machine, same broker, same codec, same topics, same client-side workload — but spawned outside SD plugin sandbox = no CPU burn. Validates Codex Round 5 plan A: sidecar architecture is viable.
+```
+
+---
+
+## Axis 1a + 2 + 6 + 7 + 8 combined finding (the actual answer)
 
 | Test | StreamDeck | Plugin Node | What's running in plugin process |
 |---|---|---|---|
@@ -258,10 +286,22 @@ Notes:                    Node 20.46 vs T0 21.05 (-0.59pp ✓). StreamDeck 66.26
 | T7 (raw TCP, no codec) | 67.86 | 20.28 | one idle TCP socket, drained, no parsing |
 | T0-off-7 | 66.26 | 20.46 | full MQTT (control) |
 
-**Empirical answer:** Any TCP socket open from the plugin process → ~20% Node
-+ ~66% StreamDeck. No socket → 0%. The MQTT codec, the SUBSCRIBE pipeline,
-the render commands, and the PING timer are all individually CHEAP. The
-**socket itself is the cost**.
+**Empirical answer (precise wording per Codex Round 5 review, T8-confirmed):**
+A raw idle TCP socket opened from the Stream Deck plugin process to the
+broker is **sufficient** to reproduce the full CPU burn. The MQTT codec,
+the SUBSCRIBE pipeline, the render commands, and the PING timer are all
+individually cheap.
+
+The same Node + same codec + same broker + same subscribe pipeline run
+**outside** the SD plugin sandbox (T8 sidecar) burns 0% — proving the
+regression is **specifically about being spawned inside the SD plugin
+sandbox**, not about Windows / Node / TCP / mqtt-connection in general.
+
+This stops short of "all sockets are expensive": we only measured one
+specific outgoing TCP socket (plugin → broker on `192.168.88.10:1883`).
+Whether arbitrary outgoing sockets reproduce the regression has not been
+ablated. SDK loopback `ws://127.0.0.1` (also a socket) is in T6 and not
+measured separately, but T6 = 0% shows it alone is not sufficient.
 
 This is not a bug in `mqtt-connection`. It's not a bug in our render code.
 It's not a bug in our SUBSCRIBE pipeline. It's something in the SD plugin
