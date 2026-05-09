@@ -163,19 +163,100 @@ Notes:                    Reversibility ✓. StreamDeck 67.22 vs T0 69.23 (-2.01
 
 ---
 
-## Axis 1a + Axis 2 combined finding
+## T6 — Axis 6 (MQTT completely disabled)
 
-Two independent ablations both miss:
-- Axis 1a removed software preview render → only -4.08pp on StreamDeck.
-- Axis 2 removed all MQTT subscriptions / cache rebuild / setImage / setTitle → only -3.01pp on StreamDeck and Plugin Node basically unchanged (-1.26pp).
+```text
+Test:                     T6
+Plugin commit:            e1e5bc8 + working tree CURRENT_AXIS="6"
+SD app:                   7.4.1.22720
+SDK:                      @elgato/streamdeck 2.1.0
+Mode:                     6 no-mqtt
+Ablation entry point:     CURRENT_AXIS = "6" (shouldConnectToMqtt() returns false)
+Hypothesis:               MQTT idle keepalive (TCP socket + mqtt-connection codec + 50s PINGs) is the missing cost driver after Axis 1a/2 both miss
+Expected if true:         Plugin Node CPU drops noticeably below T2; StreamDeck.exe may also drop
+Duration:                 app restart (4.07s ready detect) + 120s idle + 60.00s sampling
+StreamDeck.exe CPU avg:   1.12% of one core (0.07% total CPU on 16 logical processors)
+Plugin Node CPU avg:      0.00% of one core (0.00% total CPU; pid 32036)
+dwm.exe CPU avg:          not captured by Get-Process CPU delta in this run
+Match expected:           yes (massively)
+Notes:                    Smoking gun. With no MQTT connect at all, Plugin Node burns 0% and StreamDeck.exe drops -68.11pp from T0 (69.23 → 1.12). Combined with T2 (MQTT connected but no SUBSCRIBE = still ~66% / ~20%), the cost driver is unambiguously the live mqtt-connection codec attached to the idle TCP socket — NOT subscribe pipeline, NOT render commands. SD plugin sandbox itself is innocent: with no socket the plugin process is essentially asleep.
+```
 
-The intersection of "what neither axis removed" is the actual cost driver:
-- The persistent `ws://127.0.0.1` SDK IPC connection between plugin Node and SD-app host.
-- Node runtime overhead inside the SD plugin sandbox itself.
-- The `mqtt-connection` codec keepalive PINGs to broker.
-- SD-app's host-side reaction to plugin process being alive at all.
+---
 
-setImage / setTitle / SUBSCRIBE / target=hardware are all ruled out as primary drivers. Next ablation candidates:
-- **Axis 3 (drop render):** redundant with Axis 2 result — already proven render is not the driver. Skip.
-- **Axis 6 (new):** disconnect MQTT entirely (or never connect) to isolate SD-IPC cost from MQTT-keepalive cost.
-- **Axis B (SD app 7.3.x downgrade):** strongest evidence yet that this is a host regression — the plugin doing nothing useful still burns CPU. Time to give Elgato a version-regression rod.
+## T0-off-6 — disable verification after T6
+
+```text
+Test:                     T0-off-6 (post-axis-6)
+Plugin commit:            e1e5bc8 + working tree CURRENT_AXIS="off"
+SD app:                   7.4.1.22720
+SDK:                      @elgato/streamdeck 2.1.0
+Mode:                     baseline (disable check)
+Ablation entry point:     CURRENT_AXIS = "off" (shouldConnectToMqtt() returns true)
+Hypothesis:               Axis 6 旁路可逆，CPU 應回 T0 ±2pp
+Expected if true:         三個 CPU 數字都在 T0 ±2pp 內
+Duration:                 app restart (4.08s ready detect) + 120s idle + 60.01s sampling
+StreamDeck.exe CPU avg:   67.39% of one core (4.21% total CPU on 16 logical processors)
+Plugin Node CPU avg:      19.71% of one core (1.23% total CPU; pid 32572)
+dwm.exe CPU avg:          not captured by Get-Process CPU delta in this run
+Match expected:           yes
+Notes:                    Reversibility ✓. StreamDeck 67.39 vs T0 69.23 (-1.84pp), Node 19.71 vs T0 21.05 (-1.34pp). Both inside ±2pp band. Axis 6 conclusion is trustworthy.
+```
+
+---
+
+## Axis 1a + 2 + 6 combined finding (the answer)
+
+| Test | StreamDeck | Plugin Node | Δ vs T0 (StreamDeck) |
+|---|---|---|---|
+| T0 baseline | 69.23 | 21.05 | (—) |
+| T1 (1a hardware-only render) | 65.15 | 20.59 | -4.08pp |
+| T2 (no SUBSCRIBE) | 66.22 | 19.79 | -3.01pp |
+| **T6 (no MQTT at all)** | **1.12** | **0.00** | **-68.11pp** |
+| T0-off-6 (reversibility check) | 67.39 | 19.71 | -1.84pp ✓ |
+
+T1 and T2 falsify the user-visible work (render commands, SUBSCRIBE pipeline)
+as the cost driver. T6 collapses CPU to ~zero by removing the entire MQTT
+connection. The conclusion is unambiguous:
+
+**The CPU burn lives in the live `mqtt-connection` codec attached to the
+idle TCP socket.** Not the broker traffic (T2 had a quiet broker too),
+not the SDK IPC (T6 keeps it and CPU still drops to zero), not the Node
+runtime in the sandbox (also kept in T6), not host-side reaction to plugin
+existence (T6 plugin is alive and registered, just no MQTT).
+
+This matches the pre-existing observation in
+`memory/sd_plugin_cpu_regression.md`:
+
+> 連線本身 | raw TCP idle 連線只 1.5%，但用 mqtt protocol 講話就 22%
+
+T6 confirms it from the opposite direction: removing the codec entirely
+gets us to the floor (~0%), confirming raw TCP idle was already cheap and
+the codec is the hot loop.
+
+### Implication for fixes
+
+What helps:
+- Replace `mqtt-connection` with a minimal hand-written MQTT codec on top
+  of `net.Socket` — only handles CONNECT, SUBSCRIBE, PUBLISH, PINGRESP.
+  Avoid the `readable-stream` / `bl` chain that mqtt-connection drags in.
+- Or move MQTT out of the plugin process entirely (e.g., a lightweight
+  Windows-side bridge that converts MQTT → SDK calls via a different
+  channel), but that is much bigger surgery.
+
+What does NOT help (already ablated):
+- Reducing render frequency (Axis 1a / earlier setImage dedup).
+- Skipping SUBSCRIBE or topic split (Axis 2).
+- Switching SDK version 2.0.1 ↔ 2.1.0 (already in regression report).
+- Switching SD app 7.4.0 ↔ 7.4.1 (already in regression report).
+
+### Next ablation only if needed
+
+- **Axis 7 (idea):** raw TCP socket open with no codec at all (no
+  `mqttCon(sock)` wrap, just `net.createConnection` + drain reads). Should
+  reproduce the existing memory's "raw TCP idle 連線只 1.5%" measurement
+  inside the new ablation harness. Useful only if we want a clean number
+  to set the floor for Axis 8 (a hand-written codec).
+- **Axis B (SD app 7.3.x downgrade):** still useful for an Elgato bug
+  report — proves the regression direction. But the diagnosis is already
+  strong enough without it.
