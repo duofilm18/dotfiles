@@ -284,4 +284,8 @@ setInterval(() => {
   console.log(
     `[sidecar] alive: rebuild=${rebuildId} projects=${projects.size} sys=${sysStats ? "ok" : "none"} win=${winStats ? "ok" : "none"}`,
   );
+  // Bump state.json updatedAt so the plugin can distinguish "sidecar idle
+  // but alive" from "sidecar dead". Plugin's StateReader treats snapshots
+  // older than 2× HEARTBEAT_MS as stale.
+  writeSnapshot();
 }, HEARTBEAT_MS);

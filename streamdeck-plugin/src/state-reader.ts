@@ -47,6 +47,11 @@ const STATE_FILE = path.join(
   "state.json",
 );
 
+// Sidecar heartbeats every 30s, so a snapshot older than 60s means at
+// least one heartbeat was missed — sidecar is likely dead or hung.
+const STALE_THRESHOLD_MS = 60_000;
+const STALE_WARN_THROTTLE_MS = 60_000;
+
 export class StateReader {
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastRebuildId = -1;
@@ -54,6 +59,8 @@ export class StateReader {
   private lastSysJson = "";
   private lastWinJson = "";
   private readErrorLogged = false;
+  private lastStaleWarnAt = 0;
+  private wasStale = false;
 
   constructor(
     private statusAction: ClaudeStatusAction,
@@ -110,9 +117,34 @@ export class StateReader {
       return;
     }
 
+    if (this.checkStale(snap)) {
+      // Don't apply stale snapshots — the keys keep showing the last
+      // known good state until the sidecar comes back.
+      return;
+    }
+
     this.applyProjects(snap);
     this.applySysStats(snap);
     this.applyWinStats(snap);
+  }
+
+  private checkStale(snap: Snapshot): boolean {
+    const ageMs = Date.now() - new Date(snap.updatedAt).getTime();
+    const stale = ageMs > STALE_THRESHOLD_MS;
+    const now = Date.now();
+    if (stale) {
+      if (now - this.lastStaleWarnAt > STALE_WARN_THROTTLE_MS) {
+        streamDeck.logger.warn(
+          `[state-reader] snapshot stale: ${Math.round(ageMs / 1000)}s old (sidecar likely dead or hung)`,
+        );
+        this.lastStaleWarnAt = now;
+      }
+      this.wasStale = true;
+    } else if (this.wasStale) {
+      streamDeck.logger.info("[state-reader] snapshot fresh again, resuming updates");
+      this.wasStale = false;
+    }
+    return stale;
   }
 
   private applyProjects(snap: Snapshot): void {
