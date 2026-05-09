@@ -16,6 +16,17 @@ from top down:
 - `-RepetitionDuration ([TimeSpan]::MaxValue)` fails current Windows TS XML schema (`P99999999DT23H59M59S`). Use `(New-TimeSpan -Days 9999)`.
 - `State=Ready` after registering is normal for a 1-min repetition trigger — not "broken".
 
-### Sleep/wake fragility
+### Process death after long uptime (root cause unverified)
 
-LHM and ClaudeMonitorSidecar processes both die across sleep/wake despite healthy at-logon tasks. No auto-restart today. If recurring, add `RestartOnFailure` to the tasks or a small watchdog. (User declined 2026-05-09; revisit only if it happens again.)
+Observed once on 2026-05-09: both LHM and ClaudeMonitorSidecar processes were gone despite their at-logon tasks being healthy. Exit codes (sidecar `0xC000013A`, LHM `0`) are *consistent with* a sleep/wake cycle but this remains a hypothesis — not yet verified against system events.
+
+To verify when it recurs, cross-reference timestamps in:
+- `Microsoft-Windows-TaskScheduler/Operational` log
+- `Kernel-Power` and `Power-Troubleshooter` logs
+- The sidecar log's last `alive` line vs the next sleep/resume event
+
+Existing restart policy:
+- **Sidecar:** `RestartInterval 1min / RestartCount 3` (see `windows/install-sidecar-task.ps1`). After 3 failed restarts Task Scheduler stops retrying. Check Task Scheduler history if the process is gone — restarts may have been exhausted.
+- **LHM:** no restart policy. Once the GUI process dies, only logon revives it.
+
+Don't add a watchdog or change restart counts unless this actually recurs. User declined 2026-05-09.

@@ -81,11 +81,26 @@ if ($Install) {
     $ErrorActionPreference = "Stop"
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+    # Skip when source == destination (e.g. user invoked the deployed copy
+    # with -Install). Without this guard, Copy-Item locks the running script
+    # and throws, leaving Task Scheduler unregistered.
+    function Copy-IfDifferent {
+        param([Parameter(Mandatory)][string]$Source,
+              [Parameter(Mandatory)][string]$Destination)
+        $srcFull = (Resolve-Path -LiteralPath $Source -ErrorAction Stop).ProviderPath
+        $dstFull = [System.IO.Path]::GetFullPath($Destination)
+        if ([string]::Equals($srcFull, $dstFull, [StringComparison]::OrdinalIgnoreCase)) {
+            Write-Host "  skip (already in place): $dstFull" -ForegroundColor DarkGray
+            return
+        }
+        Copy-Item -Force -LiteralPath $Source -Destination $Destination
+    }
+
     # 1. 部署腳本到固定 Windows 路徑，避免 Task Scheduler 綁到暫時來源
     Write-Host "[1/3] Deploying win-stats scripts..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Force -Path $DeployDir | Out-Null
-    Copy-Item -Force $SourceScript $DeployedScript
-    Copy-Item -Force $SourceDeployPaths $DeployedDeployPaths
+    Copy-IfDifferent -Source $SourceScript -Destination $DeployedScript
+    Copy-IfDifferent -Source $SourceDeployPaths -Destination $DeployedDeployPaths
     Write-Host "  OK: deployed to $DeployDir" -ForegroundColor Green
 
     # 2. 下載 LHM（如果不存在）
@@ -112,9 +127,11 @@ if ($Install) {
         -Execute $pwsh `
         -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$DeployedScript`""
 
+    # 9999 days, not [TimeSpan]::MaxValue: current Windows TS rejects
+    # the latter's `P99999999DT23H59M59S` XML duration on schema validation.
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
         -RepetitionInterval (New-TimeSpan -Minutes 1) `
-        -RepetitionDuration ([TimeSpan]::MaxValue)
+        -RepetitionDuration (New-TimeSpan -Days 9999)
 
     $settings = New-ScheduledTaskSettingsSet `
         -AllowStartIfOnBatteries `
