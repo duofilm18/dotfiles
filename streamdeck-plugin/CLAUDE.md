@@ -98,6 +98,8 @@ Get-Process StreamDeck,node | Select-Object ProcessName,Id,CPU,Path
 For a real measurement, compare CPU deltas over 30-60 seconds instead of
 reading the cumulative `CPU` column directly.
 
+If the Win Stats key shows OFFLINE, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
 ## Safe Fallback
 
 If the sidecar is broken and you need a temporary fallback:
