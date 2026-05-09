@@ -58,15 +58,18 @@ test_melody() {
     fi
 
     # 1-3: powershell.exe 啟動速度
-    local start_time end_time elapsed
+    local start_time end_time elapsed ps_exit
     start_time=$(date +%s%N)
     powershell.exe -c "exit" 2>/dev/null
+    ps_exit=$?
     end_time=$(date +%s%N)
     elapsed=$(( (end_time - start_time) / 1000000 ))
-    if [ "$elapsed" -lt 3000 ]; then
+    if [ "$ps_exit" -eq 0 ] && [ "$elapsed" -lt 3000 ]; then
         pass "powershell.exe 啟動耗時 ${elapsed}ms（< 3s）"
-    else
+    elif [ "$ps_exit" -eq 0 ]; then
         warn "powershell.exe 啟動耗時 ${elapsed}ms（慢！可能導致 hook timeout 殺掉進程）"
+    else
+        fail "powershell.exe 無法執行（exit=$ps_exit）"
     fi
 
     # 1-4: 直接播放測試音

@@ -7,10 +7,13 @@
 EVENT="$1"
 MATCHER="${2:-}"
 SCRIPT_DIR="$(dirname "$0")"
+AI_LABEL="${AI_LABEL:-Claude Code}"
 # git repo root 取名，不怕 cd 子目錄
 # 注意：basename "" 回傳空字串但 exit=0，所以不能用 || fallback
-PROJECT="$(git rev-parse --show-toplevel 2>/dev/null)"
-PROJECT="$(basename "${PROJECT:-$PWD}")"
+PROJECT_BASE="$(git rev-parse --show-toplevel 2>/dev/null)"
+PROJECT_BASE="$(basename "${PROJECT_BASE:-$PWD}")"
+PROJECT="${PROJECT_KEY:-$PROJECT_BASE}"
+WINDOW_NAME="${WINDOW_NAME:-$PROJECT}"
 
 # 取得 tmux window index（供 claude-hook.sh 寫入 @claude_state）
 WINDOW_IDX=""
@@ -20,7 +23,7 @@ fi
 
 # 自動標記 tmux window（供 State Publisher 匹配）
 if [ -n "$TMUX" ] && [ "$EVENT" = "UserPromptSubmit" ]; then
-    tmux rename-window "$PROJECT" 2>/dev/null || true
+    tmux rename-window "$WINDOW_NAME" 2>/dev/null || true
     tmux set-window-option @project "$PROJECT" 2>/dev/null || true
 fi
 
@@ -64,7 +67,7 @@ fi
 # ── 手機通知（Stop 事件） ──
 if [ "$EVENT" = "Stop" ]; then
     curl -s -X POST "https://ntfy.sh/claude-notify-rpi5b" \
-        -H "Title: $PROJECT" -d "Claude Code 完成" &>/dev/null &
+        -H "Title: $PROJECT_BASE" -d "$AI_LABEL 完成" &>/dev/null &
 fi
 
 exit 0

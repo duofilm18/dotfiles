@@ -44,17 +44,17 @@ startup_cleanup
 # idle/waiting 狀態時，每秒切換 @claude_blink on/off
 blink_loop() {
     while true; do
-        tmux list-windows -F '#{window_index} #{@claude_state} #{@claude_blink}' 2>/dev/null | while read -r idx state blink; do
+        tmux list-windows -a -F '#{session_name}:#{window_index} #{@claude_state} #{@claude_blink}' 2>/dev/null | while read -r target state blink; do
             case "$state" in
                 idle|waiting)
                     if [ "$blink" = "on" ]; then
-                        tmux set-window-option -t ":$idx" @claude_blink "off" 2>/dev/null
+                        tmux set-window-option -t "$target" @claude_blink "off" 2>/dev/null
                     else
-                        tmux set-window-option -t ":$idx" @claude_blink "on" 2>/dev/null
+                        tmux set-window-option -t "$target" @claude_blink "on" 2>/dev/null
                     fi
                     ;;
                 *)
-                    [ -n "$blink" ] && tmux set-window-option -t ":$idx" @claude_blink "" 2>/dev/null
+                    [ -n "$blink" ] && tmux set-window-option -t "$target" @claude_blink "" 2>/dev/null
                     ;;
             esac
         done
@@ -114,7 +114,7 @@ while true; do
                 current_projects["$project"]="$idx"
             fi
         fi
-    done < <(tmux list-windows -F '#{window_index} #{@project} #{@claude_state}' 2>/dev/null)
+    done < <(tmux list-windows -a -F '#{session_name}:#{window_index} #{@project} #{@claude_state}' 2>/dev/null)
 
     # 偵測狀態變化 → 發 MQTT
     for project in "${!current_states[@]}"; do

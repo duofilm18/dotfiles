@@ -6,11 +6,7 @@
 PROJECT="$1"
 [ -z "$PROJECT" ] && exit 1
 
-# 外部呼叫時需明確指定 session
-SESSION=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | head -1)
-[ -z "$SESSION" ] && exit 1
-
-idx=$(tmux list-windows -t "$SESSION" -F '#{window_index} #{@project}' \
+TARGET=$(tmux list-windows -a -F '#{session_name}:#{window_index} #{@project}' 2>/dev/null \
     | grep " ${PROJECT}$" | head -1 | cut -d' ' -f1)
 
-[ -n "$idx" ] && tmux select-window -t "${SESSION}:${idx}"
+[ -n "$TARGET" ] && tmux select-window -t "$TARGET"
