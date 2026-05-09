@@ -7,3 +7,7 @@ import { CURRENT_AXIS } from "./_config";
 export function shouldSubscribeToMqtt(): boolean {
   return CURRENT_AXIS !== "2";
 }
+
+export function shouldConnectToMqtt(): boolean {
+  return CURRENT_AXIS !== "6";
+}

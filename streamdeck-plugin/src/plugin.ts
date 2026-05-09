@@ -1,5 +1,6 @@
 import "./ablation";
 import streamDeck from "@elgato/streamdeck";
+import { shouldConnectToMqtt } from "./ablation/mqtt-adapter";
 import { ClaudeStatusAction } from "./actions/claude-status";
 import { ClaudeDateAction } from "./actions/claude-date";
 import { SystemStatsAction } from "./actions/system-stats";
@@ -39,6 +40,10 @@ const mqttHandler = new MqttHandler(
 
 /** 從 globalSettings 讀取 MQTT broker 設定並連線 */
 async function connectMqtt(): Promise<void> {
+  if (!shouldConnectToMqtt()) {
+    streamDeck.logger.info("MQTT ablation axis 6: connect skipped");
+    return;
+  }
   const settings =
     await streamDeck.settings.getGlobalSettings<GlobalSettings>();
   const broker = settings.mqttBroker || DEFAULT_SETTINGS.mqttBroker;
