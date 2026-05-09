@@ -1,3 +1,4 @@
+import "./ablation";
 import streamDeck from "@elgato/streamdeck";
 import { ClaudeStatusAction } from "./actions/claude-status";
 import { ClaudeDateAction } from "./actions/claude-date";
