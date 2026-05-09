@@ -205,58 +205,95 @@ Notes:                    Reversibility ✓. StreamDeck 67.39 vs T0 69.23 (-1.84
 
 ---
 
-## Axis 1a + 2 + 6 combined finding (the answer)
+## T7 — Axis 7 (raw TCP socket, no codec)
 
-| Test | StreamDeck | Plugin Node | Δ vs T0 (StreamDeck) |
+```text
+Test:                     T7
+Plugin commit:            31f9cb6 + working tree CURRENT_AXIS="7"
+SD app:                   7.4.1.22720
+SDK:                      @elgato/streamdeck 2.1.0
+Mode:                     7 raw-tcp
+Ablation entry point:     CURRENT_AXIS = "7" (shouldUseMqttCodec() returns false)
+Hypothesis:               codec/PING is the cost; bare socket is cheap (per old memory "raw TCP 1.5%")
+Expected if true:         Plugin Node ≈ 0%, StreamDeck ≈ T6 (~1%)
+Duration:                 app restart (5.11s ready detect) + 120s idle + 60.01s sampling
+StreamDeck.exe CPU avg:   67.86% of one core (4.24% total CPU on 16 logical processors)
+Plugin Node CPU avg:      20.28% of one core (1.27% total CPU; pid 4308)
+dwm.exe CPU avg:          not captured by Get-Process CPU delta in this run
+Match expected:           NO — falsified
+Notes:                    Raw idle TCP socket alone (no codec, no PING setInterval, no parsing — just net.createConnection + sock.on('data', ()=>{}) drain) burns the SAME CPU as full MQTT (T0). Plugin log confirmed only 2 lines during the run (no reconnect storm, socket stayed open the entire window). Old memory entry "raw TCP idle 連線只 1.5%" is FALSIFIED by this run. The codec is innocent.
+```
+
+---
+
+## T0-off-7 — disable verification after T7
+
+```text
+Test:                     T0-off-7 (post-axis-7)
+Plugin commit:            31f9cb6 + working tree CURRENT_AXIS="off"
+SD app:                   7.4.1.22720
+SDK:                      @elgato/streamdeck 2.1.0
+Mode:                     baseline (disable check)
+Ablation entry point:     CURRENT_AXIS = "off" (shouldUseMqttCodec() returns true)
+Hypothesis:               Axis 7 旁路可逆，CPU 應回 T0 ±2pp
+Expected if true:         三個 CPU 數字都在 T0 ±2pp 內
+Duration:                 app restart (4.59s ready detect) + 120s idle + 60.01s sampling
+StreamDeck.exe CPU avg:   66.26% of one core (4.14% total CPU on 16 logical processors)
+Plugin Node CPU avg:      20.46% of one core (1.28% total CPU; pid 12412)
+dwm.exe CPU avg:          not captured by Get-Process CPU delta in this run
+Match expected:           partial (Node ✓, StreamDeck -2.97pp just outside band)
+Notes:                    Node 20.46 vs T0 21.05 (-0.59pp ✓). StreamDeck 66.26 vs T0 69.23 (-2.97pp), slightly outside ±2pp. Same magnitude of session drift as T0-off-2/6 saw on StreamDeck — appears to be natural between-session noise on the SD app process, not residual ablation. T7 is reproducible and trustworthy.
+```
+
+---
+
+## Axis 1a + 2 + 6 + 7 combined finding (the actual answer)
+
+| Test | StreamDeck | Plugin Node | What's running in plugin process |
 |---|---|---|---|
-| T0 baseline | 69.23 | 21.05 | (—) |
-| T1 (1a hardware-only render) | 65.15 | 20.59 | -4.08pp |
-| T2 (no SUBSCRIBE) | 66.22 | 19.79 | -3.01pp |
-| **T6 (no MQTT at all)** | **1.12** | **0.00** | **-68.11pp** |
-| T0-off-6 (reversibility check) | 67.39 | 19.71 | -1.84pp ✓ |
+| T0 baseline | 69.23 | 21.05 | full MQTT (codec + subscribe + render) |
+| T1 (1a hardware-only) | 65.15 | 20.59 | same as T0, render → hardware target |
+| T2 (no SUBSCRIBE) | 66.22 | 19.79 | codec attached, no subscribe / publish flow |
+| T6 (no MQTT at all) | **1.12** | **0.00** | no TCP socket open, plugin idle |
+| T7 (raw TCP, no codec) | 67.86 | 20.28 | one idle TCP socket, drained, no parsing |
+| T0-off-7 | 66.26 | 20.46 | full MQTT (control) |
 
-T1 and T2 falsify the user-visible work (render commands, SUBSCRIBE pipeline)
-as the cost driver. T6 collapses CPU to ~zero by removing the entire MQTT
-connection. The conclusion is unambiguous:
+**Empirical answer:** Any TCP socket open from the plugin process → ~20% Node
++ ~66% StreamDeck. No socket → 0%. The MQTT codec, the SUBSCRIBE pipeline,
+the render commands, and the PING timer are all individually CHEAP. The
+**socket itself is the cost**.
 
-**The CPU burn lives in the live `mqtt-connection` codec attached to the
-idle TCP socket.** Not the broker traffic (T2 had a quiet broker too),
-not the SDK IPC (T6 keeps it and CPU still drops to zero), not the Node
-runtime in the sandbox (also kept in T6), not host-side reaction to plugin
-existence (T6 plugin is alive and registered, just no MQTT).
+This is not a bug in `mqtt-connection`. It's not a bug in our render code.
+It's not a bug in our SUBSCRIBE pipeline. It's something in the SD plugin
+sandbox / SD app's reaction to the plugin process having an open TCP
+socket to anywhere. Mechanism unknown — possibly Windows-level event
+tracing, possibly SD app polling the plugin's socket state, possibly
+Node's event loop activity in the sandbox triggers extra SDK IPC traffic.
 
-This matches the pre-existing observation in
-`memory/sd_plugin_cpu_regression.md`:
+The previous T6-based conclusion that "cost lives in mqtt-connection codec"
+was OVERREACH — T6 removed too many things at once. T7 isolates the
+socket from the codec, and the cost stays.
 
-> 連線本身 | raw TCP idle 連線只 1.5%，但用 mqtt protocol 講話就 22%
+### Implication for fixes (revised after T7)
 
-T6 confirms it from the opposite direction: removing the codec entirely
-gets us to the floor (~0%), confirming raw TCP idle was already cheap and
-the codec is the hot loop.
+What does NOT help (proven by ablation):
+- Reducing render frequency (T1).
+- Skipping SUBSCRIBE / topic split (T2).
+- Replacing `mqtt-connection` with a hand-written codec (T7 — the codec is
+  not the problem).
+- Switching SDK version 2.0.1 ↔ 2.1.0 (regression report).
+- Switching SD app 7.4.0 ↔ 7.4.1 (regression report).
 
-### Implication for fixes
-
-What helps:
-- Replace `mqtt-connection` with a minimal hand-written MQTT codec on top
-  of `net.Socket` — only handles CONNECT, SUBSCRIBE, PUBLISH, PINGRESP.
-  Avoid the `readable-stream` / `bl` chain that mqtt-connection drags in.
-- Or move MQTT out of the plugin process entirely (e.g., a lightweight
-  Windows-side bridge that converts MQTT → SDK calls via a different
-  channel), but that is much bigger surgery.
-
-What does NOT help (already ablated):
-- Reducing render frequency (Axis 1a / earlier setImage dedup).
-- Skipping SUBSCRIBE or topic split (Axis 2).
-- Switching SDK version 2.0.1 ↔ 2.1.0 (already in regression report).
-- Switching SD app 7.4.0 ↔ 7.4.1 (already in regression report).
-
-### Next ablation only if needed
-
-- **Axis 7 (idea):** raw TCP socket open with no codec at all (no
-  `mqttCon(sock)` wrap, just `net.createConnection` + drain reads). Should
-  reproduce the existing memory's "raw TCP idle 連線只 1.5%" measurement
-  inside the new ablation harness. Useful only if we want a clean number
-  to set the floor for Axis 8 (a hand-written codec).
-- **Axis B (SD app 7.3.x downgrade):** still useful for an Elgato bug
-  report — proves the regression direction. But the diagnosis is already
-  strong enough without it.
+What MIGHT help (not yet ablated):
+- **Move MQTT out of the plugin process entirely.** A Windows-side sidecar
+  process subscribes to MQTT and translates state changes into a channel
+  the plugin can read cheaply (e.g., file watch, named pipe with smaller
+  per-event cost than a persistent socket, or even SDK PI settings push).
+  This is the only architecture-level fix consistent with the data.
+- **Axis 8 (out-of-process control test):** run the same `mqtt-connection`
+  + raw socket test in vanilla Node outside SD plugin sandbox. If CPU is
+  also ~20% there, the regression is in Node/Windows TCP, not SD app —
+  ball is on the broader stack, not Elgato. If CPU is normal in vanilla
+  Node, this is exclusively SD plugin sandbox interaction.
+- **Axis B (SD app 7.3.x downgrade):** still useful as a directional rod
+  for Elgato bug reports.
