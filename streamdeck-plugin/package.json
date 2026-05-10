@@ -9,7 +9,7 @@
     "watch": "rollup -c -w",
     "deploy": "bash -c 'source ../windows/deploy-paths.sh && cp -r com.duofilm.claude-monitor.sdPlugin/bin com.duofilm.claude-monitor.sdPlugin/imgs com.duofilm.claude-monitor.sdPlugin/ui com.duofilm.claude-monitor.sdPlugin/manifest.json \"$DEPLOY_SD_PLUGIN/\"'",
     "build:sidecar": "rollup -c rollup.sidecar.config.mjs && npm run deploy:sidecar",
-    "deploy:sidecar": "bash -c 'source ../windows/deploy-paths.sh && mkdir -p \"$DEPLOY_CLAUDE_MONITOR_DIR\" && cp sidecar/dist/sidecar.js \"$DEPLOY_CLAUDE_MONITOR_SIDECAR\" && cp sidecar/run-sidecar.ps1 \"$DEPLOY_CLAUDE_MONITOR_RUNNER\"'"
+    "deploy:sidecar": "bash -c 'source ../windows/deploy-paths.sh && mkdir -p \"$DEPLOY_CLAUDE_MONITOR_DIR\" && cp sidecar/dist/sidecar.js \"$DEPLOY_CLAUDE_MONITOR_SIDECAR\" && cp sidecar/run-sidecar.ps1 \"$DEPLOY_CLAUDE_MONITOR_RUNNER\" && cp sidecar/run-sidecar.vbs \"$DEPLOY_CLAUDE_MONITOR_HIDDEN_RUNNER\"'"
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.1.0",

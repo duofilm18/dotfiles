@@ -26,9 +26,11 @@ $LhmExe = $DEPLOY_LHM_EXE
 $LhmPort = 8085
 $DeployDir = $DEPLOY_WIN_STATS_DIR
 $DeployedScript = $DEPLOY_WIN_STATS_MAIN
+$DeployedRunner = $DEPLOY_WIN_STATS_RUNNER
 $SourceScript = $MyInvocation.MyCommand.Path
 $SourceDeployPaths = Join-Path $PSScriptRoot "deploy-paths.ps1"
 $DeployedDeployPaths = Join-Path $DeployDir "deploy-paths.ps1"
+$SourceRunner = Join-Path $PSScriptRoot "run-win-stats.vbs"
 
 # --- MQTT PUBLISH (pure TCP, no external tools) ---
 function Send-MqttPublish {
@@ -100,6 +102,7 @@ if ($Install) {
     Write-Host "[1/3] Deploying win-stats scripts..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Force -Path $DeployDir | Out-Null
     Copy-IfDifferent -Source $SourceScript -Destination $DeployedScript
+    Copy-IfDifferent -Source $SourceRunner -Destination $DeployedRunner
     Copy-IfDifferent -Source $SourceDeployPaths -Destination $DeployedDeployPaths
     Write-Host "  OK: deployed to $DeployDir" -ForegroundColor Green
 
@@ -119,13 +122,13 @@ if ($Install) {
 
     # 3. 註冊 Task Scheduler（push-win-stats 每分鐘）
     Write-Host "[3/3] Registering Task Scheduler..." -ForegroundColor Yellow
-    $pwsh = (Get-Command powershell.exe).Source
+    $wscript = (Get-Command wscript.exe).Source
 
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 
     $action = New-ScheduledTaskAction `
-        -Execute $pwsh `
-        -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$DeployedScript`""
+        -Execute $wscript `
+        -Argument "//B //Nologo `"$DeployedRunner`""
 
     # 9999 days, not [TimeSpan]::MaxValue: current Windows TS rejects
     # the latter's `P99999999DT23H59M59S` XML duration on schema validation.
@@ -137,7 +140,8 @@ if ($Install) {
         -AllowStartIfOnBatteries `
         -DontStopIfGoingOnBatteries `
         -StartWhenAvailable `
-        -ExecutionTimeLimit (New-TimeSpan -Minutes 1)
+        -ExecutionTimeLimit (New-TimeSpan -Minutes 1) `
+        -Hidden
 
     Register-ScheduledTask `
         -TaskName $TaskName `
@@ -145,6 +149,7 @@ if ($Install) {
         -Trigger $trigger `
         -Settings $settings `
         -Description "LibreHardwareMonitor stats -> MQTT (system/stats/win, stable deploy path)" `
+        -Force `
         | Out-Null
 
     Write-Host "  OK: '$TaskName' registered (every 1 min)" -ForegroundColor Green

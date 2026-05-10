@@ -17,6 +17,7 @@ $ErrorActionPreference = "Stop"
 $taskName     = "ClaudeMonitorSidecar"
 $claudeDir    = "$env:LOCALAPPDATA\claude-monitor"
 $runner       = "$claudeDir\run-sidecar.ps1"
+$hiddenRunner = "$claudeDir\run-sidecar.vbs"
 $sidecarJs    = "$claudeDir\sidecar.js"
 $sidecarLog   = "$claudeDir\sidecar.log"
 
@@ -28,14 +29,20 @@ if (-not (Test-Path $sidecarJs)) {
     Write-Error "Sidecar bundle not found at $sidecarJs. Run 'npm run build:sidecar' first."
     exit 1
 }
+if (-not (Test-Path $hiddenRunner)) {
+    Write-Error "Hidden sidecar wrapper not found at $hiddenRunner. Run 'npm run build:sidecar' first."
+    exit 1
+}
 
 $action = New-ScheduledTaskAction `
-    -Execute "powershell.exe" `
-    -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$runner`""
+    -Execute "wscript.exe" `
+    -Argument "//B //Nologo `"$hiddenRunner`""
 
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
 $settings = New-ScheduledTaskSettingsSet `
+    -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries `
     -StartWhenAvailable `
     -RestartInterval (New-TimeSpan -Minutes 1) `
     -RestartCount 3 `

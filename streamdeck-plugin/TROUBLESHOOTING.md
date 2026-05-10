@@ -16,6 +16,18 @@ from top down:
 - `-RepetitionDuration ([TimeSpan]::MaxValue)` fails current Windows TS XML schema (`P99999999DT23H59M59S`). Use `(New-TimeSpan -Days 9999)`.
 - `State=Ready` after registering is normal for a 1-min repetition trigger — not "broken".
 
+### Windows console flashes
+
+The production tasks should launch through Windows Script Host wrappers, not
+directly through `powershell.exe`:
+
+- `ClaudeMonitorSidecar` → `wscript.exe //B //Nologo "%LOCALAPPDATA%\claude-monitor\run-sidecar.vbs"`
+- `Push Win Stats MQTT` → `wscript.exe //B //Nologo "%LOCALAPPDATA%\win-stats-mqtt\run-win-stats.vbs"`
+
+The VBS wrappers only hide the window and then invoke the original PowerShell
+scripts. They are not an alternate data path. If a PowerShell console flashes
+on screen, check the task `Actions`; do not replace the MQTT/state.json flow.
+
 ### Process death after long uptime (root cause unverified)
 
 Observed once on 2026-05-09: both LHM and ClaudeMonitorSidecar processes were gone despite their at-logon tasks being healthy. Exit codes (sidecar `0xC000013A`, LHM `0`) are *consistent with* a sleep/wake cycle but this remains a hypothesis — not yet verified against system events.
