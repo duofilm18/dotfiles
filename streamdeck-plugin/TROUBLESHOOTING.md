@@ -28,6 +28,12 @@ The VBS wrappers only hide the window and then invoke the original PowerShell
 scripts. They are not an alternate data path. If a PowerShell console flashes
 on screen, check the task `Actions`; do not replace the MQTT/state.json flow.
 
+Regression check:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\verify-hidden-task-wrappers.ps1
+```
+
 ### Process death after long uptime (root cause unverified)
 
 Observed once on 2026-05-09: both LHM and ClaudeMonitorSidecar processes were gone despite their at-logon tasks being healthy. Exit codes (sidecar `0xC000013A`, LHM `0`) are *consistent with* a sleep/wake cycle but this remains a hypothesis — not yet verified against system events.
