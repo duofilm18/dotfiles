@@ -1,0 +1,193 @@
+<Window x:Class="CpuUsageWidget.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="System Usage"
+        Width="270"
+        Height="176"
+        MinWidth="150"
+        MinHeight="96"
+        ResizeMode="CanResize"
+        WindowStyle="SingleBorderWindow"
+        Background="#FF181C22"
+        ShowInTaskbar="True"
+        Topmost="True">
+    <Border CornerRadius="0"
+            Background="#FF181C22"
+            BorderBrush="#33252B33"
+            BorderThickness="1"
+            Padding="{Binding OuterPadding}">
+        <Grid x:Name="RootGrid">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="{Binding HeaderGap}" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{Binding LabelColumnWidth}" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Row="0"
+                       Grid.ColumnSpan="2"
+                       Text="{Binding TitleText}"
+                       Foreground="#FFDCE1E8"
+                       FontFamily="Segoe UI Semibold"
+                       FontSize="{Binding TitleFontSize}"
+                       FontWeight="Bold" />
+
+            <TextBlock Grid.Row="1"
+                       Grid.ColumnSpan="2"
+                       Margin="0,4,0,0"
+                       Text="{Binding PlanText}"
+                       Visibility="{Binding PlanVisibility}"
+                       Foreground="#FF97A1AE"
+                       FontFamily="Segoe UI"
+                       FontSize="{Binding MetaFontSize}" />
+
+            <Grid Grid.Row="3"
+                  Grid.RowSpan="4"
+                  Grid.ColumnSpan="2"
+                  Visibility="{Binding FullVisibility}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="{Binding LabelColumnWidth}" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Grid.Column="0"
+                           Text="CPU"
+                           Foreground="#FFFFB86C"
+                           FontFamily="Consolas"
+                           FontSize="{Binding MetricFontSize}"
+                           FontWeight="Bold" />
+                <TextBlock Grid.Row="0"
+                           Grid.Column="1"
+                           Text="{Binding CpuText}"
+                           Foreground="#FFEBEFF4"
+                           FontFamily="Consolas"
+                           FontSize="{Binding MetricFontSize}" />
+
+                <TextBlock Grid.Row="1"
+                           Grid.Column="0"
+                           Margin="0,6,0,0"
+                           Text="RAM"
+                           Foreground="#FF50FA7B"
+                           FontFamily="Consolas"
+                           FontSize="{Binding MetricFontSize}"
+                           FontWeight="Bold" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="1"
+                           Margin="0,6,0,0"
+                           Text="{Binding RamText}"
+                           Foreground="#FFEBEFF4"
+                           FontFamily="Consolas"
+                           FontSize="{Binding MetricFontSize}" />
+
+                <TextBlock Grid.Row="2"
+                           Grid.Column="0"
+                           Margin="0,6,0,0"
+                           Text="DOWN"
+                           Foreground="#FF8BE9FD"
+                           FontFamily="Consolas"
+                           FontSize="{Binding MetricFontSize}"
+                           FontWeight="Bold" />
+                <TextBlock Grid.Row="2"
+                           Grid.Column="1"
+                           Margin="0,6,0,0"
+                           Text="{Binding DownText}"
+                           Foreground="#FFEBEFF4"
+                           FontFamily="Consolas"
+                           FontSize="{Binding MetricFontSize}" />
+
+                <TextBlock Grid.Row="3"
+                           Grid.Column="0"
+                           Margin="0,6,0,0"
+                           Text="UP"
+                           Foreground="#FFFF79C6"
+                           FontFamily="Consolas"
+                           FontSize="{Binding MetricFontSize}"
+                           FontWeight="Bold" />
+                <TextBlock Grid.Row="3"
+                           Grid.Column="1"
+                           Margin="0,6,0,0"
+                           Text="{Binding UpText}"
+                           Foreground="#FFEBEFF4"
+                           FontFamily="Consolas"
+                           FontSize="{Binding MetricFontSize}" />
+            </Grid>
+
+            <UniformGrid Grid.Row="3"
+                         Grid.RowSpan="4"
+                         Grid.ColumnSpan="2"
+                         Columns="2"
+                         Visibility="{Binding CompactVisibility}">
+                <Border Padding="0,0,6,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="C"
+                                   Foreground="#FFFFB86C"
+                                   FontFamily="Consolas"
+                                   FontSize="{Binding CompactKeyFontSize}"
+                                   FontWeight="Bold" />
+                        <TextBlock Margin="6,0,0,0"
+                                   Text="{Binding CpuCompactText}"
+                                   Foreground="#FFEBEFF4"
+                                   FontFamily="Consolas"
+                                   FontSize="{Binding CompactValueFontSize}" />
+                    </StackPanel>
+                </Border>
+                <Border Padding="0,0,0,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="R"
+                                   Foreground="#FF50FA7B"
+                                   FontFamily="Consolas"
+                                   FontSize="{Binding CompactKeyFontSize}"
+                                   FontWeight="Bold" />
+                        <TextBlock Margin="6,0,0,0"
+                                   Text="{Binding RamCompactText}"
+                                   Foreground="#FFEBEFF4"
+                                   FontFamily="Consolas"
+                                   FontSize="{Binding CompactValueFontSize}" />
+                    </StackPanel>
+                </Border>
+                <Border Padding="0,0,6,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="D"
+                                   Foreground="#FF8BE9FD"
+                                   FontFamily="Consolas"
+                                   FontSize="{Binding CompactKeyFontSize}"
+                                   FontWeight="Bold" />
+                        <TextBlock Margin="6,0,0,0"
+                                   Text="{Binding DownCompactText}"
+                                   Foreground="#FFEBEFF4"
+                                   FontFamily="Consolas"
+                                   FontSize="{Binding CompactValueFontSize}" />
+                    </StackPanel>
+                </Border>
+                <Border Padding="0,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="U"
+                                   Foreground="#FFFF79C6"
+                                   FontFamily="Consolas"
+                                   FontSize="{Binding CompactKeyFontSize}"
+                                   FontWeight="Bold" />
+                        <TextBlock Margin="6,0,0,0"
+                                   Text="{Binding UpCompactText}"
+                                   Foreground="#FFEBEFF4"
+                                   FontFamily="Consolas"
+                                   FontSize="{Binding CompactValueFontSize}" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+        </Grid>
+    </Border>
+</Window>

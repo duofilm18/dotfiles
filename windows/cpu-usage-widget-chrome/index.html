@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CPU Usage Widget</title>
+    <link rel="stylesheet" href="./widget.css" />
+  </head>
+  <body>
+    <main class="launcher">
+      <div class="launcher-card">
+        <p class="eyebrow">Chrome Native Widget</p>
+        <h1>CPU Usage</h1>
+        <p class="desc">開啟更小、更精簡、可拖動的浮動小窗。</p>
+        <div class="actions">
+          <button id="open-widget" type="button">Open resizable widget</button>
+          <button id="open-pip" type="button">Open PiP</button>
+        </div>
+        <p id="status" class="status">等待開啟小窗</p>
+      </div>
+    </main>
+
+    <template id="widget-template">
+      <section class="widget-shell">
+        <div class="widget-head">
+          <span class="dot"></span>
+          <span class="title">SYSTEM</span>
+          <span class="stamp" id="mini-stamp">LIVE</span>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-row">
+            <span class="metric-key cpu">CPU</span>
+            <span class="metric-value" id="cpu-value">--</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key ram">RAM</span>
+            <span class="metric-value" id="ram-value">--</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key down">D</span>
+            <span class="metric-value" id="down-value">--</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-key up">U</span>
+            <span class="metric-value" id="up-value">--</span>
+          </div>
+        </div>
+
+        <div class="ultra-grid">
+          <div class="ultra-cell">
+            <span class="ultra-key cpu">C</span>
+            <span class="ultra-value" id="cpu-mini">--</span>
+          </div>
+          <div class="ultra-cell">
+            <span class="ultra-key ram">R</span>
+            <span class="ultra-value" id="ram-mini">--</span>
+          </div>
+          <div class="ultra-cell">
+            <span class="ultra-key down">D</span>
+            <span class="ultra-value" id="down-mini">--</span>
+          </div>
+          <div class="ultra-cell">
+            <span class="ultra-key up">U</span>
+            <span class="ultra-value" id="up-mini">--</span>
+          </div>
+        </div>
+      </section>
+    </template>
+
+    <script type="module" src="./widget.js"></script>
+  </body>
+  </html>

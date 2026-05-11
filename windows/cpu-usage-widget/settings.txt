@@ -1,0 +1,3 @@
+# Network plan limits for usage percentage
+download_mbps=500
+upload_mbps=500

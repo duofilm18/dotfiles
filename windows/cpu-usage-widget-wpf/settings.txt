@@ -1,0 +1,9 @@
+# Network plan limits for usage percentage
+download_mbps=500
+upload_mbps=500
+pinned=true
+locked=false
+pos_x=-1
+pos_y=-1
+window_width=270
+window_height=176
