@@ -39,6 +39,36 @@ description: >
 
 看到這些訊號時，直接沿用下面流程，不要重新探索。
 
+## 一鍵修復（快速路徑）
+
+如果使用者只想趕快印東西，不關心過程：
+
+```bash
+powershell.exe -NoProfile -ExecutionPolicy Bypass \
+    -File "$(wslpath -w ~/dotfiles/windows/brother-printer/repair.ps1)"
+```
+
+會跳 UAC 視窗，按「是」即可。腳本會 idempotent 跑完：自動重啟設定 → 啟動 Spooler → 移除重複印表機 → 跑 healthcheck 驗證。
+
+桌面有 `Brother Printer Repair.lnk` 捷徑可直接雙擊。新機器或捷徑不見了，跑：
+
+```bash
+powershell.exe -NoProfile -ExecutionPolicy Bypass \
+    -File "$(wslpath -w ~/dotfiles/windows/brother-printer/install-shortcut.ps1)"
+```
+
+不通過或要排查根因時，再走下面的固定流程。
+
+## 自動驗證（regression check）
+
+修完後或 commit 前驗證：
+
+```bash
+bats ~/dotfiles/windows/brother-printer/tests/brother_printer.bats
+```
+
+對應 `windows/brother-printer/healthcheck.ps1`，預設只檢查 regression 項目（自動重啟設定 + 無重複印表機），加 `-Full` 旗標可額外檢查當下健康（Spooler 在跑、印表機 Normal、IP 可達）。
+
 ## 固定流程
 
 ### 第一步：讀既有文檔

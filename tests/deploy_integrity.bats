@@ -6,6 +6,24 @@
 
 DOTFILES="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
+# ── Brother 印表機 Win11 修復產物 ──
+
+@test "DI-15: brother-printer healthcheck.ps1 存在" {
+    [ -f "$DOTFILES/windows/brother-printer/healthcheck.ps1" ]
+}
+
+@test "DI-16: brother-printer repair.ps1 存在" {
+    [ -f "$DOTFILES/windows/brother-printer/repair.ps1" ]
+}
+
+@test "DI-17: brother-printer regression bats 存在" {
+    [ -f "$DOTFILES/windows/brother-printer/tests/brother_printer.bats" ]
+}
+
+@test "DI-18: brother-printer install-shortcut.ps1 存在" {
+    [ -f "$DOTFILES/windows/brother-printer/install-shortcut.ps1" ]
+}
+
 # ── WSL ime-mqtt-publisher 完整性 ──
 
 @test "DI-1: ime-mqtt-publisher.sh 腳本存在" {
