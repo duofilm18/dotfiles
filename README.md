@@ -275,6 +275,11 @@ ansible-playbook rpi5b.yml --check --diff
 
 > 機器特定敏感值（Uptime Kuma token 等）放在 `ansible/host_vars/rpi5b.yml`（已 gitignore），模板見 `rpi5b.yml.example`。
 
+### XD60 鍵盤（QMK 遷移）
+
+公司 XD60 二代鍵盤從 YDKB 韌體遷移到 QMK 的紀錄、硬體規格與 keymap，
+見 [hardware/kb_XD60/README.md](hardware/kb_XD60/README.md)。
+
 ---
 
 ## 慘案教訓
