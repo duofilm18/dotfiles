@@ -42,6 +42,7 @@ keymap 原始碼版控在本 repo,WSL 只負責編譯出 `.hex`,**燒錄仍在 W
 
 ```
 hardware/kb_XD60/
+├── CLAUDE.md                     ← 開工提示(必踩的坑);動到此資料夾自動載入
 ├── xd60_qmk_keymap.json          ← 編譯預設 keymap(QMK 官方定義 + 實機截圖)
 ├── xd60_via_definition.json      ← VIA 定義檔(由 QMK LAYOUT_all 轉),載入 VIA App 用
 ├── xd60_via_keymap.layout        ← VIA 實際鍵位備份(VIA Export),重灌時 Import 回去
