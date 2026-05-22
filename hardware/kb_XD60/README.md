@@ -32,7 +32,52 @@
 - **問題**:YDKB 的 `GH60_ABC` profile 對 LED 設定不符 → RGB 顏色亂跳,且 profile 在別人網站上改不了。
 - **解法**:改用 **QMK**(TMK 的開源後繼者)。XD60 二代已內建支援 `keyboards/xiudi/xd60/rev2`,且其 RGB 定義已正確(6× WS2812 / F6)→ 換過去即修好亂跳。
 
-## 遷移流程(QMK Configurator,零安裝)
+## 編譯路線(主線:本地客製編譯)
+
+走客製編譯,才能做 Configurator 做不到的事(逐層底燈換色、WS2812 色序)。
+keymap 原始碼版控在本 repo,WSL 只負責編譯出 `.hex`,**燒錄仍在 Windows**
+(WSL2 無原生 USB)。
+
+### 資產配置
+
+```
+hardware/kb_XD60/
+├── xd60_qmk_keymap.json          ← 唯一真實來源(QMK 官方定義 + 實機截圖)
+├── xd60_custom/                  ← 客製 keymap 原始碼,symlink 進 qmk_firmware
+│   ├── keymap.c                  ← 3 層 + rgblight_layers 逐層換色
+│   ├── config.h                  ← RGBLIGHT_LAYERS / WS2812 色序(備援)
+│   └── rules.mk                  ← MOUSEKEY / EXTRAKEY / RGBLIGHT / BACKLIGHT
+└── tests/check_keymap_sync.py    ← 守門:keymap.c 必須與 JSON 逐鍵一致
+```
+
+### 建置環境(Ansible,一次性)
+
+```bash
+cd ~/dotfiles/ansible && ansible-playbook wsl.yml --tags qmk
+```
+
+`wsl` role 的 `qmk` tag 會裝 AVR toolchain(`gcc-avr` / `avr-libc` /
+`binutils-avr`)、用 pipx 裝 `qmk` CLI、shallow clone `qmk_firmware`,
+並把 `xd60_custom/` symlink 進 `qmk_firmware/keyboards/xiudi/xd60/rev2/keymaps/`。
+
+### 編譯 → 燒錄
+
+```bash
+# WSL:編譯出 .hex
+qmk compile -kb xiudi/xd60/rev2 -km xd60_custom
+# 備援(不靠 qmk CLI):cd ~/qmk_firmware && make xiudi/xd60/rev2:xd60_custom
+```
+
+1. 把產出的 `.hex` 給 Windows 端
+2. 鍵盤進 bootloader(按住左上角鍵 + 插 USB)
+3. Windows 用 QMK Toolbox 燒錄(atmel-dfu)
+
+改 keymap 的順序:**先改 `xd60_qmk_keymap.json`** → 同步 `xd60_custom/keymap.c`
+→ 跑 `python3 hardware/kb_XD60/tests/check_keymap_sync.py` 確認一致 → 編譯。
+
+## 備援:QMK Configurator(零安裝)
+
+不想裝編譯環境時的快速路線,但**做不到逐層換色 / 色序客製**:
 
 1. 開 [config.qmk.fm](https://config.qmk.fm)
 2. `Import QMK Keymap` → 選 [`xd60_qmk_keymap.json`](./xd60_qmk_keymap.json)
@@ -40,13 +85,14 @@
 4. 切 Layer 1 / 2 對照截圖微調 → 綠色 `COMPILE` → `FIRMWARE` 下載 `.hex`
 5. 進 bootloader(按住鍵盤左上角鍵 + 插 USB)→ 用 QMK Toolbox 燒錄
 
-## Keymap(3 層,見 `xd60_qmk_keymap.json`)
+## Keymap(3 層,見 `xd60_qmk_keymap.json` / `xd60_custom/keymap.c`)
 
 - **Layer 0 — Base**:HHKB 風格。`Fn = MO(1)` 在右下、`MO(2)` 在空格左邊。
   - 此層由 `gh60 (3).hex` 解碼 + 截圖核對,**精準**。
 - **Layer 1 — Fn**(按住 MO(1)):F1~F12、滑鼠鍵、媒體、方向/翻頁。
 - **Layer 2 — RGB/數字**(按住 MO(2)):RGB 控制鍵(`RGB_TOG/MOD/HUI/SAI/VAI`)、背光、數字鍵盤、音量。
   - Layer 1/2 由 YDKB 截圖轉錄,**需在 Configurator 核對**。
+- **底燈逐層換色**:`keymap.c` 用 `rgblight_layers` —— L_FN 全段紅、L_RGB 全段藍,放開模式鍵自動復原。
 
 ## 原始 YDKB 韌體
 
@@ -73,6 +119,8 @@
 
 ## 已知問題 / 待辦
 
-- [ ] Layer 1 / 2 是截圖轉錄,燒錄前在 Configurator 核對
-- [ ] 燒 QMK 後若顏色對不上(選紅變綠)= WS2812 色序 GRB↔RGB,需客製編譯改一行
-- [ ] 「逐層自動換色」(Layer 1 紅、Layer 2 藍…)QMK Configurator 做不到,需客製編譯用 `rgblight_layers`
+- [x] 「逐層自動換色」—— `keymap.c` 已用 `rgblight_layers` 實作(L_FN 紅 / L_RGB 藍)
+- [ ] Layer 1 / 2 是截圖轉錄,燒錄前在實機核對
+- [ ] WS2812 色序:`config.h` 已備好覆寫(預設不啟用)。燒錄後若選紅變綠,
+      取消 `WS2812_BYTE_ORDER` 那行註解重編譯
+- [ ] 首次跑 `ansible-playbook wsl.yml --tags qmk` 建置編譯環境(尚未部署)

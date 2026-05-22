@@ -5,3 +5,9 @@ obsidian_deb_path: "/tmp/obsidian_{{ obsidian_version }}_amd64.deb"
 obsidian_install_root: "{{ ansible_facts.user_dir }}/.local/opt/obsidian-{{ obsidian_version }}"
 obsidian_launcher_path: "{{ ansible_facts.user_dir }}/.local/bin/obsidian"
 obsidian_desktop_path: "{{ ansible_facts.user_dir }}/.local/share/applications/obsidian.desktop"
+
+# QMK firmware build env（XD60 鍵盤客製編譯路線）
+qmk_firmware_repo: "https://github.com/qmk/qmk_firmware.git"
+qmk_firmware_dir: "{{ ansible_facts.user_dir }}/qmk_firmware"
+qmk_xd60_keymap_src: "{{ dotfiles_local }}/hardware/kb_XD60/xd60_custom"
+qmk_xd60_keymap_link: "{{ qmk_firmware_dir }}/keyboards/xiudi/xd60/rev2/keymaps/xd60_custom"

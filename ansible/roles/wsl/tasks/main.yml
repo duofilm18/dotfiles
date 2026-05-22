@@ -230,3 +230,56 @@
     enabled: true
     state: started
     scope: user
+
+# ── QMK firmware build env（XD60 鍵盤客製編譯路線）──
+# WSL 只負責「編譯」出 .hex；燒錄仍在 Windows 用 QMK Toolbox（WSL2 無原生 USB）。
+
+- name: Install AVR toolchain + QMK CLI 安裝器
+  become: true
+  ansible.builtin.apt:
+    name:
+      - gcc-avr        # ATmega32u4 編譯器
+      - avr-libc       # AVR C 函式庫
+      - binutils-avr   # AVR 組譯/連結
+      - pipx           # 隔離安裝 qmk CLI，避開 PEP 668
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  tags: [qmk]
+
+- name: Install QMK CLI via pipx
+  ansible.builtin.command:
+    cmd: pipx install qmk
+  args:
+    creates: "{{ ansible_facts.user_dir }}/.local/bin/qmk"
+  tags: [qmk]
+
+- name: Ensure pipx bin dir on PATH
+  ansible.builtin.command:
+    cmd: pipx ensurepath
+  changed_when: false
+  tags: [qmk]
+
+- name: Clone qmk_firmware（含 submodule，shallow）
+  ansible.builtin.git:
+    repo: "{{ qmk_firmware_repo }}"
+    dest: "{{ qmk_firmware_dir }}"
+    depth: 1
+    recursive: true
+    update: false
+  tags: [qmk]
+
+- name: Point QMK CLI at qmk_firmware
+  ansible.builtin.command:
+    cmd: "{{ ansible_facts.user_dir }}/.local/bin/qmk config user.qmk_home={{ qmk_firmware_dir }}"
+  args:
+    creates: "{{ ansible_facts.user_dir }}/.config/qmk/qmk.ini"
+  tags: [qmk]
+
+- name: Symlink XD60 客製 keymap 進 qmk_firmware（原始碼留 dotfiles 版控）
+  ansible.builtin.file:
+    src: "{{ qmk_xd60_keymap_src }}"
+    dest: "{{ qmk_xd60_keymap_link }}"
+    state: link
+    force: true
+  tags: [qmk]
