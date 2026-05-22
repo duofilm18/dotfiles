@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """XD60 keymap 同步守門 — regression check。
 
-驗證 xd60_custom/keymap.c 的三層 LAYOUT_all 與唯一真實來源
-xd60_qmk_keymap.json 逐鍵一致。任一不符即非零退出。
+驗證 xd60_custom/keymap.c 的 4 層 LAYOUT_all 與 xd60_qmk_keymap.json
+逐鍵一致。任一不符即非零退出。
 
-為什麼要這個檢查（見 ../README.md「外部 review 核對紀錄」）：
-keymap 的真實來源是「QMK 官方定義 + 實機 3 層截圖」，外部 AI 無實機時會
-幻覺出錯誤硬體定義。客製編譯路線多了一份手寫 keymap.c，這支腳本確保它
-不會悄悄偏離 JSON。改 keymap 時：先改 JSON，再同步 keymap.c，跑此檢查。
+兩者都由 tools/sync_from_via.py 從 VIA 匯出的 .layout 產生;此檢查確保
+keymap.c 沒有偏離 JSON（例如有人手改了其中一個、或腳本格式出錯）。
 
 用法：  python3 hardware/kb_XD60/tests/check_keymap_sync.py
 """

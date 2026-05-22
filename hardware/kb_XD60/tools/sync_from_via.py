@@ -40,6 +40,12 @@ CONV = {
     "KC_MS_UP": "MS_UP", "KC_MS_DOWN": "MS_DOWN",
     "KC_MS_LEFT": "MS_LEFT", "KC_MS_RIGHT": "MS_RGHT",
     "KC_MS_WH_UP": "MS_WHLU", "KC_MS_WH_DOWN": "MS_WHLD",
+    "KC_MS_WH_LEFT": "MS_WHLL", "KC_MS_WH_RIGHT": "MS_WHLR",
+    # 更舊的裸名（VIA 通常匯出 KC_MS_* 形式，這幾個是保險，與坑表宣稱一致）
+    "KC_MS_U": "MS_UP", "KC_MS_D": "MS_DOWN", "KC_MS_L": "MS_LEFT", "KC_MS_R": "MS_RGHT",
+    "KC_BTN1": "MS_BTN1", "KC_BTN2": "MS_BTN2", "KC_BTN3": "MS_BTN3",
+    "KC_BTN4": "MS_BTN4", "KC_BTN5": "MS_BTN5",
+    "KC_WH_U": "MS_WHLU", "KC_WH_D": "MS_WHLD", "KC_WH_L": "MS_WHLL", "KC_WH_R": "MS_WHLR",
     "KC_NLCK": "KC_NUM", "KC_GESC": "QK_GESC",
     "RGB_TOG": "UG_TOGG", "RGB_MOD": "UG_NEXT", "RGB_RMOD": "UG_PREV",
     "RGB_HUI": "UG_HUEU", "RGB_HUD": "UG_HUED",
