@@ -1,20 +1,24 @@
 // XD60 rev2 客製 keymap — 客製編譯路線
 //
 // 唯一真實來源：../xd60_qmk_keymap.json
-//   （真實抓下來的 QMK 官方 xiudi/xd60/rev2 定義 + 實機 3 層截圖核對）
-// 本檔三層 keymap 由該 JSON 機械轉換而來，token 與 JSON 一一對應。
+//   （真實抓下來的 QMK 官方 xiudi/xd60/rev2 定義 + 實機截圖核對）
+// 本檔四層 keymap 由該 JSON 機械轉換而來，token 與 JSON 一一對應。
 // 同步守門：tests/check_keymap_sync.py（keymap.c 與 JSON 任一不一致即 fail）。
 //
-// 客製編譯才能做、Configurator 做不到的兩件事都在這檔：
-//   1. rgblight_layers — 逐層底燈換色（L_FN 紅 / L_RGB 藍）
-//   2. WS2812 色序 — 見 config.h（預設不啟用，僅備援）
+// 分工：
+//   - 底燈逐層顏色 → 編譯進此檔的 rgblight_layers（VIA 改不了，固定）
+//   - 鍵位        → VIA App 即時編輯（此檔的 keymaps[] 只是燒進去的預設值）
+//
+// 逐層底燈顏色（客製編譯才有，Configurator 做不到）：
+//   L_BASE 無色（底燈關）/ L_FN 紅 / L_NUM 綠 / L_RSVD 藍
 
 #include QMK_KEYBOARD_H
 
 enum xd60_layers {
-    L_BASE = 0,  // HHKB 風格基礎層
-    L_FN,        // MO(1)：F 區、滑鼠、媒體、方向/翻頁
-    L_RGB,       // MO(2)：RGB/背光控制、數字鍵盤、音量
+    L_BASE = 0,  // HHKB 風格基礎層 —— 無色
+    L_FN,        // MO(1)：F 區、滑鼠、媒體、方向/翻頁 —— 紅
+    L_NUM,       // MO(2)：數字鍵盤、RGB/背光控制、音量 —— 綠
+    L_RSVD,      // 預備層（空白，鍵位之後在 VIA 填）—— 藍
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -36,19 +40,29 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
-    // ── Layer 2：RGB/數字（按住 MO(2)）— 由 YDKB 截圖轉錄，燒前在實機核對 ──
-    [L_RGB] = LAYOUT_all(
+    // ── Layer 2：數字/RGB（按住 MO(2)）— 由 YDKB 截圖轉錄，燒前在實機核對 ──
+    [L_NUM] = LAYOUT_all(
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_INS,  KC_NUM,  KC_TRNS, KC_LPRN, KC_RPRN, KC_UNDS, KC_TRNS, KC_TRNS, KC_NO,
         KC_CAPS, UG_TOGG, UG_NEXT, UG_HUEU, UG_SATU, UG_VALU, KC_ESC,  KC_P7,   KC_P8,   KC_P9,   KC_PPLS, KC_PMNS, KC_PAST, KC_TRNS,
         KC_TRNS, UG_VALD, UG_VALU, KC_TRNS, BL_TOGG, BL_STEP, KC_PENT, KC_P4,   KC_P5,   KC_P6,   KC_SCLN, KC_PPLS, KC_NO,   KC_TRNS,
         KC_TRNS, KC_VOLD, KC_VOLU, KC_MUTE, KC_TRNS, KC_TRNS, KC_PDOT, KC_P1,   KC_P2,   KC_P3,   KC_PSLS, KC_PENT, KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS, KC_TRNS, KC_TRNS, KC_P0,   KC_PDOT, KC_PENT, KC_PENT, KC_TRNS, KC_TRNS
     ),
+
+    // ── Layer 3：預備層 —— 全 transparent，鍵位之後在 VIA 填 ──
+    [L_RSVD] = LAYOUT_all(
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
+    ),
 };
 
 // ── rgblight_layers：逐層底燈換色 ───────────────────────────────
-// QMK Configurator 做不到（待辦第 3 項），客製編譯才有。
-// 6 顆 WS2812 全段上色：L_FN 全紅、L_RGB 全藍，放開模式鍵自動復原。
+// 6 顆 WS2812 全段上色。L_BASE 無色（底燈關），按住模式鍵才疊上顏色，
+// 放開自動復原。config.h 的 RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF 讓底燈
+// 即使在關閉狀態，疊上的顏色層仍會亮。
 
 // 新版 QMK 把 RGBLED_NUM 改名 RGBLIGHT_LED_COUNT，相容兩種命名。
 #ifndef RGBLED_NUM
@@ -58,20 +72,26 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 const rgblight_segment_t PROGMEM xd60_fn_lighting[] = RGBLIGHT_LAYER_SEGMENTS(
     {0, RGBLED_NUM, HSV_RED}
 );
-const rgblight_segment_t PROGMEM xd60_rgb_lighting[] = RGBLIGHT_LAYER_SEGMENTS(
+const rgblight_segment_t PROGMEM xd60_num_lighting[] = RGBLIGHT_LAYER_SEGMENTS(
+    {0, RGBLED_NUM, HSV_GREEN}
+);
+const rgblight_segment_t PROGMEM xd60_rsvd_lighting[] = RGBLIGHT_LAYER_SEGMENTS(
     {0, RGBLED_NUM, HSV_BLUE}
 );
 const rgblight_segment_t* const PROGMEM xd60_rgb_layers[] = RGBLIGHT_LAYERS_LIST(
-    xd60_fn_lighting,   // index 0 → L_FN
-    xd60_rgb_lighting   // index 1 → L_RGB
+    xd60_fn_lighting,    // index 0 → L_FN   紅
+    xd60_num_lighting,   // index 1 → L_NUM  綠
+    xd60_rsvd_lighting   // index 2 → L_RSVD 藍
 );
 
 void keyboard_post_init_user(void) {
     rgblight_layers = xd60_rgb_layers;
+    rgblight_disable_noeeprom();  // L_BASE 底燈關（無色）
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     rgblight_set_layer_state(0, layer_state_cmp(state, L_FN));
-    rgblight_set_layer_state(1, layer_state_cmp(state, L_RGB));
+    rgblight_set_layer_state(1, layer_state_cmp(state, L_NUM));
+    rgblight_set_layer_state(2, layer_state_cmp(state, L_RSVD));
     return state;
 }

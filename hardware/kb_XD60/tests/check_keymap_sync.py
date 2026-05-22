@@ -21,7 +21,7 @@ KB_DIR = Path(__file__).resolve().parent.parent
 JSON_PATH = KB_DIR / "xd60_qmk_keymap.json"
 KEYMAP_C = KB_DIR / "xd60_custom" / "keymap.c"
 KEYS_PER_LAYER = 67
-LAYER_COUNT = 3
+LAYER_COUNT = 4
 
 
 def strip_comments(src: str) -> str:

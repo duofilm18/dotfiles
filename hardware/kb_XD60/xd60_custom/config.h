@@ -4,6 +4,11 @@
 // keymap.c 用 RGBLIGHT_LAYER_SEGMENTS / rgblight_set_layer_state 即依賴此旗標。
 #define RGBLIGHT_LAYERS
 
+// 讓「顏色層」即使在底燈關閉狀態下仍會亮。
+// L_BASE 要求無色 → keymap.c 開機時 rgblight_disable，但 L_FN/L_NUM/L_RSVD
+// 疊上的顏色仍要顯示，故需此旗標。
+#define RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF
+
 // WS2812 色序 ── 預設「不要」啟用下行 ──
 //
 // xiudi/xd60/rev2 的官方定義已是正確色序（見 ../README.md「外部 review 核對紀錄」），

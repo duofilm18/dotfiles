@@ -42,11 +42,12 @@ keymap 原始碼版控在本 repo,WSL 只負責編譯出 `.hex`,**燒錄仍在 W
 
 ```
 hardware/kb_XD60/
-├── xd60_qmk_keymap.json          ← 唯一真實來源(QMK 官方定義 + 實機截圖)
+├── xd60_qmk_keymap.json          ← 編譯預設 keymap(QMK 官方定義 + 實機截圖)
+├── xd60_via_definition.json      ← VIA 定義檔(由 QMK LAYOUT_all 轉),載入 VIA App 用
 ├── xd60_custom/                  ← 客製 keymap 原始碼,symlink 進 qmk_firmware
-│   ├── keymap.c                  ← 3 層 + rgblight_layers 逐層換色
-│   ├── config.h                  ← RGBLIGHT_LAYERS / WS2812 色序(備援)
-│   └── rules.mk                  ← MOUSEKEY / EXTRAKEY / RGBLIGHT / BACKLIGHT
+│   ├── keymap.c                  ← 4 層 + rgblight_layers 逐層換色 + VIA
+│   ├── config.h                  ← RGBLIGHT_LAYERS / 色序覆寫(備援)
+│   └── rules.mk                  ← MOUSEKEY / EXTRAKEY / RGBLIGHT / BACKLIGHT / VIA / LTO
 └── tests/check_keymap_sync.py    ← 守門:keymap.c 必須與 JSON 逐鍵一致
 ```
 
@@ -73,8 +74,10 @@ qmk compile -kb xiudi/xd60/rev2 -km xd60_custom
 2. 鍵盤進 bootloader(按住左上角鍵 + 插 USB)
 3. Windows 用 QMK Toolbox 燒錄(atmel-dfu)
 
-改 keymap 的順序:**先改 `xd60_qmk_keymap.json`** → 同步 `xd60_custom/keymap.c`
-→ 跑 `python3 hardware/kb_XD60/tests/check_keymap_sync.py` 確認一致 → 編譯。
+日常**改鍵位用 VIA**(見下節),不必重編譯。需要重編譯的情況:改底燈顏色、
+改層數、改編譯預設值。此時順序:**先改 `xd60_qmk_keymap.json`** → 同步
+`xd60_custom/keymap.c` → 跑 `python3 hardware/kb_XD60/tests/check_keymap_sync.py`
+確認一致 → 編譯。
 
 ## 備援:QMK Configurator(零安裝)
 
@@ -82,19 +85,39 @@ qmk compile -kb xiudi/xd60/rev2 -km xd60_custom
 
 1. 開 [config.qmk.fm](https://config.qmk.fm)
 2. `Import QMK Keymap` → 選 [`xd60_qmk_keymap.json`](./xd60_qmk_keymap.json)
-3. 自動帶出 `xiudi/xd60/rev2` + `LAYOUT_all` + 3 層
-4. 切 Layer 1 / 2 對照截圖微調 → 綠色 `COMPILE` → `FIRMWARE` 下載 `.hex`
+3. 自動帶出 `xiudi/xd60/rev2` + `LAYOUT_all` + 4 層
+4. 對照截圖微調 → 綠色 `COMPILE` → `FIRMWARE` 下載 `.hex`
 5. 進 bootloader(按住鍵盤左上角鍵 + 插 USB)→ 用 QMK Toolbox 燒錄
 
-## Keymap(3 層,見 `xd60_qmk_keymap.json` / `xd60_custom/keymap.c`)
+## Keymap(4 層,見 `xd60_custom/keymap.c`)
 
-- **Layer 0 — Base**:HHKB 風格。`Fn = MO(1)` 在右下、`MO(2)` 在空格左邊。
-  - 此層由 `gh60 (3).hex` 解碼 + 截圖核對,**精準**。
-- **Layer 1 — Fn**(按住 MO(1)):F1~F12、滑鼠鍵、媒體、方向/翻頁。
-- **Layer 2 — RGB/數字**(按住 MO(2)):底燈控制鍵(`UG_TOGG/NEXT/HUEU/SATU/VALU`)、背光、數字鍵盤、音量。
-  - Layer 1/2 由 YDKB 截圖轉錄,**需在 Configurator 核對**。
-  - keycode 採 **現行 QMK 命名**:底燈 `UG_*`(舊 `RGB_*` 已廢)、滑鼠 `MS_*`(舊 `KC_MS_*/KC_BTN*/KC_WH_*` 已廢)。改鍵時以實際 qmk_firmware 的 `quantum/keycodes.h` 為準。
-- **底燈逐層換色**:`keymap.c` 用 `rgblight_layers` —— L_FN 全段紅、L_RGB 全段藍,放開模式鍵自動復原。
+鍵位之後改在 **VIA App**(見下節);`keymap.c` 的 `keymaps[]` 只是燒進去的預設值。
+逐層底燈顏色則固定編譯在 `keymap.c`,VIA 改不了。
+
+| 層 | 進入方式 | 內容 | 底燈色 |
+|----|---------|------|--------|
+| Layer 0 — Base | 預設層 | HHKB 風格打字層 | 無色(關) |
+| Layer 1 — Fn | 按住 `MO(1)`(右下) | F1~F12、滑鼠、媒體、方向/翻頁 | 紅 |
+| Layer 2 — 數字/RGB | 按住 `MO(2)`(空格左) | 數字鍵盤、底燈/背光控制、音量 | 綠 |
+| Layer 3 — 預備層 | 尚無按鍵(待 VIA 指定) | 空白,內容待 VIA 填 | 藍 |
+
+- Layer 0 由 `gh60 (3).hex` 解碼 + 截圖核對,**精準**;實體 64 鍵(14+14+13+14+9)已實機數過核對。
+- Layer 1/2 由 YDKB 截圖轉錄,**需在實機核對**。
+- keycode 採 **現行 QMK 命名**:底燈 `UG_*`(舊 `RGB_*` 已廢)、滑鼠 `MS_*`(舊 `KC_MS_*/KC_BTN*/KC_WH_*` 已廢)。改鍵時以實際 qmk_firmware 的 `quantum/keycodes.h` 為準。
+- 底燈逐層換色用 `rgblight_layers` + `RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF`(Base 關燈時顏色層仍亮)。
+
+## VIA 即時鍵位編輯
+
+韌體已開 `VIA_ENABLE` —— 鍵位改在 VIA App 即時生效,**不用重編譯重刷**。
+
+1. 開 [usevia.app](https://usevia.app)(Chrome/Edge)
+2. 右上 ⚙ Settings → 開啟 **Show Design tab**
+3. **Design** 分頁 → 載入 [`xd60_via_definition.json`](./xd60_via_definition.json)
+4. 回 **Configure** 分頁 → 接上鍵盤即自動辨識 → 拖拉改鍵
+
+- 定義檔由 QMK 官方 `LAYOUT_all` 幾何資料轉出,矩陣保證正確,**非手寫臆測**。
+- 顯示的是 67 鍵分裂超集;實機只有 64 鍵,3 個分裂變體位置無實體鍵帽(`KC_NO`),VIA 裡略過即可。
+- 底燈顏色不歸 VIA 管,要改顏色仍須改 `keymap.c` 重編譯。
 
 ## 原始 YDKB 韌體
 
@@ -121,8 +144,9 @@ qmk compile -kb xiudi/xd60/rev2 -km xd60_custom
 
 ## 已知問題 / 待辦
 
-- [x] 「逐層自動換色」—— `keymap.c` 已用 `rgblight_layers` 實作(L_FN 紅 / L_RGB 藍)
-- [ ] Layer 1 / 2 是截圖轉錄,燒錄前在實機核對
-- [ ] WS2812 色序:`config.h` 已備好覆寫(預設不啟用)。燒錄後若選紅變綠,
-      取消 `WS2812_BYTE_ORDER` 那行註解重編譯
-- [ ] 首次跑 `ansible-playbook wsl.yml --tags qmk` 建置編譯環境(尚未部署)
+- [x] 逐層自動換色 —— `keymap.c` 用 `rgblight_layers`(L0 無 / L1 紅 / L2 綠 / L3 藍)
+- [x] VIA 即時鍵位編輯 —— `VIA_ENABLE`,定義檔 `xd60_via_definition.json`
+- [x] 編譯環境 —— `ansible-playbook wsl.yml --tags qmk` 已部署,實機編譯/燒錄已驗證
+- [x] 實體配列 —— 64 鍵(每行 14/14/13/14/9)已實機數過,對上 `LAYOUT_all` 的 67−3 `KC_NO`
+- [ ] Layer 1/2 截圖轉錄,在實機核對;Layer 3 預備層待 VIA 填鍵位
+- [ ] WS2812 色序:`config.h` 已備好覆寫(預設不啟用),選紅變綠才取消註解重編譯
