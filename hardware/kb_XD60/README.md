@@ -8,8 +8,8 @@
 |------|-----|
 | 型號 | XD60 二代(rev2)/ QMK `xiudi/xd60/rev2` |
 | MCU | ATmega32u4(28KB) |
-| USB | VID `0xFEED` / PID `0x6060` |
-| Bootloader | `atmel-dfu` |
+| USB（正常模式）| VID `0x7844` / PID `0x6060`（VIA / 裝置管理員看到的）|
+| USB（DFU bootloader）| `0x03EB:0x2FF4`（`atmel-dfu`,進 bootloader 燒錄時）|
 | RGB 燈條 | 6× WS2812(背面),資料腳 `F6` |
 | 背光 | 單色,腳位 `F5` |
 
@@ -31,9 +31,9 @@
 ```
 hardware/kb_XD60/
 ├── CLAUDE.md                  ← 開工提示;動到此資料夾自動載入
-├── xd60_qmk_keymap.json       ← 編譯預設 keymap(真實來源)
-├── xd60_via_definition.json   ← VIA 定義檔,載入 VIA App 用
-├── xd60_via_keymap.layout     ← VIA 實際鍵位備份,重灌時 Import 回去
+├── xd60_qmk_keymap.json       ← 編譯用 keymap(由 .layout 同步產生,出廠預設)
+├── xd60_via_definition.json   ← VIA 定義檔,載入 VIA App 用(很少變)
+├── xd60_via_keymap.layout     ← VIA 鍵位的真實來源(VIA Export),其餘由它同步
 ├── xd60_custom/               ← 客製 keymap 原始碼,symlink 進 qmk_firmware
 │   ├── keymap.c               ← 4 層 keymap(標準 QMK + VIA,無客製魔改)
 │   └── rules.mk               ← VIA + LTO
