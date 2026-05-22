@@ -44,6 +44,7 @@ keymap 原始碼版控在本 repo,WSL 只負責編譯出 `.hex`,**燒錄仍在 W
 hardware/kb_XD60/
 ├── xd60_qmk_keymap.json          ← 編譯預設 keymap(QMK 官方定義 + 實機截圖)
 ├── xd60_via_definition.json      ← VIA 定義檔(由 QMK LAYOUT_all 轉),載入 VIA App 用
+├── xd60_via_keymap.layout        ← VIA 實際鍵位備份(VIA Export),重灌時 Import 回去
 ├── xd60_custom/                  ← 客製 keymap 原始碼,symlink 進 qmk_firmware
 │   ├── keymap.c                  ← 4 層 + rgblight_layers 逐層換色 + VIA
 │   ├── config.h                  ← RGBLIGHT_LAYERS / 色序覆寫(備援)
@@ -118,6 +119,16 @@ qmk compile -kb xiudi/xd60/rev2 -km xd60_custom
 - 定義檔由 QMK 官方 `LAYOUT_all` 幾何資料轉出,矩陣保證正確,**非手寫臆測**。
 - 顯示的是 67 鍵分裂超集;實機只有 64 鍵,3 個分裂變體位置無實體鍵帽(`KC_NO`),VIA 裡略過即可。
 - 底燈顏色不歸 VIA 管,要改顏色仍須改 `keymap.c` 重編譯。
+
+### VIA 鍵位備份 / 還原
+
+`xd60_via_keymap.layout` 是 VIA 實際鍵位的備份(VIA App 的 **Save Current Layout** 匯出)。
+
+- VIA 改的鍵位存在鍵盤 EEPROM,平常不會掉;此檔是「重燒韌體可能清 EEPROM」時的保險。
+- **還原**:VIA App → **Load Saved Layout** → 選此檔。
+- ⚠️ 此檔是某時點的快照;之後在 VIA 又改了鍵位,記得重新匯出覆蓋此檔。
+- 注意:`keymap.c` 的編譯預設值**未**跟著此檔同步(刻意),兩者用途不同 ——
+  `keymap.c` = 燒進去的出廠預設,`.layout` = VIA 之後的實際改動。
 
 ## 原始 YDKB 韌體
 
