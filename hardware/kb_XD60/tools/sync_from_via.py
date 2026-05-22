@@ -13,9 +13,9 @@
   python3 sync_from_via.py [path/to/file.layout]
 不給路徑時，自動抓 OneDrive XD60_VIA/ 裡 mtime 最新的 .layout。
 
-注意：本腳本會「重新產生」keymap.c —— 它假設 keymap.c 是標準 QMK + VIA、
-無客製 C 程式碼（這正是本專案的設計）。若日後在 keymap.c 加了自訂函式，
-別再用這支腳本覆蓋。
+注意：keymap.c 由本腳本「整檔重新產生」—— 上半 keymaps[] 是 VIA 來的鍵位，
+下半的 rgblight_layers（逐層底燈換色）是固定區塊。要改底燈顏色 → 改本腳本
+KEYMAP_C 模板裡的 HSV_*;別直接手改 keymap.c（會被下次同步覆蓋）。
 """
 import argparse
 import json
@@ -59,22 +59,22 @@ CONV = {
     "RGB_M_T": "RGB_MODE_RGBTEST", "RGB_M_TW": "RGB_MODE_TWINKLE",
 }
 
-KEYMAP_C = '''// XD60 rev2 客製 keymap — 標準 QMK + VIA
+KEYMAP_C = '''// XD60 rev2 客製 keymap — QMK + VIA + 逐層底燈換色
 //
 // 唯一真實來源：../xd60_qmk_keymap.json（由 VIA 匯出 xd60_via_keymap.layout 同步）
 // 同步守門：tests/check_keymap_sync.py（keymap.c 與 JSON 任一不一致即 fail）。
-// 本檔由 tools/sync_from_via.py 產生 —— 別手改，改 VIA 後重跑該腳本。
+// 本檔由 tools/sync_from_via.py 整檔產生 —— keymaps[] 別手改（改 VIA 後重跑腳本）;
+// 下半 rgblight_layers 是固定區塊，要改底燈顏色改腳本模板的 HSV_*。
 //
-// 鍵位平常改在 VIA App 即時生效;此檔的 keymaps[] 只是燒進去的出廠預設。
-// 底燈為標準 QMK rgblight（xd60 出廠內建全部動畫），用 Layer 2 的 RGB 鍵控制。
+// 逐層底燈：L_BASE 黑(關) / L_FN 紅 / L_NUM 綠 / L_L3 藍。
 
 #include QMK_KEYBOARD_H
 
 enum xd60_layers {
-    L_BASE = 0,  // 打字基礎層
-    L_FN,        // MO(1)：F 區、滑鼠、媒體、方向
-    L_NUM,       // MO(2)：數字鍵盤、RGB/背光控制、音量
-    L_L3,        // MO(3)：方向鍵等
+    L_BASE = 0,  // 打字基礎層 —— 底燈黑
+    L_FN,        // MO(1)：F 區、滑鼠、媒體、方向 —— 紅
+    L_NUM,       // MO(2)：數字鍵盤、RGB/背光控制、音量 —— 綠
+    L_L3,        // MO(3)：方向鍵等 —— 藍
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -91,6 +91,36 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 {L3}
     ),
 };
+
+// ── 逐層底燈換色（rgblight_layers）────────────────────────────────
+// 底燈 6× WS2812。基礎層靜態黑(視覺上=關)，按住 MO(1/2/3) 疊上紅/綠/藍，
+// 放開自動復原。rgblight 全程保持 enabled —— 顏色層才會 render（不用
+// rgblight_disable，那條路之前沒亮過）。
+#ifndef RGBLED_NUM
+#    define RGBLED_NUM RGBLIGHT_LED_COUNT
+#endif
+
+const rgblight_segment_t PROGMEM xd60_fn_layer[]  = RGBLIGHT_LAYER_SEGMENTS({0, RGBLED_NUM, HSV_RED});
+const rgblight_segment_t PROGMEM xd60_num_layer[] = RGBLIGHT_LAYER_SEGMENTS({0, RGBLED_NUM, HSV_GREEN});
+const rgblight_segment_t PROGMEM xd60_l3_layer[]  = RGBLIGHT_LAYER_SEGMENTS({0, RGBLED_NUM, HSV_BLUE});
+const rgblight_segment_t* const PROGMEM xd60_rgb_layers[] = RGBLIGHT_LAYERS_LIST(
+    xd60_fn_layer,    // index 0 → L_FN   紅
+    xd60_num_layer,   // index 1 → L_NUM  綠
+    xd60_l3_layer     // index 2 → L_L3   藍
+);
+
+void keyboard_post_init_user(void) {
+    rgblight_layers = xd60_rgb_layers;
+    rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
+    rgblight_sethsv_noeeprom(HSV_BLACK);   // 基礎層底燈關(靜態黑)
+}
+
+layer_state_t layer_state_set_user(layer_state_t state) {
+    rgblight_set_layer_state(0, layer_state_cmp(state, L_FN));
+    rgblight_set_layer_state(1, layer_state_cmp(state, L_NUM));
+    rgblight_set_layer_state(2, layer_state_cmp(state, L_L3));
+    return state;
+}
 '''
 
 ROW_LENS = [15, 14, 14, 15, 9]

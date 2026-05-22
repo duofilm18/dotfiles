@@ -35,7 +35,8 @@ hardware/kb_XD60/
 ├── xd60_via_definition.json   ← VIA 定義檔,載入 VIA App 用(很少變)
 ├── xd60_via_keymap.layout     ← VIA 鍵位的真實來源(VIA Export),其餘由它同步
 ├── xd60_custom/               ← 客製 keymap 原始碼,symlink 進 qmk_firmware
-│   ├── keymap.c               ← 4 層 keymap(標準 QMK + VIA,無客製魔改)
+│   ├── keymap.c               ← 4 層 keymap + 逐層底燈換色(由腳本產生)
+│   ├── config.h               ← RGBLIGHT_LAYERS 旗標
 │   └── rules.mk               ← VIA + LTO
 ├── tests/check_keymap_sync.py ← 守門:keymap.c 必須與 JSON 逐鍵一致
 └── tools/sync_from_via.py     ← VIA → repo + 編譯,一鍵同步(不需 AI)
@@ -60,21 +61,21 @@ qmk compile -kb xiudi/xd60/rev2 -km xd60_custom
 2. 鍵盤進 bootloader(按住左上角鍵 + 插 USB)
 3. Windows 用 QMK Toolbox 燒錄(atmel-dfu;首次需 Zadig 綁 WinUSB 驅動)
 
-> 日常**改鍵位用 VIA**,即時生效、不必重編譯。只有改層數 / 編譯預設才需重編譯。
-> 想把 VIA 的設定同步回 repo 當基礎,用 `tools/sync_from_via.py`(見下節)。
+> 日常**改鍵位用 VIA**,即時生效、不必重編譯。只有改層數 / 底燈顏色 / 編譯預設
+> 才需重編譯。想把 VIA 的設定同步回 repo 當基礎,用 `tools/sync_from_via.py`(見下節)。
 
 ## Keymap(4 層)
 
-| 層 | 進入 | 內容 |
-|----|------|------|
-| L0 Base | 預設層 | HHKB 風格打字層 |
-| L1 Fn | 按住 `MO(1)`(右下) | F1~F12、滑鼠、媒體、方向 |
-| L2 數字 | 按住 `MO(2)`(空格左) | 數字鍵盤、Home/End/PgUp/PgDn、RGB/背光、音量 |
-| L3 方向 | L2 上按 `MO(3)` | 方向鍵等 |
+| 層 | 進入 | 內容 | 底燈色 |
+|----|------|------|--------|
+| L0 Base | 預設層 | HHKB 風格打字層 | 黑(關) |
+| L1 Fn | 按住 `MO(1)`(右下) | F1~F12、滑鼠、媒體、方向 | 紅 |
+| L2 數字 | 按住 `MO(2)`(空格左) | 數字鍵盤、Home/End/PgUp/PgDn、RGB/背光、音量 | 綠 |
+| L3 方向 | L2 上按 `MO(3)` | 方向鍵等 | 藍 |
 
 - 鍵位以 VIA 即時編輯;`keymap.c` 的 `keymaps[]` 是出廠預設,已同步成目前 VIA 的設定。
-- 底燈是**標準 QMK rgblight**(xd60 出廠內建全部動畫),用 Layer 2 的 RGB 鍵手動控制,
-  沒有客製魔改。
+- 底燈**逐層換色**(`rgblight_layers`):基礎層黑、按住 MO(1/2/3) 疊上紅/綠/藍,
+  放開復原。寫在 `keymap.c`,要改顏色改 `tools/sync_from_via.py` 模板的 `HSV_*`。
 
 ## VIA 即時鍵位編輯
 
