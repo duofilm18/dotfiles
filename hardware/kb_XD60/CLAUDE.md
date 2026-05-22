@@ -22,13 +22,17 @@
 ## 常用指令
 
 ```bash
-qmk compile -kb xiudi/xd60/rev2 -km xd60_custom        # 編譯（symlink 已就位）
+# VIA 改完鍵位後，同步回 repo + 編譯出 .hex（一鍵，平常用這個，不需 AI）
+python3 hardware/kb_XD60/tools/sync_from_via.py
+
+qmk compile -kb xiudi/xd60/rev2 -km xd60_custom        # 單獨編譯
 python3 hardware/kb_XD60/tests/check_keymap_sync.py    # keymap.c ↔ JSON 同步守門
 ```
 
 ## 規矩
 
-- **`xd60_qmk_keymap.json` 是 keymap 的真實來源** —— 改鍵先改它、再同步 `keymap.c`、
-  跑 sync check。外部 AI 無實機截圖會幻覺出錯誤硬體定義，勿直接採用。
-- **底燈顏色只能改 `keymap.c` 重編譯**，VIA / QMK Configurator 都做不到。
-- **日常鍵位改 VIA**，不必重編譯；`keymap.c` 的 `keymaps[]` 只是燒進去的出廠預設。
+- **日常鍵位改 VIA**，即時生效、不必重編譯;`keymap.c` 只是燒進去的出廠預設。
+- **要把 VIA 設定同步回 repo 當基礎** —— 跑 `tools/sync_from_via.py`,別手改
+  `keymap.c` / `xd60_qmk_keymap.json`(手改容易和 VIA 不一致;keymap.c 由腳本產生)。
+- 底燈是**標準 QMK rgblight**(無客製魔改),用 Layer 2 的 RGB 鍵控制。
+- 外部 AI 無實機截圖會幻覺出錯誤硬體定義,勿直接採用。

@@ -1,37 +1,29 @@
-// XD60 rev2 客製 keymap — 客製編譯路線
+// XD60 rev2 客製 keymap — 標準 QMK + VIA
 //
-// 唯一真實來源：../xd60_qmk_keymap.json
-//   （真實抓下來的 QMK 官方 xiudi/xd60/rev2 定義 + 實機截圖核對）
-// 本檔四層 keymap 由該 JSON 機械轉換而來，token 與 JSON 一一對應。
+// 唯一真實來源：../xd60_qmk_keymap.json（由 VIA 匯出 xd60_via_keymap.layout 同步）
 // 同步守門：tests/check_keymap_sync.py（keymap.c 與 JSON 任一不一致即 fail）。
+// 本檔由 tools/sync_from_via.py 產生 —— 別手改，改 VIA 後重跑該腳本。
 //
-// 分工：
-//   - 底燈逐層顏色 → 編譯進此檔的 rgblight_layers（VIA 改不了，固定）
-//   - 鍵位        → VIA App 即時編輯（此檔的 keymaps[] 只是燒進去的預設值）
-//
-// 逐層底燈顏色（客製編譯才有，Configurator 做不到）：
-//   L_BASE 無色（底燈關）/ L_FN 紅 / L_NUM 綠 / L_RSVD 藍
+// 鍵位平常改在 VIA App 即時生效;此檔的 keymaps[] 只是燒進去的出廠預設。
+// 底燈為標準 QMK rgblight（xd60 出廠內建全部動畫），用 Layer 2 的 RGB 鍵控制。
 
 #include QMK_KEYBOARD_H
 
 enum xd60_layers {
-    L_BASE = 0,  // HHKB 風格基礎層 —— 無色
-    L_FN,        // MO(1)：F 區、滑鼠、媒體、方向/翻頁 —— 紅
-    L_NUM,       // MO(2)：數字鍵盤、RGB/背光控制、音量 —— 綠
-    L_RSVD,      // 預備層（空白，鍵位之後在 VIA 填）—— 藍
+    L_BASE = 0,  // 打字基礎層
+    L_FN,        // MO(1)：F 區、滑鼠、媒體、方向
+    L_NUM,       // MO(2)：數字鍵盤、RGB/背光控制、音量
+    L_L3,        // MO(3)：方向鍵等
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    // ── Layer 0：Base — HHKB 風格打字層 ──
     [L_BASE] = LAYOUT_all(
         KC_TAB,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSLS, KC_NO,
-        KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSPC,
+        QK_GESC, KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSPC,
         KC_LCTL, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT, KC_NO,   KC_ENT,
         KC_LSFT, KC_NO,   KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_F5,   KC_UP,   MO(1),
         MO(2),   KC_LGUI, KC_LALT, KC_SPC,  KC_BSPC, KC_BSPC, KC_LEFT, KC_DOWN, KC_RGHT
     ),
-
-    // ── Layer 1：Fn（按住 MO(1)）— F 區、滑鼠、媒體、方向 ──
     [L_FN] = LAYOUT_all(
         KC_TRNS, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_TRNS, KC_NO,
         KC_TRNS, MS_BTN1, MS_UP,   MS_BTN2, MS_WHLU, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_MPLY, KC_UP,   KC_PSCR, KC_DEL,
@@ -39,18 +31,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS, KC_NO,   MS_BTN1, MS_BTN2, MS_BTN3, KC_TRNS, KC_TRNS, KC_TRNS, KC_END,  KC_PGDN, KC_DOWN, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
-
-    // ── Layer 2：數字（按住 MO(2)）— 數字盤、底燈/背光、音量 ──
     [L_NUM] = LAYOUT_all(
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_INS,  KC_NUM,  KC_TRNS, S(KC_9), S(KC_0), S(KC_MINS), KC_TRNS, KC_TRNS, KC_NO,
-        KC_CAPS, UG_TOGG, UG_NEXT, UG_HUEU, UG_SATU, UG_VALU, KC_PGUP, KC_P7,   KC_P8,   KC_P9,   KC_PPLS, KC_PMNS, KC_PAST, KC_TRNS,
-        KC_TRNS, UG_VALD, UG_VALU, KC_TRNS, BL_TOGG, BL_STEP, KC_HOME, KC_P4,   KC_P5,   KC_P6,   KC_END,  KC_PPLS, KC_NO,   KC_TRNS,
+        KC_CAPS, UG_TOGG, UG_NEXT, UG_HUEU, UG_SATU, UG_VALU, KC_PGUP, KC_P7,   KC_P8,   KC_P9,   KC_PEQL, KC_PMNS, KC_PAST, KC_TRNS,
+        KC_TRNS, UG_SPDU, UG_VALU, RGB_MODE_GRADIENT, RGB_MODE_SWIRL, BL_STEP, KC_HOME, KC_P4,   KC_P5,   KC_P6,   KC_END,  KC_PPLS, KC_NO,   KC_TRNS,
         KC_TRNS, KC_VOLD, KC_VOLD, KC_VOLU, KC_MUTE, KC_TRNS, KC_TRNS, KC_PGDN, KC_P1,   KC_P2,   KC_P3,   KC_PSLS, KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS, KC_TRNS, MO(3),   KC_P0,   KC_PDOT, KC_PENT, KC_TRNS, KC_TRNS, KC_TRNS
+        KC_TRNS, KC_ENT,  MO(3),   KC_P0,   KC_PDOT, KC_PENT, KC_TRNS, KC_TRNS, KC_TRNS
     ),
-
-    // ── Layer 3：方向鍵等（MO(3) 進入）──
-    [L_RSVD] = LAYOUT_all(
+    [L_L3] = LAYOUT_all(
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
@@ -58,40 +46,3 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 };
-
-// ── rgblight_layers：逐層底燈換色 ───────────────────────────────
-// 6 顆 WS2812 全段上色。L_BASE 無色（底燈關），按住模式鍵才疊上顏色，
-// 放開自動復原。config.h 的 RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF 讓底燈
-// 即使在關閉狀態，疊上的顏色層仍會亮。
-
-// 新版 QMK 把 RGBLED_NUM 改名 RGBLIGHT_LED_COUNT，相容兩種命名。
-#ifndef RGBLED_NUM
-#    define RGBLED_NUM RGBLIGHT_LED_COUNT
-#endif
-
-const rgblight_segment_t PROGMEM xd60_fn_lighting[] = RGBLIGHT_LAYER_SEGMENTS(
-    {0, RGBLED_NUM, HSV_RED}
-);
-const rgblight_segment_t PROGMEM xd60_num_lighting[] = RGBLIGHT_LAYER_SEGMENTS(
-    {0, RGBLED_NUM, HSV_GREEN}
-);
-const rgblight_segment_t PROGMEM xd60_rsvd_lighting[] = RGBLIGHT_LAYER_SEGMENTS(
-    {0, RGBLED_NUM, HSV_BLUE}
-);
-const rgblight_segment_t* const PROGMEM xd60_rgb_layers[] = RGBLIGHT_LAYERS_LIST(
-    xd60_fn_lighting,    // index 0 → L_FN   紅
-    xd60_num_lighting,   // index 1 → L_NUM  綠
-    xd60_rsvd_lighting   // index 2 → L_RSVD 藍
-);
-
-void keyboard_post_init_user(void) {
-    rgblight_layers = xd60_rgb_layers;
-    rgblight_disable_noeeprom();  // L_BASE 底燈關（無色）
-}
-
-layer_state_t layer_state_set_user(layer_state_t state) {
-    rgblight_set_layer_state(0, layer_state_cmp(state, L_FN));
-    rgblight_set_layer_state(1, layer_state_cmp(state, L_NUM));
-    rgblight_set_layer_state(2, layer_state_cmp(state, L_RSVD));
-    return state;
-}

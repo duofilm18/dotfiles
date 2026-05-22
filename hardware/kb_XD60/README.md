@@ -35,10 +35,10 @@ hardware/kb_XD60/
 ├── xd60_via_definition.json   ← VIA 定義檔,載入 VIA App 用
 ├── xd60_via_keymap.layout     ← VIA 實際鍵位備份,重灌時 Import 回去
 ├── xd60_custom/               ← 客製 keymap 原始碼,symlink 進 qmk_firmware
-│   ├── keymap.c               ← 4 層 + rgblight_layers + VIA
-│   ├── config.h               ← RGBLIGHT_LAYERS / 色序覆寫
-│   └── rules.mk               ← MOUSEKEY/EXTRAKEY/RGBLIGHT/BACKLIGHT/VIA/LTO
-└── tests/check_keymap_sync.py ← 守門:keymap.c 必須與 JSON 逐鍵一致
+│   ├── keymap.c               ← 4 層 keymap(標準 QMK + VIA,無客製魔改)
+│   └── rules.mk               ← VIA + LTO
+├── tests/check_keymap_sync.py ← 守門:keymap.c 必須與 JSON 逐鍵一致
+└── tools/sync_from_via.py     ← VIA → repo + 編譯,一鍵同步(不需 AI)
 ```
 
 ## 建置環境(一次性)
@@ -60,20 +60,21 @@ qmk compile -kb xiudi/xd60/rev2 -km xd60_custom
 2. 鍵盤進 bootloader(按住左上角鍵 + 插 USB)
 3. Windows 用 QMK Toolbox 燒錄(atmel-dfu;首次需 Zadig 綁 WinUSB 驅動)
 
-> 日常**改鍵位用 VIA**,不必重編譯。只有改底燈顏色 / 層數才需重編譯 ——
-> 順序:改 `xd60_qmk_keymap.json` → 同步 `keymap.c` → 跑 `check_keymap_sync.py` → 編譯。
+> 日常**改鍵位用 VIA**,即時生效、不必重編譯。只有改層數 / 編譯預設才需重編譯。
+> 想把 VIA 的設定同步回 repo 當基礎,用 `tools/sync_from_via.py`(見下節)。
 
 ## Keymap(4 層)
 
-| 層 | 進入 | 內容 | 底燈色 |
-|----|------|------|--------|
-| L0 Base | 預設層 | HHKB 風格打字層 | 無色(關) |
-| L1 Fn | 按住 `MO(1)`(右下) | F1~F12、滑鼠、媒體、方向 | 紅 |
-| L2 數字 | 按住 `MO(2)`(空格左) | 數字鍵盤、Home/End/PgUp/PgDn、底燈/背光、音量 | 綠 |
-| L3 方向 | L2 上按 `MO(3)` | 方向鍵等 | 藍 |
+| 層 | 進入 | 內容 |
+|----|------|------|
+| L0 Base | 預設層 | HHKB 風格打字層 |
+| L1 Fn | 按住 `MO(1)`(右下) | F1~F12、滑鼠、媒體、方向 |
+| L2 數字 | 按住 `MO(2)`(空格左) | 數字鍵盤、Home/End/PgUp/PgDn、RGB/背光、音量 |
+| L3 方向 | L2 上按 `MO(3)` | 方向鍵等 |
 
 - 鍵位以 VIA 即時編輯;`keymap.c` 的 `keymaps[]` 是出廠預設,已同步成目前 VIA 的設定。
-- 底燈逐層顏色固定編譯在 `keymap.c`(`rgblight_layers`),VIA 改不了 —— 要改顏色須重編譯。
+- 底燈是**標準 QMK rgblight**(xd60 出廠內建全部動畫),用 Layer 2 的 RGB 鍵手動控制,
+  沒有客製魔改。
 
 ## VIA 即時鍵位編輯
 
@@ -89,8 +90,19 @@ VIA 顯示 67 鍵超集,實機 64 鍵,3 個無鍵帽的位置略過即可。
 ### 備份 / 還原
 
 VIA 鍵位存在鍵盤 EEPROM。`xd60_via_keymap.layout` 是匯出備份(防重燒清 EEPROM)。
-還原:VIA App → **Load Saved Layout** → 選此檔。之後在 VIA 又改了鍵位,記得重匯出覆蓋。
+還原:VIA App → **Load Saved Layout** → 選此檔。
 
-## 待辦
+## 把 VIA 設定同步回 repo（`tools/sync_from_via.py`）
 
-- [ ] WS2812 色序:`config.h` 已備好覆寫(預設關),選紅變綠才取消註解重編譯
+日常改鍵位只在 VIA、不用碰 repo。但偶爾想把 VIA 現況存成「出廠預設基礎」
+(這樣重燒韌體也是你的設定),用這支腳本一次做完,**不需要 AI**:
+
+```bash
+# 1. VIA App → Save Current Layout，匯出 .layout 到 OneDrive 的 XD60_VIA/
+# 2. 跑：
+python3 ~/dotfiles/hardware/kb_XD60/tools/sync_from_via.py
+```
+
+它會:讀最新的 `.layout` → 更新 `keymap.c` + `xd60_qmk_keymap.json` +
+`xd60_via_keymap.layout` → 跑 sync check → 編譯 → 把 `.hex` 複製到桌面。
+之後自己 `git commit` 即可。
