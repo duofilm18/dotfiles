@@ -22,7 +22,7 @@ enum xd60_layers {
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    // ── Layer 0：Base（由 gh60 (3).hex 解碼 + 截圖核對，精準）──
+    // ── Layer 0：Base — HHKB 風格打字層 ──
     [L_BASE] = LAYOUT_all(
         KC_TAB,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSLS, KC_NO,
         KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSPC,
@@ -31,7 +31,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         MO(2),   KC_LGUI, KC_LALT, KC_SPC,  KC_BSPC, KC_BSPC, KC_LEFT, KC_DOWN, KC_RGHT
     ),
 
-    // ── Layer 1：Fn（按住 MO(1)）— 由 YDKB 截圖轉錄，燒前在實機核對 ──
+    // ── Layer 1：Fn（按住 MO(1)）— F 區、滑鼠、媒體、方向 ──
     [L_FN] = LAYOUT_all(
         KC_TRNS, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_TRNS, KC_NO,
         KC_TRNS, MS_BTN1, MS_UP,   MS_BTN2, MS_WHLU, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_MPLY, KC_UP,   KC_PSCR, KC_DEL,
@@ -40,20 +40,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
-    // ── Layer 2：數字/RGB（按住 MO(2)）— 由 YDKB 截圖轉錄，燒前在實機核對 ──
+    // ── Layer 2：數字（按住 MO(2)）— 數字盤、底燈/背光、音量 ──
     [L_NUM] = LAYOUT_all(
-        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_INS,  KC_NUM,  KC_TRNS, KC_LPRN, KC_RPRN, KC_UNDS, KC_TRNS, KC_TRNS, KC_NO,
-        KC_CAPS, UG_TOGG, UG_NEXT, UG_HUEU, UG_SATU, UG_VALU, KC_ESC,  KC_P7,   KC_P8,   KC_P9,   KC_PPLS, KC_PMNS, KC_PAST, KC_TRNS,
-        KC_TRNS, UG_VALD, UG_VALU, KC_TRNS, BL_TOGG, BL_STEP, KC_PENT, KC_P4,   KC_P5,   KC_P6,   KC_SCLN, KC_PPLS, KC_NO,   KC_TRNS,
-        KC_TRNS, KC_VOLD, KC_VOLU, KC_MUTE, KC_TRNS, KC_TRNS, KC_PDOT, KC_P1,   KC_P2,   KC_P3,   KC_PSLS, KC_PENT, KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS, KC_TRNS, KC_TRNS, KC_P0,   KC_PDOT, KC_PENT, KC_PENT, KC_TRNS, KC_TRNS
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_INS,  KC_NUM,  KC_TRNS, S(KC_9), S(KC_0), S(KC_MINS), KC_TRNS, KC_TRNS, KC_NO,
+        KC_CAPS, UG_TOGG, UG_NEXT, UG_HUEU, UG_SATU, UG_VALU, KC_PGUP, KC_P7,   KC_P8,   KC_P9,   KC_PPLS, KC_PMNS, KC_PAST, KC_TRNS,
+        KC_TRNS, UG_VALD, UG_VALU, KC_TRNS, BL_TOGG, BL_STEP, KC_HOME, KC_P4,   KC_P5,   KC_P6,   KC_END,  KC_PPLS, KC_NO,   KC_TRNS,
+        KC_TRNS, KC_VOLD, KC_VOLD, KC_VOLU, KC_MUTE, KC_TRNS, KC_TRNS, KC_PGDN, KC_P1,   KC_P2,   KC_P3,   KC_PSLS, KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS, KC_TRNS, MO(3),   KC_P0,   KC_PDOT, KC_PENT, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
-    // ── Layer 3：預備層 —— 全 transparent，鍵位之後在 VIA 填 ──
+    // ── Layer 3：方向鍵等（MO(3) 進入）──
     [L_RSVD] = LAYOUT_all(
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
