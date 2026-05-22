@@ -58,7 +58,8 @@ cd ~/dotfiles/ansible && ansible-playbook wsl.yml --tags qmk
 
 `wsl` role 的 `qmk` tag 會裝 AVR toolchain(`gcc-avr` / `avr-libc` /
 `binutils-avr`)、用 pipx 裝 `qmk` CLI、shallow clone `qmk_firmware`,
-並把 `xd60_custom/` symlink 進 `qmk_firmware/keyboards/xiudi/xd60/rev2/keymaps/`。
+並把 `xd60_custom/` symlink 進 `qmk_firmware/keyboards/xiudi/xd60/keymaps/`
+(keymaps 在 `xd60/` 層、rev2/rev3 共用;QMK 解析 keymap 會往父目錄找)。
 
 ### 編譯 → 燒錄
 
@@ -90,8 +91,9 @@ qmk compile -kb xiudi/xd60/rev2 -km xd60_custom
 - **Layer 0 — Base**:HHKB 風格。`Fn = MO(1)` 在右下、`MO(2)` 在空格左邊。
   - 此層由 `gh60 (3).hex` 解碼 + 截圖核對,**精準**。
 - **Layer 1 — Fn**(按住 MO(1)):F1~F12、滑鼠鍵、媒體、方向/翻頁。
-- **Layer 2 — RGB/數字**(按住 MO(2)):RGB 控制鍵(`RGB_TOG/MOD/HUI/SAI/VAI`)、背光、數字鍵盤、音量。
+- **Layer 2 — RGB/數字**(按住 MO(2)):底燈控制鍵(`UG_TOGG/NEXT/HUEU/SATU/VALU`)、背光、數字鍵盤、音量。
   - Layer 1/2 由 YDKB 截圖轉錄,**需在 Configurator 核對**。
+  - keycode 採 **現行 QMK 命名**:底燈 `UG_*`(舊 `RGB_*` 已廢)、滑鼠 `MS_*`(舊 `KC_MS_*/KC_BTN*/KC_WH_*` 已廢)。改鍵時以實際 qmk_firmware 的 `quantum/keycodes.h` 為準。
 - **底燈逐層換色**:`keymap.c` 用 `rgblight_layers` —— L_FN 全段紅、L_RGB 全段藍,放開模式鍵自動復原。
 
 ## 原始 YDKB 韌體
