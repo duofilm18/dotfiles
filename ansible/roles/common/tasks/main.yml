@@ -44,5 +44,10 @@
     state: present
 
 - name: Make shell scripts executable
-  ansible.builtin.shell: chmod u+x {{ dotfiles_local }}/scripts/*.sh {{ dotfiles_local }}/scripts/*.py
+  # find (not a bare *.sh *.py glob): a missing *.py (or *.sh) makes chmod exit
+  # non-zero and fails the play; find just matches nothing and exits 0.
+  ansible.builtin.shell: >-
+    find {{ dotfiles_local }}/scripts -maxdepth 1 -type f
+    \( -name '*.sh' -o -name '*.py' \)
+    -exec chmod u+x {} +
   changed_when: false
