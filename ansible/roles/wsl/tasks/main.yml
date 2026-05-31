@@ -22,6 +22,58 @@
     update_cache: true
     cache_valid_time: 3600
 
+# ── PHP 8.4 CLI + WP-CLI（對齊 landtw-wp 專案 PHP 8.4 標準）──
+
+- name: Ensure add-apt-repository is available
+  become: true
+  ansible.builtin.apt:
+    name: software-properties-common
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  tags: [php]
+
+# Use the official add-apt-repository (writes deb822 .sources with the key
+# inline). apt_repository writes a legacy .list whose Signed-By conflicts with
+# a deb822 entry for the same PPA. creates: makes this idempotent.
+- name: Add Ondřej PHP PPA (deb822, idempotent)
+  become: true
+  ansible.builtin.command:
+    cmd: add-apt-repository -y ppa:ondrej/php
+    creates: "/etc/apt/sources.list.d/ondrej-ubuntu-php-{{ ansible_distribution_release }}.sources"
+  tags: [php]
+
+- name: Install PHP 8.4 CLI + WP-CLI deps
+  become: true
+  ansible.builtin.apt:
+    name: [php8.4-cli, php8.4-mbstring, php8.4-curl, php8.4-xml]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  tags: [php]
+
+- name: Set php default to 8.4
+  become: true
+  community.general.alternatives:
+    name: php
+    path: /usr/bin/php8.4
+  tags: [php]
+
+- name: Ensure ~/.local/bin exists (WP-CLI target)
+  ansible.builtin.file:
+    path: "{{ ansible_facts.user_dir }}/.local/bin"
+    state: directory
+    mode: "0755"
+  tags: [wp-cli]
+
+- name: Install WP-CLI (official phar)
+  ansible.builtin.get_url:
+    url: "{{ wp_cli_phar_url }}"
+    dest: "{{ ansible_facts.user_dir }}/.local/bin/wp"
+    mode: "0755"
+    force: false
+  tags: [wp-cli]
+
 - name: Create fontconfig directory
   ansible.builtin.file:
     path: "{{ ansible_facts.user_dir }}/.config/fontconfig/conf.d"
@@ -230,6 +282,50 @@
     enabled: true
     state: started
     scope: user
+
+# ── Open Design (local-first design agent UI) ──
+
+- name: Ensure pnpm via corepack (Open Design)
+  ansible.builtin.shell: |
+    export NVM_DIR="{{ ansible_facts.user_dir }}/.nvm"
+    . "$NVM_DIR/nvm.sh"
+    corepack enable
+    corepack prepare pnpm@latest --activate
+  args:
+    executable: /bin/bash
+  changed_when: false
+  tags: [open_design]
+
+- name: Clone Open Design repo
+  ansible.builtin.git:
+    repo: "{{ open_design_repo }}"
+    dest: "{{ open_design_install_root }}"
+    update: false
+  tags: [open_design]
+
+- name: Install Open Design dependencies (pnpm)
+  ansible.builtin.shell: |
+    export NVM_DIR="{{ ansible_facts.user_dir }}/.nvm"
+    . "$NVM_DIR/nvm.sh"
+    cd "{{ open_design_install_root }}"
+    pnpm install
+  args:
+    executable: /bin/bash
+    creates: "{{ open_design_install_root }}/node_modules"
+  tags: [open_design]
+
+- name: Install Open Design launcher
+  ansible.builtin.copy:
+    dest: "{{ open_design_launcher_path }}"
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      set -e
+      export NVM_DIR="{{ ansible_facts.user_dir }}/.nvm"
+      . "$NVM_DIR/nvm.sh"
+      cd "{{ open_design_install_root }}"
+      exec pnpm tools-dev run web "$@"
+  tags: [open_design]
 
 # ── QMK firmware build env（XD60 鍵盤客製編譯路線）──
 # WSL 只負責「編譯」出 .hex；燒錄仍在 Windows 用 QMK Toolbox（WSL2 無原生 USB）。

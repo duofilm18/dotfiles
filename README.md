@@ -87,6 +87,8 @@ WSL 版 Obsidian 若出現中文方格，playbook 也會部署 fontconfig，讓 
 
 Launcher 預設帶 WSLg flags：`--ozone-platform=wayland`（修正滑鼠位移）+ `--disable-gpu --disable-gpu-compositing --use-angle=swiftshader`（避開 Electron/WSLg 的 GPU 與 GL 初始化問題）。另外也會部署一個最小 `xdg-settings` shim，避免 WSL 環境缺少 `xdg-utils` 時噴錯。
 
+WSL playbook 也會裝 **PHP 8.4 CLI（Ondřej PPA，設為預設 `php`）+ 官方 WP-CLI**（`~/.local/bin/wp`，phar 非 apt），對齊 landtw-wp 專案的 PHP 8.4 標準。單獨補裝：`ansible-playbook wsl.yml --tags php,wp-cli`。
+
 ### RPi5B 部署
 
 SD 卡壞了？新的 Pi 要設定？用 Ansible 一次搞定：
